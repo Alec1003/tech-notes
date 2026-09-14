@@ -120,7 +120,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="system_architecture_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 65 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 85 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -207,11 +207,21 @@
           <li><a href="#s10-4">这套架构什么时候不适用</a></li>
         </ol>
       </li>
-      <li><a href="#s11">高频面试题 · 高吞吐流水线</a>
+      <li><a href="#s11">反向案例：总共 1000 张，单机跑完</a>
         <ol>
-          <li><a href="#s11-1">基础（必答）</a></li>
-          <li><a href="#s11-2">中级（区分熟练度）</a></li>
-          <li><a href="#s11-3">高级（体现深度）</a></li>
+          <li><a href="#s11-1">重算一遍：4.4 秒，五条 ADR 倒了四条</a></li>
+          <li><a href="#s11-2">三个反转：小规模不是大规模的简化版</a></li>
+          <li><a href="#s11-3">线程池：数量怎么定，为什么不需要队列</a></li>
+          <li><a href="#s11-4">对象池：判据是「跨不跨线程」</a></li>
+          <li><a href="#s11-5">时间预算：省下的 2.3 秒里没有一行并行代码</a></li>
+          <li><a href="#s11-6">撞上 I/O 墙之后，与四件不要做的事</a></li>
+        </ol>
+      </li>
+      <li><a href="#s12">高频面试题 · 高吞吐流水线</a>
+        <ol>
+          <li><a href="#s12-1">基础（必答）</a></li>
+          <li><a href="#s12-2">中级（区分熟练度）</a></li>
+          <li><a href="#s12-3">高级（体现深度）</a></li>
         </ol>
       </li>
     </ol>
@@ -227,7 +237,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★★</span>
     <span class="pill cyan">端到端案例</span>
-    <span class="pill green">阅读时长 ~65 min</span>
+    <span class="pill green">阅读时长 ~85 min</span>
     <span class="pill amber">前置 C++ 并发 · 内存管理</span>
   </div>
 </header>
@@ -1308,7 +1318,7 @@
   <div class="grid-3">
     <div class="panel good">
       <h4>v1 · ≤ 50 张/s</h4>
-      <p>一个线程池从头做到尾，全解码，同进程，单队列。<strong>在这个规模下它完全正确</strong>，而且两周能上线。别提前上分层和沙箱。</p>
+      <p>一个线程池从头做到尾，全解码，同进程，单队列。<strong>在这个规模下它完全正确</strong>，而且两周能上线。别提前上分层和沙箱。再往下还有「总共就几千张、单机跑完」这一档，<a href="#s11">§11 把它完整走了一遍</a>。</p>
     </div>
     <div class="panel mid">
       <h4>v2 · 50 → 2000 张/s</h4>
@@ -1326,9 +1336,9 @@
     <thead><tr><th>如果……</th><th>哪个决策会失效</th><th>该怎么做</th></tr></thead>
     <tbody>
       <tr>
-        <td>吞吐 &lt; 50 张/s</td>
-        <td class="bad-cell">分层线程池、沙箱子进程、分级队列的复杂度全都收不回来</td>
-        <td>v1：一个线程池，一个队列，尺寸校验就够了</td>
+        <td>吞吐 &lt; 50 张/s，或<strong>总量有限、一次性跑完</strong></td>
+        <td class="bad-cell">分层线程池、沙箱子进程、分级队列的复杂度全都收不回来；有限输入下连背压都不需要</td>
+        <td>v1：一个线程池，一个队列，尺寸校验就够了。完整推演见 <a href="#s11">§11 反向案例</a></td>
       </tr>
       <tr>
         <td>图片很小且尺寸一致（例如固定 512×512 的头像）</td>
@@ -1360,11 +1370,492 @@
 </section>
 
 <!-- =========================================================== -->
-<!-- S11 · INTERVIEW -->
+<!-- S11 -->
 <!-- =========================================================== -->
 <section class="chapter" id="s11">
   <div class="ch-head">
     <div class="num">11</div>
+    <div class="t">
+      <h2>反向案例：总共 1000 张，单机跑完</h2>
+      <div class="sub">上一章列了失效判据，这一章真的走一遍——顺便把线程池和对象池的数量算出来</div>
+    </div>
+  </div>
+
+  <h3 id="s11-1">11.1 重算一遍：4.4 秒，五条 ADR 倒了四条</h3>
+
+  <p>把需求换成「一共就 1000 张，一次性刷完，一台机器」。注意这句话本身<strong>又踩了 §1.1 那个坑</strong>——它没说是总量、峰值到达率还是积压阈值。三种读法里有两种对架构毫无影响：</p>
+
+  <ul>
+    <li><strong>1000 张/s 峰值到达率</strong>：和原文的 1200 张/s 只差 17%，架构形状一模一样，无非集群从 8 台变 7 台。</li>
+    <li><strong>积压阈值 1000 张</strong>：ADR-001 算过，1000 × 64 B = 64 KB，连算都不用算。</li>
+    <li><strong>总共 1000 张</strong> ← 只有这一种读法会改变架构，本章讲它。</li>
+  </ul>
+
+  <div class="box arch">
+    这三种读法的分岔点很清楚：<strong>架构的形状由数量级决定，不由百分比决定。</strong>1200 → 1000 是 17%，什么都不用改；1000 万 → 1000 是三个数量级，几乎每条决策都要重来。做容量复审时先问「差几个零」，差不到一个零的变化通常不值得动架构。
+  </div>
+
+  <div class="box num">
+    总 CPU 工作量 = 1000 × 0.28 s = <strong>280 核·秒</strong>（一次性，不是持续需求）。<br>
+    单机 64 物理核跑完 = <strong>4.4 秒</strong>；8 核笔记本 = 35 秒。<br>
+    输入 4 GB，输出 7.5 GB，峰值内存 64 × 72 MB = 4.6 GB。<br><br>
+    <strong>整个任务在一台机器上 5 秒内结束</strong>——任何需要「部署、运维、监控」的组件，它的搭建成本都比任务本身高三个数量级。
+  </div>
+
+  <table>
+    <thead><tr><th>ADR</th><th>1000 张时还成立吗</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>001 队列只传引用 + 外置 MQ</td><td class="bad-cell">❌ 推翻</td><td>1000 个路径 = 100 KB，一个 <code>std::vector&lt;Job&gt;</code> 装下。它是为了让「积压量与内存解耦」，而这里不存在积压</td></tr>
+      <tr class="good-cell"><td>002 libvips 流式管道</td><td class="good-cell">✅ 保留，且是唯一免费的一条</td><td>不增加任何架构复杂度，只是换个库，却把单张峰值从 72 MB 压到个位数 MB。选它的理由从「省内存」变成「省代码」</td></tr>
+      <tr><td>003 事件驱动不轮询</td><td class="bad-cell">❌ 不适用</td><td>没有对象存储、没有事件，就是一次目录遍历</td></tr>
+      <tr><td>004 解码放沙箱子进程</td><td class="mid-cell">⚠️ 不随规模退化</td><td>判据是「输入是否可信」，和吞吐无关。1000 张用户上传里只要有 1 张解压炸弹，照样打爆整台机器</td></tr>
+      <tr><td>005 GPU 批 4 / 128</td><td class="bad-cell">❌ 推翻</td><td>CUDA context + nvJPEG 初始化就要 0.5–2 s，占 4.4 s 总预算的 11–45%。盈亏平衡点算在 §11.6</td></tr>
+    </tbody>
+  </table>
+
+  <p>ADR-004 那一行值得单独说：<strong>安全约束不是性能约束，它不会因为规模变小而放松。</strong>复审时最容易犯的错就是下意识觉得「小任务嘛简单点就行」，然后把尺寸校验也一起省了。</p>
+
+  <h3 id="s11-2">11.2 三个反转：小规模不是大规模的简化版</h3>
+
+  <p>规模缩小三个数量级之后，有三件事不是「变简单了」，而是<strong>结论反过来了</strong>。这三个反转直接决定下面两节的线程池与对象池怎么设计。</p>
+
+  <p><strong>反转一 · 重尾分布的处理方式完全相反。</strong>§6 的结论是「隔离大图，别让它拖慢小图」，因为在线场景的指标是<strong>单张的 P99</strong>。而一次性批处理的指标是<strong>总完成时间（makespan）</strong>，单张延迟毫无意义。此时正确做法恰恰是<strong>大图优先派发</strong>（LPT，最长处理时间优先）：</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 940 300" style="min-width:760px;height:auto" role="img" aria-label="派发顺序对总完成时间的影响：六十四核处理一千张图理想完成时间四点四秒；若那张一百兆像素的巨图最后才被派出去，其余核已经空转而它还要单独跑两点五秒，总完成时间变成六点八秒、比理想值慢百分之五十五；改成按像素数降序先派大图之后，巨图第一个开跑、小图在尾部充当填缝料，总完成时间回到四点五秒">
+      <text class="tb" x="20" y="26">1000 张 / 64 核，理想完成时间 4.4 s。派发顺序能把它变成 6.8 s，也能把它保住</text>
+
+      <rect class="box-r" x="20" y="38" width="900" height="112" rx="9"/>
+      <text class="tb" x="36" y="58">❌ FIFO / 随机顺序：那张巨图最后才被派出去</text>
+      <text class="tm" x="36" y="77">核 1</text>
+      <rect class="box-a" x="110" y="68" width="410" height="11" rx="2"/>
+      <rect class="box-r" x="520" y="68" width="210" height="11" rx="2"/>
+      <text class="ts" x="536" y="77">100 MP · 2.5 s</text>
+      <text class="tr" x="745" y="77">单核跑，没人能帮它</text>
+      <text class="tm" x="36" y="93">核 2</text>
+      <rect class="box-a" x="110" y="84" width="405" height="11" rx="2"/>
+      <text class="tr" x="536" y="93">↓ 这两个核在 4.4 s 就空了，然后干等 2.4 s</text>
+      <text class="tm" x="36" y="109">核 3</text>
+      <rect class="box-a" x="110" y="100" width="408" height="11" rx="2"/>
+      <text class="ts" x="36" y="126">…其余 61 个核同理：尾部只剩一个核在跑，另外 63 个全部空转</text>
+      <path class="ln-d" d="M520 62 V132"/><path class="ln-d" d="M730 62 V132"/>
+      <text class="tm" x="455" y="144">理想 4.4 s</text>
+      <text class="tr" x="640" y="144">makespan 6.8 s（+55%）</text>
+
+      <rect class="box-g" x="20" y="166" width="900" height="112" rx="9"/>
+      <text class="tb" x="36" y="186">✅ LPT：按像素数降序，最大的第一个派出去</text>
+      <text class="tm" x="36" y="205">核 1</text>
+      <rect class="box-r" x="110" y="196" width="210" height="11" rx="2"/>
+      <text class="ts" x="126" y="205">100 MP · 2.5 s</text>
+      <rect class="box-a" x="320" y="196" width="204" height="11" rx="2"/>
+      <text class="tm" x="36" y="221">核 2</text>
+      <rect class="box-a" x="110" y="212" width="412" height="11" rx="2"/>
+      <text class="tm" x="36" y="237">核 3</text>
+      <rect class="box-a" x="110" y="228" width="414" height="11" rx="2"/>
+      <text class="tg" x="36" y="254">小图成了「填缝料」：谁先空谁抢下一张，尾部不会只剩一个核在跑</text>
+      <path class="ln-d" d="M524 190 V262"/>
+      <text class="tg" x="536" y="272">makespan 4.5 s —— 只比理想值多 0.1 s</text>
+    </svg>
+    <figcaption>图 9 · 同一个「耗时重尾」的事实，在线推出「隔离大图」，离线推出「先做大图」。<strong>重尾本身不决定做法，指标才决定。</strong></figcaption>
+  </div>
+
+  <p><strong>反转二 · 有限输入 = 免费的背压，全局视野 = 免费的配额。</strong>§9 那三个背压点、§3.2 那个 40 行的 <code>ByteBudget</code>，前提都是「上游能持续产生」。而这里上游是一个<strong>有限的 vector，它自己就是界</strong>——生产者跑完就没了，队列不可能无限增长。整套背压机制连同条件变量、超时退回、<code>notify_all</code> 的丢失唤醒陷阱，全部消失。</p>
+
+  <p>更进一步：任务集合<strong>预先完全已知</strong>，可以在启动前扫一遍文件头，于是峰值内存从「运行时需要同步机制去守的动态量」变成<strong>一个启动时能算死的常数</strong>。而在 1200 张/s 的流式场景下，你根本没有「预扫描」这个选项——任务是一张张到达的，只能做局部决策。<strong>规模变小买到的不是「简单」，是「全局视野」这个新能力。</strong></p>
+
+  <p><strong>反转三 · 固定成本从可忽略变成主导项。</strong>任务总时长只有 4.4 秒时，这些原本被摊销掉的数字全部浮上来：</p>
+
+  <table>
+    <thead><tr><th>固定成本</th><th>绝对值</th><th>占 4.4 s 的比例</th></tr></thead>
+    <tbody>
+      <tr><td>1000 次 <code>fork</code> + <code>exec</code> + 动态链接（CLI + <code>parallel</code> 的写法）</td><td>~30 s</td><td class="bad-cell">680%</td></tr>
+      <tr><td>CUDA context + nvJPEG 初始化</td><td>0.5–2 s</td><td class="bad-cell">11–45%</td></tr>
+      <tr><td>读入 4 GB（本地 NVMe 3 GB/s）</td><td>1.3 s</td><td class="mid-cell">30%</td></tr>
+      <tr><td>libvips / OpenCV 动态库加载与初始化</td><td>~100 ms</td><td>2%</td></tr>
+      <tr><td>64 个线程的创建与绑核</td><td>~1.5 ms</td><td class="good-cell">0.03%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box danger">
+    第一行是实操中最常踩的：处理 1000 张图的第一反应往往是 <code>parallel vips thumbnail ::: *.jpg</code>，结果<strong>进程启动开销是计算量的 14 倍</strong>。而在常驻服务里这笔成本早在启动时就摊销掉了，根本不会被注意到——<strong>「在大规模下可忽略」和「在小规模下可忽略」是两个不同的判断，不能互相套用。</strong>
+  </div>
+
+  <h3 id="s11-3">11.3 线程池：数量怎么定，为什么不需要队列</h3>
+
+  <p>先定一条贯穿本节和下一节的原则。1000 张图、64 个核，比例是 15.6 : 1：</p>
+
+  <div class="box arch">
+    <strong>任务数远大于核数时，图像级并行已经能喂饱所有核，任何图像内部的并行化都是纯开销。</strong><br>
+    所以这三件事一律不做：每个输出档位起一个线程、多线程 JPEG 编码、GPU 流水线并行。它们只在「任务数 &lt; 核数」时才有意义（比如处理单张 8K 大图）。这里只剩两条路：<strong>减少总工作量</strong>和<strong>提高单核效率</strong>。
+  </div>
+
+  <p><strong>一、线程数 = 物理核数 = 64，但取数的方式和理由都和 §5.2 不同。</strong><code>std::thread::hardware_concurrency()</code> 返回的是<strong>逻辑核</strong>，开了超线程就是物理核的两倍。拿物理核数要读 <code>/sys/devices/system/cpu/cpu*/topology/thread_siblings_list</code> 去重计数（或 <code>lscpu -p=Core | sort -u | wc -l</code>）。</p>
+
+  <div class="box tip">
+    但<strong>超线程该不该开，这里的结论和 §5.2 相反</strong>。§5.2 说关掉，理由是超线程让单张耗时翻倍、吞吐只涨 10–20%，在有 P99 目标的在线路径上是亏的。而 makespan <strong>只看吞吐、完全不看单张耗时</strong>，所以这 10–20% 是净赚的——这里应该<strong>实测把它打开</strong>。代价是 128 个线程的缓冲内存翻倍（见 §11.4，1.34 GB，仍然轻松）。<br>
+    同一条结论在两个场景下方向相反，原因不是哪一次搞错了，而是<strong>指标换了</strong>。
+  </div>
+
+  <p><strong>二、要不要为 I/O 超订线程？算「阻塞占比」。</strong>线程在一张图上的时间分成「真在算」和「阻塞在 I/O」两段，后者的占比 <em>b</em> 决定了超订系数 1/(1−<em>b</em>)：</p>
+
+  <table>
+    <thead><tr><th>源在哪</th><th>单张 I/O 阻塞</th><th>阻塞占比 b</th><th>该怎么做</th></tr></thead>
+    <tbody>
+      <tr class="good-cell"><td>本地磁盘 / page cache</td><td>读 ~1.5 ms + 写进 page cache ~1 ms</td><td><strong>约 2%</strong></td><td class="good-cell">直接忽略。超订到 66 个线程换不到任何东西</td></tr>
+      <tr><td>网络存储（100 MB/s）</td><td>读 4 MB ≈ 40 ms</td><td class="bad-cell"><strong>约 23%</strong></td><td class="mid-cell">不要超订到 83 个线程——<strong>该分层</strong>：I/O 拆成独立的一层，回到 §2.1 的结构</td></tr>
+    </tbody>
+  </table>
+
+  <p>判据写成一句话：<strong><em>b</em> &lt; 10% 就当它不存在，<em>b</em> &gt; 10% 就把 I/O 拆成独立的层</strong>。中间地带才考虑超订。理由是超订的代价不只是上下文切换——每多一个 worker 线程就多一整套缓冲（§11.4 算的 10.5 MB），83 个线程要多付 200 MB，却只换来 23% 里的一部分。</p>
+
+  <p><strong>三、库的内部线程池必须关掉，不然前面全白做。</strong>这是实测中最隐蔽的性能 bug：<code>libvips</code>、OpenCV、OpenMP、IPP/MKL <strong>各自都有内部线程池，默认按核数展开</strong>。在 64 个 worker 里各调一次 vips，vips 又各起 64 个线程，就是 <strong>4096 个线程抢 64 个核</strong>，结果常常比单线程还慢。</p>
+
+  <div class="box danger">
+    必须逐个显式关掉：<code>vips_concurrency_set(1)</code>、<code>cv::setNumThreads(1)</code>、<code>omp_set_num_threads(1)</code>（或环境变量 <code>OMP_NUM_THREADS=1</code>）。<br>
+    <strong>怎么发现自己踩了：</strong>CPU 利用率远超「核数 × 100%」而吞吐不涨，或者 <code>ps -o nlwp</code> 看到的线程数是你创建数的几十倍。这个 bug 的欺骗性在于<strong>它看起来像「并行已经生效」</strong>——机器在冒烟，只是在做无用功。
+  </div>
+
+  <p><strong>四、不需要任务队列。</strong>§2.3 的有界队列承担三件事：解耦上下游速率、提供背压、允许跨进程重投。这三件在有限批里一件都不需要。剩下的唯一职责是「把 N 个任务分给 M 个线程」，一个原子游标就够了——而且它天然是<strong>动态负载均衡</strong>：线程跑完一个立刻抢下一个，不会出现静态分块那种「某个线程恰好分到 5 张巨图，其它线程早就空了」。<strong>LPT 排序 + 原子游标，两条加起来就是 makespan 最小化的完整实现。</strong></p>
+
+<pre><code><span class="cm">// ── 规划阶段。1000 张预扫描一遍只要几十毫秒，买到的是「全局视野」——</span>
+<span class="cm">//    这个能力在 1200 张/s 的流式场景下根本不存在（§11.2 反转二）。</span>
+<span class="kw">struct</span> <span class="type">Job</span>  { <span class="type">fs</span>::<span class="type">path</span> src; <span class="type">uint64_t</span> pixels; };
+<span class="kw">struct</span> <span class="type">Plan</span> { <span class="type">std</span>::<span class="type">vector</span>&lt;<span class="type">Job</span>&gt; jobs; <span class="type">unsigned</span> threads; };
+
+<span class="type">Plan</span> <span class="fn">make_plan</span>(<span class="kw">const</span> <span class="type">fs</span>::<span class="type">path</span>&amp; root, <span class="type">size_t</span> mem_budget) {
+  <span class="type">Plan</span> p;
+  <span class="kw">for</span> (<span class="kw">const</span> <span class="kw">auto</span>&amp; e : <span class="type">fs</span>::<span class="fn">recursive_directory_iterator</span>(root)) {
+    <span class="type">ImageInfo</span> info;
+    <span class="kw">if</span> (!e.<span class="fn">is_regular_file</span>() || !<span class="fn">peek_header</span>(e.<span class="fn">path</span>(), &amp;info)) <span class="kw">continue</span>;
+    <span class="kw">if</span> (info.<span class="fn">pixels</span>() &gt; kMaxPixels) <span class="kw">continue</span>;   <span class="cm">// 解压炸弹 / 超规格（§3.1）—— 这一条不随规模退化</span>
+    p.jobs.<span class="fn">push_back</span>({e.<span class="fn">path</span>(), info.<span class="fn">pixels</span>()});
+  }
+  <span class="cm">// LPT：处理时间 ∝ 像素数，所以按像素数降序，最长的先派。</span>
+  <span class="type">std</span>::<span class="type">ranges</span>::<span class="fn">sort</span>(p.jobs, <span class="type">std</span>::<span class="fn">greater</span>{}, &amp;<span class="type">Job</span>::pixels);
+
+  <span class="cm">// 排序之后「前 N 个」就是最大的 N 张，所以 N 线程的峰值内存这个上界是紧的。</span>
+  <span class="cm">// 于是 §3.2 那个带互斥量和条件变量的运行时字节配额，在这里塌缩成四行算术。</span>
+  p.threads = <span class="type">std</span>::<span class="fn">min</span>&lt;<span class="type">unsigned</span>&gt;(<span class="fn">physical_cores</span>(), p.jobs.<span class="fn">size</span>());
+  <span class="type">size_t</span> peak = <span class="num">0</span>;
+  <span class="kw">for</span> (<span class="type">unsigned</span> i = <span class="num">0</span>; i &lt; p.threads; ++i) peak += <span class="fn">buffers_bytes</span>(p.jobs[i].pixels);
+  <span class="kw">while</span> (p.threads &gt; <span class="num">1</span> &amp;&amp; peak &gt; mem_budget)
+    peak -= <span class="fn">buffers_bytes</span>(p.jobs[--p.threads].pixels);   <span class="cm">// 放不下就降并发，而不是运行时等配额</span>
+  <span class="kw">return</span> p;
+}
+</code></pre>
+
+<pre><code><span class="cm">// ── 执行阶段。没有任务队列、没有条件变量、没有背压：</span>
+<span class="cm">//    输入是一个有限的 vector，它自己就是界。</span>
+<span class="type">std</span>::<span class="type">vector</span>&lt;<span class="type">Outcome</span>&gt; <span class="fn">run</span>(<span class="kw">const</span> <span class="type">Plan</span>&amp; p) {
+  <span class="type">std</span>::<span class="type">vector</span>&lt;<span class="type">Outcome</span>&gt; out(p.jobs.<span class="fn">size</span>());     <span class="cm">// 预先定长，各线程只写自己那个下标</span>
+  <span class="type">std</span>::<span class="type">atomic</span>&lt;<span class="type">size_t</span>&gt; next{<span class="num">0</span>};
+  {
+    <span class="type">std</span>::<span class="type">vector</span>&lt;<span class="type">std</span>::<span class="type">jthread</span>&gt; pool;
+    pool.<span class="fn">reserve</span>(p.threads);
+    <span class="kw">for</span> (<span class="type">unsigned</span> i = <span class="num">0</span>; i &lt; p.threads; ++i)
+      pool.<span class="fn">emplace_back</span>([&amp;, i] {
+        <span class="fn">pin_to_core</span>(i);               <span class="cm">// 稳住 L2，并让缓冲的 first-touch 落在本地 NUMA 节点</span>
+        <span class="type">Buffers</span>&amp; b = <span class="fn">tls_buffers</span>();     <span class="cm">// thread_local，全程独占 —— 零锁，见 §11.4</span>
+        <span class="kw">for</span> (<span class="type">size_t</span> k = next.<span class="fn">fetch_add</span>(<span class="num">1</span>, <span class="type">std</span>::<span class="type">memory_order_relaxed</span>);
+             k &lt; p.jobs.<span class="fn">size</span>();
+             k = next.<span class="fn">fetch_add</span>(<span class="num">1</span>, <span class="type">std</span>::<span class="type">memory_order_relaxed</span>)) {
+          <span class="cm">// 一张坏图不能掀翻整个 job：从 jthread 里逃出的异常会直接 terminate。</span>
+          <span class="kw">try</span> { out[k] = <span class="fn">process</span>(p.jobs[k], b); }
+          <span class="kw">catch</span> (<span class="kw">const</span> <span class="type">std</span>::<span class="type">exception</span>&amp; e) { out[k] = {<span class="kw">false</span>, e.<span class="fn">what</span>()}; }
+        }
+      });
+  }   <span class="cm">// jthread 析构自动 join —— 这对花括号就是全部的生命周期管理</span>
+  <span class="kw">return</span> out;
+}
+</code></pre>
+
+  <div class="grid-2">
+    <div class="panel info">
+      <h4><code>memory_order_relaxed</code> 够不够</h4>
+      <p>够。我们只需要「每个下标被恰好取走一次」，这由 <code>fetch_add</code> 的原子性保证；不需要跨线程的数据同步，因为 <code>jobs</code> 的内容在建线程<strong>之前</strong>就已写好，<code>jthread</code> 构造本身提供了 happens-before。</p>
+    </div>
+    <div class="panel info">
+      <h4><code>out[k]</code> 为什么不用加锁</h4>
+      <p>不同线程写 <code>vector</code> 的<strong>不同元素</strong>是良定义的，标准明确保证（唯一例外是位打包的 <code>vector&lt;bool&gt;</code>）。预先 <code>resize</code> 之后容器不再变化，也没有迭代器失效问题。</p>
+    </div>
+  </div>
+
+  <p>⚠️ <code>out[k]</code> 这个写法有一个前提：相邻的 <code>Outcome</code> 可能落在同一条缓存行上，不同线程写它们会<strong>伪共享</strong>。这里每个任务耗时 130 ms、只在结尾写一次，频率低到完全不需要管；如果任务是微秒级的，就得给 <code>Outcome</code> 加 <code>alignas(std::hardware_destructive_interference_size)</code>。</p>
+
+  <p>顺带说明<strong>为什么不用 <code>std::for_each(std::execution::par, …)</code></strong>：三个都是硬伤——GCC 的实现要拖 TBB 依赖；<strong>它不让你指定并发度</strong>（而上面整整一节都在讨论这个数该取多少）；并行算法里逃出的异常直接 <code>std::terminate</code>，而且你无法知道哪些任务已经完成。</p>
+
+  <h3 id="s11-4">11.4 对象池：判据是「跨不跨线程」</h3>
+
+  <p>「要不要做对象池、做多大」这个问题，在这个规模下有一个非常干脆的判据：</p>
+
+  <div class="box arch">
+    <strong>缓冲跨不跨线程？不跨 → 池消失，退化成 <code>thread_local</code>；跨 → 才需要真正的池，而池的容量由 Little's Law 定。</strong><br>
+    §3.4 那套分档池 + 借还 + 加锁，解决的是「多个线程共享一批大小不一的缓冲」。如果每张图从头到尾都在一个线程里处理完、缓冲从不离开这个线程，那套机制服务的问题根本不存在。
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 940 300" style="min-width:780px;height:auto" role="img" aria-label="两种对象池形态对比：源在本地时每个worker线程独占一组thread_local缓冲，缓冲与线程同生共死从不跨越线程边界，因此不需要池也不需要锁，每线程约十点五MB、六十四线程合计六百七十MB；源在远端时预取线程把数据读进共享的分档缓冲池再交给worker处理完归还，缓冲跨越了线程边界所以必须做成真正的池，池容量由Little定律算出为四十块合计二百四十MB，池空时预取线程自然阻塞这就是天然的背压">
+      <rect class="box-g" x="20" y="34" width="440" height="252" rx="9"/>
+      <text class="tb" x="36" y="56">① 源在本地 / page cache：池消失</text>
+
+      <rect class="box-a" x="36" y="68" width="92" height="34" rx="5"/><text class="ts" x="62" y="89">worker 1</text>
+      <rect class="box-a" x="140" y="68" width="92" height="34" rx="5"/><text class="ts" x="166" y="89">worker 2</text>
+      <rect class="box-a" x="244" y="68" width="92" height="34" rx="5"/><text class="ts" x="270" y="89">worker 3</text>
+      <text class="tm" x="352" y="89">… ×64</text>
+
+      <path class="ln-g" d="M82 102 V120"/><path class="ar-g" d="M77 120 l5 8 5 -8 z"/>
+      <path class="ln-g" d="M186 102 V120"/><path class="ar-g" d="M181 120 l5 8 5 -8 z"/>
+      <path class="ln-g" d="M290 102 V120"/><path class="ar-g" d="M285 120 l5 8 5 -8 z"/>
+
+      <rect class="box" x="36" y="126" width="92" height="52" rx="5"/><text class="ts" x="44" y="147">thread_local</text><text class="ts" x="50" y="164">10.5 MB</text>
+      <rect class="box" x="140" y="126" width="92" height="52" rx="5"/><text class="ts" x="148" y="147">thread_local</text><text class="ts" x="154" y="164">10.5 MB</text>
+      <rect class="box" x="244" y="126" width="92" height="52" rx="5"/><text class="ts" x="252" y="147">thread_local</text><text class="ts" x="258" y="164">10.5 MB</text>
+
+      <text class="tg" x="36" y="204">✅ 零锁、零借还、高水位之后零 realloc</text>
+      <text class="t"  x="36" y="226">合计 64 × 10.5 MB ≈ 670 MB</text>
+      <text class="tm" x="36" y="246">（朴素实现是 64 × 72 MB = 4.6 GB，差 7 倍）</text>
+      <text class="tr" x="36" y="270">❌ 这里硬上全局池：多一把争用的锁，换不到任何东西</text>
+
+      <rect class="box-y" x="480" y="34" width="440" height="252" rx="9"/>
+      <text class="tb" x="496" y="56">② 源在远端：缓冲跨线程，必须做池</text>
+
+      <rect class="box-p" x="496" y="68" width="150" height="34" rx="5"/><text class="ts" x="510" y="89">预取线程 ×16</text>
+      <path class="ln-a" d="M646 85 H684"/><path class="ar-a" d="M684 80 l8 5 -8 5 z"/>
+      <text class="tm" x="650" y="78">借出</text>
+      <rect class="box-a" x="692" y="68" width="212" height="34" rx="5"/><text class="ts" x="706" y="89">共享分档池 · 40 块（4/8/16 MB）</text>
+
+      <path class="ln-a" d="M798 102 V126"/><path class="ar-a" d="M793 126 l5 8 5 -8 z"/>
+      <rect class="box-a" x="692" y="132" width="212" height="34" rx="5"/><text class="ts" x="706" y="153">worker ×64　处理完归还</text>
+      <path class="ln-a" d="M692 149 C 660 149, 660 110, 692 92"/><path class="ar-a" d="M687 92 l5 -8 5 8 z"/>
+
+      <text class="ty" x="496" y="196">容量 = 读取延迟 40 ms ÷ 消费间隔 2.06 ms ≈ 20，取 2 倍余量 = 40</text>
+      <text class="t"  x="496" y="218">合计 40 × 平均 6 MB ≈ 240 MB</text>
+      <text class="tg" x="496" y="244">✅ 池空 ⇒ 预取线程自然阻塞 ⇒ 背压是副产品，不用另写</text>
+      <text class="tm" x="496" y="268">借还频率 ≈ 950 次/s，一把互斥量绰绰有余 —— 上无锁栈是过度设计</text>
+    </svg>
+    <figcaption>图 10 · 同一个「对象池」，在两种数据来源下一个退化成 <code>thread_local</code>、一个必须真做。<strong>决定它的不是规模，是缓冲的生命周期跨不跨线程。</strong></figcaption>
+  </div>
+
+  <p><strong>形态一（源在本地）：每线程独占，池数量 = 0。</strong>每个线程需要几块、各多大，是按流水线阶段数出来的，不是拍的。前提是用了 ADR-002 的 shrink-on-load（§11.5 会展开），最大档只有 1600×1200：</p>
+
+  <table>
+    <thead><tr><th>缓冲</th><th>大小</th><th>这个数从哪来</th></tr></thead>
+    <tbody>
+      <tr><td>压缩输入的流式窗口</td><td>256 KB</td><td>解码器直接从 fd 流式读，<strong>整个文件不必驻留</strong>——这一块常被人误留成 4–12 MB</td></tr>
+      <tr><td>最大档位图</td><td>5.8 MB</td><td>1600 × 1200 × 3。shrink-on-load 直接产出这一档，<strong>不经过 36 MB 的全尺寸</strong></td></tr>
+      <tr><td>链式缩放的第二块</td><td>1.4 MB</td><td>800 × 600 × 3。ping/pong 两块交替，同时在手的最大一对就是「1600 + 800」</td></tr>
+      <tr><td>编码输出</td><td>1 MB</td><td>1600×1200 q85 实测 300–500 KB，留一倍余量</td></tr>
+      <tr><td>库内部 tile 缓冲</td><td>~2 MB</td><td>libvips 默认 128 KB tile × 若干，关掉内部线程池之后这一项才是可预测的</td></tr>
+      <tr class="good-cell"><td><strong>每线程合计</strong></td><td class="good-cell"><strong>≈ 10.5 MB</strong></td><td class="good-cell">× 64 线程 = <strong>670 MB</strong>（超线程开到 128 线程则 1.34 GB）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box num">
+    <strong>LPT 的第三个好处（前两个是 makespan 和内存上界可算）：高水位一步到位。</strong><br>
+    降序排列意味着<strong>第一批处理的就是全库最大的 64 张</strong>，<code>thread_local</code> 缓冲在开场几百毫秒内就长到最终大小，此后 1000 张图里<strong>一次 realloc 都没有</strong>。如果是随机顺序，缓冲会在整个任务期间断断续续地增长，每次增长都是一次 <code>mmap</code> + 全量缺页（§3.4 算过：9 MB 要付 2000 多次缺页）。
+  </div>
+
+  <p>配套的两个细节：<strong>① 别用 <code>std::vector&lt;uint8_t&gt;</code> 当位图缓冲。</strong><code>resize</code> 会值初始化，也就是 <code>memset</code> 一遍马上要被完整覆写的内存（§5.3 算过，36 MB 约 3.6 ms）。要么用只 <code>reserve</code> 不 <code>resize</code> 的裸缓冲类型，要么给它一个不做值初始化的分配器。<strong>② 启动时把缓冲 touch 一遍</strong>（或 <code>MAP_POPULATE</code>），把缺页成本付在启动而不是第一张图上——不过在 LPT 顺序下这一条收益不大，因为第一批本来就会把缓冲撑到最大。</p>
+
+  <p><strong>形态二（源在远端）：池容量由 Little's Law 算。</strong>这是 §2.2 那个公式在小规模下的形态，只是 λ 换成了「系统的消费速率」：</p>
+
+  <div class="box num">
+    优化后单张 CPU 132 ms、64 线程并行 ⇒ 系统每 <code>132 / 64 = 2.06 ms</code> 消费一张。<br>
+    远端读一张 4 MB @ 100 MB/s ⇒ 读取延迟 W = 40 ms。<br>
+    要让 worker 不饿死，管道里必须常驻 <code>L = 40 / 2.06 ≈ 19.4</code> 块 —— <strong>取 2 倍余量 = 40 块</strong>。<br>
+    按 2 的幂分 4 / 8 / 16 MB 三档，合计约 <strong>240 MB</strong>。<br><br>
+    <strong>预取线程数是另一个数</strong>：由「目标带宽 ÷ 单连接实测吞吐」决定，通常 8–32。它同时是对远端的并发上限，也就是 §8.1 那个限速点。
+  </div>
+
+<pre><code><span class="cm">// 只有「缓冲要跨线程」时才需要真正的池：预取线程借出，worker 归还。</span>
+<span class="kw">class</span> <span class="type">BufferPool</span> {
+  <span class="type">std</span>::<span class="type">mutex</span>              m_;
+  <span class="type">std</span>::<span class="type">condition_variable</span> cv_;
+  <span class="type">std</span>::<span class="type">vector</span>&lt;<span class="type">Buffer</span>&gt;    free_[kClasses];   <span class="cm">// 按 2 的幂分档：4 / 8 / 16 MB</span>
+
+ <span class="kw">public</span>:
+  <span class="cm">// 池空 = worker 跟不上 = 预取线程自然阻塞在这里。</span>
+  <span class="cm">// 有限输入 + 固定池 ⇒ 背压是这个结构的副产品，不需要 §9.2 那三道闸。</span>
+  <span class="type">Buffer</span> <span class="fn">acquire</span>(<span class="type">size_t</span> n) {
+    <span class="type">unsigned</span> c = <span class="fn">size_class</span>(n);
+    <span class="type">std</span>::<span class="type">unique_lock</span> lk(m_);
+    cv_.<span class="fn">wait</span>(lk, [&amp;] { <span class="kw">return</span> !free_[c].<span class="fn">empty</span>(); });
+    <span class="type">Buffer</span> b = <span class="type">std</span>::<span class="fn">move</span>(free_[c].<span class="fn">back</span>());
+    free_[c].<span class="fn">pop_back</span>();
+    <span class="kw">return</span> b;
+  }
+  <span class="type">void</span> <span class="fn">release</span>(<span class="type">Buffer</span> b) {
+    <span class="type">unsigned</span> c = <span class="fn">size_class</span>(b.<span class="fn">capacity</span>());
+    { <span class="type">std</span>::<span class="type">lock_guard</span> lk(m_); free_[c].<span class="fn">push_back</span>(<span class="type">std</span>::<span class="fn">move</span>(b)); }
+    cv_.<span class="fn">notify_one</span>();   <span class="cm">// 和 §3.2 相反：同一档里每块都一样大，谁被唤醒都能满足，</span>
+  }                     <span class="cm">// 所以 notify_one 是对的，不会丢唤醒，也没有惊群</span>
+};
+</code></pre>
+
+  <div class="box arch">
+    <code>notify_one</code> 那一行是本章和 §3.2 最直接的对照。<code>ByteBudget</code> 必须 <code>notify_all</code>，因为<strong>等待者要的字节数各不相同</strong>，释放 36 MB 不代表队首那个等 900 MB 的能走。而分档池里<strong>同一档的每一块都一样大</strong>，被唤醒的那个必然满足——同样是「等一个资源」，<strong>资源是否同质，决定了唤醒策略</strong>。<br>
+    这也解释了为什么这里不该上无锁栈：借还频率约 950 次/s（1000 张 × 2 次 ÷ 2.1 s），一把互斥量能扛百万次/s。<strong>无锁不是「更好」，是「在争用真的成为瓶颈时」才付得起的复杂度。</strong>
+  </div>
+
+  <p>最后一个池：<strong>编解码上下文，64 个，<code>thread_local</code>，一线程一份。</strong><code>jpeg_create_decompress</code> / <code>jpeg_create_compress</code> 会初始化一整套内部内存管理器，1000 张图 × 5 档编码就是 5000 次创建销毁。但要诚实：每次约 30 µs，合计 150 ms CPU，摊到 64 核只有 <strong>2.3 ms 墙钟、占 0.1%</strong>。<strong>做它不是因为收益大，而是因为成本也接近零</strong>——一个 <code>thread_local</code> 变量而已。这类优化该做，但不该在汇报时把它说成「关键优化」。</p>
+
+  <h3 id="s11-5">11.5 时间预算：省下的 2.3 秒里没有一行并行代码</h3>
+
+  <p>线程和内存都定好了，剩下的就是单张 280 ms 本身。§11.3 那条原则说过，这个规模下只能「少算」不能「多并行」。逐项看能砍掉多少（源 4000×3000，五档最大 1600×1200）：</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 940 310" style="min-width:760px;height:auto" role="img" aria-label="时间预算对比图：单张耗时从朴素的二百八十毫秒降到一百三十二毫秒，其中解码从一百二十降到四十、缩放从六十降到八、水印与哈希从二十降到四，而编码八十毫秒完全省不掉；结果是编码在总耗时中的占比从百分之二十九升到百分之六十一，瓶颈换了位置。下半部分显示六十四核墙钟时间从四点三八秒降到二点零六秒，而读四GB写七点五GB的IO设备时间是三点八秒，已经超过了计算时间">
+      <rect class="box" x="20" y="34" width="900" height="126" rx="9"/>
+      <text class="tb" x="36" y="56">单张耗时构成（2 px = 1 ms）</text>
+
+      <text class="tm" x="36" y="84">朴素 280 ms</text>
+      <rect class="box-r" x="170" y="68" width="240" height="26" rx="3"/><text class="ts" x="240" y="85">解码 120</text>
+      <rect class="box-y" x="410" y="68" width="120" height="26" rx="3"/><text class="ts" x="440" y="85">缩放 60</text>
+      <rect class="box-p" x="530" y="68" width="40" height="26" rx="3"/>
+      <rect class="box-a" x="570" y="68" width="160" height="26" rx="3"/><text class="ts" x="618" y="85">编码 80</text>
+      <text class="tm" x="742" y="85">水印+哈希 20（细条）</text>
+
+      <text class="tm" x="36" y="128">优化 132 ms</text>
+      <rect class="box-g" x="170" y="112" width="80" height="26" rx="3"/><text class="ts" x="190" y="129">40</text>
+      <rect class="box-g" x="250" y="112" width="24" height="26" rx="3"/>
+      <rect class="box-a" x="274" y="112" width="160" height="26" rx="3"/><text class="ts" x="322" y="129">编码 80（省不掉）</text>
+      <text class="ty" x="448" y="129">编码占比从 29% 变成 61% —— 瓶颈换了位置</text>
+      <text class="tm" x="36" y="152">优化的真正产出不是「快了一倍」，是这张表直接告诉你下一轮该动谁</text>
+
+      <rect class="box" x="20" y="176" width="900" height="124" rx="9"/>
+      <text class="tb" x="36" y="198">64 核墙钟 vs I/O 设备时间（110 px = 1 s）</text>
+
+      <text class="tm" x="36" y="222">朴素 · 计算</text>
+      <rect class="box-r" x="170" y="206" width="482" height="22" rx="3"/><text class="ts" x="380" y="222">4.38 s</text>
+      <text class="tm" x="36" y="252">优化 · 计算</text>
+      <rect class="box-g" x="170" y="236" width="227" height="22" rx="3"/><text class="ts" x="262" y="252">2.06 s</text>
+      <text class="tm" x="36" y="282">I/O 读+写</text>
+      <rect class="box-y" x="170" y="266" width="418" height="22" rx="3"/><text class="ts" x="300" y="282">3.8 s　（读 4 GB + 写 7.5 GB @ NVMe 3 GB/s）</text>
+      <text class="tr" x="606" y="282">计算已经比 I/O 短了</text>
+    </svg>
+    <figcaption>图 11 · 上半张是「优化之后瓶颈换了阶段」，下半张是「优化之后瓶颈换了资源」。后者更要紧：<strong>过了这条线，CPU 再快一倍，墙钟纹丝不动。</strong></figcaption>
+  </div>
+
+  <p><strong>① DCT 域缩放解码：省 80 ms，最大的一笔。</strong>五档里最大的是 1600×1200，而源是 4000×3000——传统流程把 12 MP 全解出来，其中 84% 的像素解码出来就是为了被扔掉。<code>libjpeg-turbo</code> 支持在 <strong>IDCT 阶段</strong>直接按 N/8 输出，代价接近零：</p>
+
+<pre><code><span class="cm">// 挑「刚好够用」的最小缩放比：4000 × 4/8 = 2000 ≥ 1600 ✔；3/8 = 1500 &lt; 1600 ✘</span>
+<span class="type">unsigned</span> <span class="fn">pick_dct_num</span>(<span class="type">unsigned</span> src_edge, <span class="type">unsigned</span> need_edge) {
+  <span class="kw">for</span> (<span class="type">unsigned</span> n = <span class="num">1</span>; n &lt;= <span class="num">8</span>; ++n)
+    <span class="kw">if</span> (src_edge * n / <span class="num">8</span> &gt;= need_edge) <span class="kw">return</span> n;
+  <span class="kw">return</span> <span class="num">8</span>;
+}
+cinfo.scale_num   = <span class="fn">pick_dct_num</span>(<span class="num">4000</span>, <span class="num">1600</span>);   <span class="cm">// → 4</span>
+cinfo.scale_denom = <span class="num">8</span>;
+</code></pre>
+
+  <p>这一步的收益远不止那 80 ms——它把<strong>后面所有阶段的输入</strong>都缩小了 4 倍，下面两项的收益都是它带来的。位图从 36 MB 降到 9 MB，顺带把 §3 整章的内存问题一起解决了（也正是 §11.4 那张 10.5 MB 表格成立的前提）。</p>
+
+  <p><strong>② 金字塔链式缩放：省 50 ms。</strong>五档如果各自从源缩，是 5 × 3 MP = 15 MP 的重采样工作量。改成逐级缩（每档从上一档缩，每步约 2:1）：<code>3 MP → 1.92 → 0.48 → 0.12 → 0.03</code>，源像素读取总量 <strong>5.55 MP，2.7 倍</strong>。每步 2:1 正好是 mipmap 的标准做法，用 Lanczos 或 box 滤波没有可察觉的质量损失。</p>
+
+  <div class="box tip">
+    ⚠️ 一个必须讲清的取舍：<strong>水印如果只在 1600 档打一次、往下继承，最小的 100 px 档上会糊成一团。</strong>要每档都清晰就得逐档打，那 3 ms 变回 10 ms。<strong>这是质量决策不是性能决策，要问业务而不是自己定。</strong>
+  </div>
+
+  <p><strong>③ 别手写，但要知道它在干什么。</strong>上面两项 <code>libvips</code> 的 <code>vips_thumbnail</code> 已内置（shrink-on-load + shrink/reduce 两阶段 + 流式）。手写的价值只在于<strong>能验证它确实生效了</strong>。但有个陷阱：</p>
+
+  <div class="grid-2">
+    <div class="panel bad">
+      <h4>❌ 为五档各调一次 thumbnail</h4>
+      <p><code>for (auto&amp; v : kVariants) vips_thumbnail(path, &amp;out, v.edge, …);</code><br>这是<strong>解码五遍</strong>，比朴素实现还慢。</p>
+    </div>
+    <div class="panel good">
+      <h4>✅ 解码一次，物化，再链式缩</h4>
+      <p>一次 <code>vips_thumbnail(…, VIPS_ACCESS_SEQUENTIAL)</code> 到最大档，<code>vips_image_write_to_memory</code> 物化，之后在内存里逐级缩。</p>
+    </div>
+  </div>
+
+  <p>必须物化那一步的原因是：<code>VIPS_ACCESS_SEQUENTIAL</code> 的图<strong>只能被扫描一次</strong>，拿它做第二次 resize 会报错或静默退化成重新解码——后者更糟，因为它不报错，只是慢。</p>
+
+  <p><strong>④ 关掉库的内部线程池</strong>（§11.3 第三点）。这一项不做，前三项全部白费。</p>
+
+  <table>
+    <thead><tr><th>阶段</th><th>朴素</th><th>优化后</th><th>靠什么</th></tr></thead>
+    <tbody>
+      <tr><td>解码</td><td>120 ms</td><td class="good-cell"><strong>40 ms</strong></td><td>DCT 域 1/2 缩放解码，只解需要的像素</td></tr>
+      <tr><td>缩放</td><td>60 ms</td><td class="good-cell"><strong>8 ms</strong></td><td>源小了 4 倍，再叠加金字塔链式的 2.7 倍</td></tr>
+      <tr><td>水印</td><td>10 ms</td><td>3 ms</td><td>在 1600 档打一次往下继承（注意上面那个质量取舍）</td></tr>
+      <tr><td>哈希</td><td>10 ms</td><td>1 ms</td><td>挪到最小那一档上算，几乎免费</td></tr>
+      <tr class="bad-cell"><td>编码</td><td>80 ms</td><td><strong>80 ms</strong></td><td><strong>输出尺寸是固定的，这块一毫秒都省不掉</strong></td></tr>
+      <tr class="good-cell"><td><strong>单张合计</strong></td><td>280 ms</td><td><strong>132 ms</strong></td><td>64 核墙钟：4.38 s → <strong>2.06 s</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s11-6">11.6 撞上 I/O 墙之后，与四件不要做的事</h3>
+
+  <p>看图 11 的下半张：优化到 2.06 秒之后，<strong>I/O 设备时间（3.8 s）已经超过计算时间</strong>。这意味着 CPU 侧再优化一倍，墙钟时间纹丝不动。三件事按顺序做：</p>
+
+  <div class="grid-3">
+    <div class="panel good">
+      <h4>① 让写落进 page cache</h4>
+      <p>7.5 GB 在 256 GB 内存的机器上完全放得下，写入变成内存拷贝，由内核在任务结束后慢慢刷。<strong>直接把 2.5 s 的写时间变成接近零</strong>。代价是「进程退出 ≠ 数据落盘」，跑完补一次 <code>sync</code>。</p>
+    </div>
+    <div class="panel info">
+      <h4>② 读取预热与顺序化</h4>
+      <p><code>posix_fadvise(POSIX_FADV_SEQUENTIAL|WILLNEED)</code>，或在 <code>make_plan()</code> 之后起一个预读线程。因为 LPT 已经排过序，<strong>读取顺序是完全已知的</strong>——又一个全局视野带来的便利。</p>
+    </div>
+    <div class="panel mid">
+      <h4>③ 源在远端时结论反转</h4>
+      <p>40 秒的读远大于 2 秒的算，CPU 优化一分钱不值。该做的是并发拉取（§11.4 形态二）而不是加线程。<strong>先测源在哪，再决定优化什么。</strong></p>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>明确不要做</th><th>为什么</th><th>什么时候才值得</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>上 GPU</strong></td>
+        <td class="bad-cell">CUDA context + nvJPEG 初始化 0.5–2 s，占 2 s 总预算的 25–100%；再加 PCIe 来回 11.5 GB 的传输</td>
+        <td>盈亏平衡点 = <code>初始化 1.5 s × 64 核 ÷ 单张省下的 0.036 s</code> ≈ <strong>2700 张</strong>。或者这个 job 反复跑，init 能摊销</td>
+      </tr>
+      <tr>
+        <td><strong>每张图 fork 一个进程</strong>（CLI + <code>parallel</code>）</td>
+        <td class="bad-cell">1000 次 fork+exec+动态链接 ≈ 30 s，是计算量的 14 倍</td>
+        <td>永远不要。单进程多线程</td>
+      </tr>
+      <tr>
+        <td><strong>图像内并行</strong>（每档一个线程 / 多线程编码）</td>
+        <td class="bad-cell">1000 ≫ 64，核早就满了，只增加同步开销和缓存抖动</td>
+        <td>任务数 &lt; 核数时（例如处理单张 8K 大图）</td>
+      </tr>
+      <tr>
+        <td><strong><code>std::execution::par</code></strong></td>
+        <td class="bad-cell">GCC 要拖 TBB；<strong>无法指定并发度</strong>；里面抛异常直接 <code>terminate</code> 且不知道哪些已完成</td>
+        <td>任务同质、不抛异常、不在乎线程数时</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>最后，「怎么最快」这个问题的答案<strong>取决于机器，而不只取决于代码</strong>：</p>
+
+  <table>
+    <thead><tr><th>机器</th><th>朴素</th><th>优化后</th><th>瓶颈在哪</th></tr></thead>
+    <tbody>
+      <tr><td>8 核笔记本</td><td>35 s</td><td class="good-cell"><strong>16.5 s</strong></td><td class="good-cell">纯 CPU-bound，四项优化全额兑现，I/O 完全不用管</td></tr>
+      <tr><td>64 核服务器（本例）</td><td>4.4 s</td><td class="mid-cell"><strong>2.1 s，实测约 2.5 s</strong></td><td class="mid-cell">撞 I/O 墙，CPU 优化只兑现了一半</td></tr>
+      <tr><td>64 核 + 源在对象存储</td><td>40 s+</td><td class="bad-cell">40 s+</td><td class="bad-cell"><strong>网络</strong>。该做的是并发拉取，CPU 优化一分钱不值</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box arch">
+    把 §10.4 的失效判据和本章合起来看，复审一个架构时真正该问的是三件事，而「多少张」只是其中一个的代理变量：<br>
+    <strong>① 输入是有限还是持续的？</strong>有限 ⇒ 背压、外置队列、断点续跑全部退化，还白送一个全局视野。<br>
+    <strong>② 指标是单任务延迟还是总完成时间？</strong>它能让「隔离大图」和「先做大图」这样正好相反的两个结论各自成立。<br>
+    <strong>③ 对象跨不跨线程 / 跨不跨进程？</strong>这决定了池、锁、唤醒策略这一整层要不要存在。<br><br>
+    唯独<strong>安全约束（ADR-004）不在这三条的管辖范围内</strong>——它由「输入是否可信」决定，不随规模、指标或并发模型变化。缩减架构时最容易连它一起削掉。
+  </div>
+</section>
+
+<!-- =========================================================== -->
+<!-- S12 · INTERVIEW -->
+<!-- =========================================================== -->
+<section class="chapter" id="s12">
+  <div class="ch-head">
+    <div class="num">12</div>
     <div class="t">
       <h2>高频面试题 · 高吞吐流水线</h2>
       <div class="sub">12 道，按难度分三档</div>
@@ -1373,7 +1864,7 @@
 
   <p class="qa-hint">点击每道题展开参考答案（先自测，再对照）。</p>
 
-  <h3 id="s11-1">11.1 基础（必答）</h3>
+  <h3 id="s12-1">12.1 基础（必答）</h3>
 
   <ol class="qa-list">
     <li><details class="qa">
@@ -1421,7 +1912,7 @@
     </details></li>
   </ol>
 
-  <h3 id="s11-2">11.2 中级（区分熟练度）</h3>
+  <h3 id="s12-2">12.2 中级（区分熟练度）</h3>
 
   <ol class="qa-list" start="5">
     <li><details class="qa">
@@ -1475,7 +1966,7 @@
     </details></li>
   </ol>
 
-  <h3 id="s11-3">11.3 高级（体现深度）</h3>
+  <h3 id="s12-3">12.3 高级（体现深度）</h3>
 
   <ol class="qa-list" start="9">
     <li><details class="qa">

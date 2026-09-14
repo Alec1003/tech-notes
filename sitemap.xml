@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
@@ -727,7 +727,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/ai-native/prompt_vs_context_engineering.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -787,7 +787,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/ai-native/reviewforge_project.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -1177,12 +1177,12 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/architect/distributed_systems_advanced.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/architect/distributed_systems_fundamentals.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -1192,12 +1192,12 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/architect/image_pipeline_architecture.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-14</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/architect/large_scale_engineering.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -1227,7 +1227,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/architect/system_architecture_directory.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-14</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
@@ -1592,32 +1592,32 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/cmake_modern.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/compilation_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/concurrency_deep.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/constexpr_programming.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/coroutines_deep_dive.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/cpp_study_path.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
@@ -1632,12 +1632,12 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/exceptions_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/ffi_interop_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -1682,17 +1682,17 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/llvm_ir_deep_dive.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/memory_model.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/modern_cpp_stl_directory.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
@@ -1702,22 +1702,22 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/object_model.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/pitfalls_and_style_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/ranges_views_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/safe_reclamation_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -1742,7 +1742,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/cpp/templates_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -2127,12 +2127,12 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/concurrency_verification.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/cpp_testing_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -2147,7 +2147,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/low_latency_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -2157,7 +2157,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/memory_optimization_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -2172,7 +2172,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/perf_debug_directory.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
@@ -2187,7 +2187,7 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/perf-debug/performance_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -2392,22 +2392,22 @@
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/stl/concurrency_patterns_guide.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/stl/design_patterns_ppt.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/stl/stl_algorithms_ppt.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://kavinchan13.github.io/tech-notes/stl/stl_containers_ppt.html</loc>
-    <lastmod>2026-09-12</lastmod>
+    <lastmod>2026-09-13</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
