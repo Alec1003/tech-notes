@@ -269,7 +269,7 @@ footer{border-top:1px solid var(--border);background:var(--bg-soft);margin-top:v
   <dl class="stats" aria-label="站点统计">
     <div class="stat"><dt>文章总数</dt><dd>440+</dd></div>
     <div class="stat"><dt>分类</dt><dd>16</dd></div>
-    <div class="stat"><dt>学习路径</dt><dd>14</dd></div>
+    <div class="stat"><dt>学习路径</dt><dd>15</dd></div>
     <div class="stat"><dt>最后更新</dt><dd>2026-09</dd></div>
   </dl>
   <div class="hero-search" id="searchTriggerHero" role="button" tabindex="0" aria-label="搜索文章">
@@ -383,6 +383,11 @@ footer{border-top:1px solid var(--border);background:var(--bg-soft);margin-top:v
       <h2>最新更新</h2>
       <p class="sub">最近发布的文章与修订内容。</p>
       <div class="latest">
+          <a class="l-row" href="./robotics-comm/embodied_ai_study_path.html">
+            <span class="l-date">2026-09-23</span>
+            <span class="l-main"><span class="badge badge--new">New</span><span class="l-title">新增跨域学习路径：<b>具身智能解决方案专家</b>（不做单一方向的深研究，而是把客户的话翻译成一台造得出来、卖得出去的机器——机器人怎么看怎么听懂话 → 怎么靠试错学技能、为什么仿真满分真机翻车 → 模型说「我要抓那个」之后怎么变成电机转动 → 怎么把大模型塞进机器人肚子里那点算力 → 安全兜底与客户敢签字的方案，五阶段把神经网络 / 强化学习 / 机器人通信 / AI Infra / 架构五个领域的既有内容拼成一个角色，每阶段带完成标志自检）</span></span>
+            <span class="l-time">1 篇 · ~59 h</span>
+          </a>
           <a class="l-row" href="./cpp/object_model.html">
             <span class="l-date">2026-09-12</span>
             <span class="l-main"><span class="badge badge--updated">Updated</span><span class="l-title">四个骨架页补厚到名副其实：<b>对象模型</b> 10→25 分钟（vptr 在偏移 0 的四项代价 · 虚调用真正贵的是无法内联 · 构造期虚调用与 Java 相反 · type_info 跨 .so 失败最阴险的症状是异常穿过 catch）· <b>线程与原子</b> 10→25（数据竞争≠竞态条件 · cv 那把 mutex 保护的是「检查+睡下」· 线程池里 thread_local 会串味）· <b>LLVM IR</b> 5→25（mem2reg 解释 -O0 与 -O1 的断崖 · TBAA 是严格别名的编码）· <b>内存优化</b> 补 25 张图</span></span>
@@ -1465,6 +1470,13 @@ footer{border-top:1px solid var(--border);background:var(--bg-soft);margin-top:v
           <li><a class="sp-link" href="./robotics-comm/robotics_comm_study_path.html">学习路径</a></li>
           <li><a href="./robotics-comm/tsn_deep_dive.html">TSN 深入</a></li>
           <li><a href="./robotics-comm/detnet_guide.html">DetNet 与跨域确定性</a></li>
+          <li><a href="./robotics-comm/ros2_dds_deep_dive.html">ROS2 与 DDS</a></li>
+          <li><a href="./robotics-comm/edge_cloud_robot_arch.html">端边云架构</a></li>
+        </ol></div>
+        <div class="path"><h3>具身智能解决方案专家</h3><ol>
+          <li><a class="sp-link" href="./robotics-comm/embodied_ai_study_path.html">学习路径</a></li>
+          <li><a href="./ai-native/transformer_llm_architecture.html">Transformer 与 LLM</a></li>
+          <li><a href="./reinforcement/policy_gradient_ppo.html">策略梯度与 PPO</a></li>
           <li><a href="./robotics-comm/ros2_dds_deep_dive.html">ROS2 与 DDS</a></li>
           <li><a href="./robotics-comm/edge_cloud_robot_arch.html">端边云架构</a></li>
         </ol></div>

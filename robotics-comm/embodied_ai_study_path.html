@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- tn-theme-init --><script>try{var d=document.documentElement,t=localStorage.getItem('theme')||localStorage.getItem('tn-theme');if(t==='dark')d.setAttribute('data-theme','dark');}catch(e){}</script>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>具身智能解决方案专家学习路径 · Study Path</title>
+<meta name="description" content="具身智能解决方案专家学习路径：P1 感知与模型基座（机器人怎么看、怎么听懂话，VLA 大脑怎么搭）→ P2 决策与强化学习（机器人怎么靠试错学技能，为什么仿真满分真机翻车）→ P3 机器人系统与实时性（模型说「我要抓那个」之后怎么变成电机转动）→ P4 端侧算力与部署（把大模型塞进机器人肚子里那点算力和电池）→ P5 方案架构与安全交付（安全兜底、失败降级、客户敢签字的方案），把站内 7 个领域的既有内容拼成一个面向交付的角色">
+<!-- tn-social:v1 -->
+<link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/embodied_ai_study_path.html">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kavin Tech Notes">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/embodied_ai_study_path.html">
+<meta property="og:title" content="具身智能解决方案专家学习路径 · Study Path">
+<meta property="og:description" content="具身智能解决方案专家学习路径：P1 感知与模型基座（机器人怎么看、怎么听懂话，VLA 大脑怎么搭）→ P2 决策与强化学习（机器人怎么靠试错学技能，为什么仿真满分真机翻车）→ P3 机器人系统与实时性（模型说「我要抓那个」之后怎么变成电机转动）→ P4 端侧算力与部署（把大模型塞进机器人肚子里那点算力和电池）→ P5 方案架构与安全交付（安全兜底、失败降级、客户敢签字的方案），把站内 7 个领域的既有内容拼成一个面向交付的角色">
+<meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="具身智能解决方案专家学习路径 · Study Path">
+<meta name="twitter:description" content="具身智能解决方案专家学习路径：P1 感知与模型基座（机器人怎么看、怎么听懂话，VLA 大脑怎么搭）→ P2 决策与强化学习（机器人怎么靠试错学技能，为什么仿真满分真机翻车）→ P3 机器人系统与实时性（模型说「我要抓那个」之后怎么变成电机转动）→ P4 端侧算力与部署（把大模型塞进机器人肚子里那点算力和电池）→ P5 方案架构与安全交付（安全兜底、失败降级、客户敢签字的方案），把站内 7 个领域的既有内容拼成一个面向交付的角色">
+<meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
+<!-- /tn-social:v1 -->
+<link rel="stylesheet" href="../assets/guide-theme.css">
+<link rel="stylesheet" href="../assets/study-path-theme.css">
+<link rel="stylesheet" href="../assets/site-tokens.css">
+<link rel="stylesheet" href="../assets/article.css">
+</head>
+<body class="has-topnav">
+<!-- tn-nav:v2 -->
+<nav class="tn-topnav"><div class="tn-topnav-in">
+  <a class="tn-brand" href="../index.html">Kavin <b>Tech Notes</b></a>
+  <div class="tn-navlinks"><a class="tn-home" href="../index.html">← 主页</a><a href="robotics_comm_directory.html">目录</a>
+  <button class="theme-btn" id="themeBtn" type="button" aria-label="切换深色/浅色主题">◐</button></div>
+</div></nav>
+<!-- /tn-nav:v2 -->
+<div class="layout">
+  <aside class="toc"><h2>具身智能 · 学习路径</h2><nav><ol>
+    <li><a href="#p1">P1 · 感知与模型基座</a></li><li><a href="#p2">P2 · 决策与强化学习</a></li><li><a href="#p3">P3 · 机器人系统与实时性</a></li><li><a href="#p4">P4 · 端侧算力与部署</a></li><li><a href="#p5">P5 · 方案架构与安全交付</a></li>
+  </ol></nav></aside>
+  <main>
+    <header class="hero">
+      <div class="badge">Embodied AI · Study Path</div>
+      <h1>具身智能解决方案专家学习路径</h1>
+      <p class="sub">解决方案专家不是某个单一方向钻到底的研究者，而是能「把客户的话翻译成一台造得出来、卖得出去的机器」的人。这条路径把站内七个领域拼成一个角色：<strong>P1 感知与模型基座</strong>——机器人的眼睛和语言中枢由什么组成，VLA（视觉-语言-动作模型，当下最热的机器人「大脑」架构：听得懂话、看得见物、使得出动作）是怎么搭起来的 → <strong>P2 决策与强化学习</strong>——机器人怎么靠试错学会技能，以及为什么仿真里满分、真机上不及格 → <strong>P3 机器人系统与实时性</strong>——模型说「我要抓那个」之后，怎么变成电机转动，多快才算快、慢了怎么办 → <strong>P4 端侧算力与部署</strong>——把大模型塞进机器人肚子里那点算力和电池 → <strong>P5 方案架构与安全交付</strong>——把前面全部变成客户敢签字的方案：安全兜底、失败降级、文档沉淀、数据飞轮。适合有 AI / 软件工程背景要切入具身智能交付的工程师，也适合机器人背景要补齐模型版图的工程师。</p>
+      <div class="meta-row"><span class="pill amber">~59 h</span><span class="pill cyan">20 篇 · 跨 7 个领域</span></div>
+    </header>
+    <section class="chapter" id="ch1">
+      <div class="subphase s-ai" id="p1">
+        <div class="sp-head"><div class="sp-tag">P1</div><div><div class="sp-title">感知与模型基座（~15 h）</div></div></div>
+        <table><thead><tr><th>#</th><th>内容</th><th>时间</th><th>关键收获</th></tr></thead><tbody>
+          <tr><td>1</td><td><a href="../neural-networks/ml_fundamentals.html">机器学习基础</a></td><td>3 h</td><td>怎么判断一个模型是「真学会了」还是「背题」：偏差与方差、过拟合诊断——跟客户拍胸脯之前必备的底气</td></tr>
+          <tr><td>2</td><td><a href="../neural-networks/cnn_deep_dive.html">CNN 卷积神经网络</a></td><td>3 h</td><td>机器「看图」的基本原理：卷积就是拿小放大镜逐块扫描画面、层层归纳特征——视觉感知的地基</td></tr>
+          <tr><td>3</td><td><a href="../ai-native/transformer_llm_architecture.html">Transformer 与现代 LLM 架构</a></td><td>4 h</td><td>注意力机制（读一句话时知道该重点看哪几个词）与 LLM 架构谱系：VLA 里负责「听懂话、会推理」的那半边</td></tr>
+          <tr><td>4</td><td><a href="../ai-native/multimodal.html">多模态与生成模型（CLIP / ViT / VLM）</a></td><td>3 h</td><td>让「图片」和「文字」说同一种语言：CLIP 的对比学习即「把配对的图文拉近、不配对的推开」——VLA 的直接地基</td></tr>
+          <tr><td>5</td><td><a href="../neural-networks/gan_vae_diffusion.html">生成模型：GAN / VAE / Diffusion</a></td><td>2 h</td><td>会「凭空画图」的模型：世界模型与仿真数据工厂的候选技术——机器人缺数据时，能不能造数据</td></tr>
+        </tbody></table>
+        <div class="checkpoint"><div class="cp-head">✅ 阶段完成标志</div><ol>
+          <li>能画出 VLA 的三段式结构（视觉编码 → 语言/策略主干 → 动作解码头），说清每一段分别拿哪些积木搭的</li>
+          <li>能解释 CLIP 为什么用「配对拉近」而不是「逐像素重画」来训练，以及这对机器人数据意味着什么</li>
+          <li>能评审一份模型选型报告：参数量、支持哪些模态、许可条款、微调成本——并指出至少两个被报告掩盖的风险</li>
+        </ol></div>
+      </div>
+      <div class="subphase s-sys" id="p2">
+        <div class="sp-head"><div class="sp-tag">P2</div><div><div class="sp-title">决策与强化学习（~10 h）</div></div></div>
+        <table><thead><tr><th>#</th><th>内容</th><th>时间</th><th>关键收获</th></tr></thead><tbody>
+          <tr><td>6</td><td><a href="../reinforcement/rl_fundamentals.html">强化学习基础</a></td><td>3 h</td><td>机器人「靠试错学技能」的数学底座：MDP 把任务写成「状态-动作-奖励」，贝尔曼方程说「眼前的账要和长远一起算」</td></tr>
+          <tr><td>7</td><td><a href="../reinforcement/q_learning_dqn.html">Q-Learning 与 DQN</a></td><td>2.5 h</td><td>学一张「每种局面下每个动作值多少分」的表格（表太大就用网络代替）：经验回放就是把翻过的跟头存起来反复复盘</td></tr>
+          <tr><td>8</td><td><a href="../reinforcement/policy_gradient_ppo.html">策略梯度与 PPO</a></td><td>3 h</td><td>直接学「该做什么」而不是「哪个更好」，PPO 靠「每步只许小改」保持训练稳定——当下机器人技能微调的主力算法</td></tr>
+          <tr><td>9</td><td><a href="../reinforcement/rl_hidden_killers.html">强化学习两大隐蔽杀手</a></td><td>1.5 h</td><td>为什么仿真里满分、真机上翻车：致命三合一与高估偏差这两个最隐蔽的坑</td></tr>
+        </tbody></table>
+        <div class="checkpoint"><div class="cp-head">✅ 阶段完成标志</div><ol>
+          <li>能说清「照着示范学（模仿学习）够不够、什么时候必须让机器自己试错（RL）」的判断标准，而不是默认堆算法</li>
+          <li>能解释 PPO「每步只许小改」为什么换来训练稳定，以及 sim-to-real 落差（仿真与真实的差别）中策略跑偏怎么处理</li>
+          <li>拿到一份「仿真满分、真机不及格」的报告，能列出至少五个嫌疑点：物理仿真不准、摄像头看到的不一样、控制指令到得慢、训练时见过的场景太单一、考题和真题不一致</li>
+        </ol></div>
+      </div>
+      <div class="subphase s-emb" id="p3">
+        <div class="sp-head"><div class="sp-tag">P3</div><div><div class="sp-title">机器人系统与实时性（~13 h）</div></div></div>
+        <table><thead><tr><th>#</th><th>内容</th><th>时间</th><th>关键收获</th></tr></thead><tbody>
+          <tr><td>10</td><td><a href="ros2_dds_deep_dive.html">ROS2 与 DDS / RTPS 深入</a></td><td>4 h</td><td>机器人各部件之间的「群聊软件」：谁发消息、谁收、丢了能不能补发（QoS）——机器人软件的通信骨架</td></tr>
+          <tr><td>11</td><td><a href="robot_intra_bus.html">机器人端内总线选型</a></td><td>3 h</td><td>机器人体内的「神经和血管」：EtherCAT / CAN / 共享内存各自怎么把指令送到电机，以及一个控制周期 1 ms 怎么花</td></tr>
+          <tr><td>12</td><td><a href="realtime_control_protocol.html">实时控制协议设计与标准化</a></td><td>3 h</td><td>AI 大脑和电机小脑之间的「合同」：数据多新鲜才算数、对方失联多久必须自己刹车、怎么分级降级而不是当场死机</td></tr>
+          <tr><td>13</td><td><a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a></td><td>3 h</td><td>把 Linux 调教成「说 1 ms 就 1 ms」的准实时系统，以及最坏会慢在哪——判断 AI 推理这类负载放不放实时侧的依据</td></tr>
+        </tbody></table>
+        <div class="checkpoint"><div class="cp-head">✅ 阶段完成标志</div><ol>
+          <li>能画出「看见 → 想好 → 动手」全链路的时延预算表：每一段用什么协议、跑多快周期、消息丢了怎么办</li>
+          <li>能回答客户必问的「AI 偶尔 200 ms 才想明白，机械臂怎么办」：数据过期就丢、看门狗计时到就降速、再不行就安全停</li>
+          <li>能从隔离、带宽、故障域、实时性四个角度，论证推理负载放 GPU 主板还是独立计算单元</li>
+        </ol></div>
+      </div>
+      <div class="subphase s-perf" id="p4">
+        <div class="sp-head"><div class="sp-tag">P4</div><div><div class="sp-title">端侧算力与部署（~10 h）</div></div></div>
+        <table><thead><tr><th>#</th><th>内容</th><th>时间</th><th>关键收获</th></tr></thead><tbody>
+          <tr><td>14</td><td><a href="../ai-infra/edge_deployment.html">端侧部署</a></td><td>4 h</td><td>模型上机的工程学：机器人肚子里那块板子算力、内存、电池都有限，怎么让模型跑得动、跑得稳、不发热降频</td></tr>
+          <tr><td>15</td><td><a href="../ai-infra/quantization.html">模型量化</a></td><td>3 h</td><td>给模型「瘦身」的主要手段：把高精度数字换成低精度存（INT4 / FP8 / GPTQ / AWQ 是几条不同的瘦身路线），代价是精度掉多少</td></tr>
+          <tr><td>16</td><td><a href="../ai-infra/cuda_for_cpp.html">GPU / CUDA 全景（C++ 视角）</a></td><td>3 h</td><td>GPU 为什么快、什么时候反而不快：跟算法团队对话算子与性能的通用语言</td></tr>
+        </tbody></table>
+        <div class="checkpoint"><div class="cp-head">✅ 阶段完成标志</div><ol>
+          <li>拿到一款机器人主控的算力 / 内存 / 功耗规格，能初判「能跑什么档次的 VLA、每秒想几次（跑多少 Hz）」</li>
+          <li>能解释「训完再瘦身」（PTQ）和「边训边瘦身」（QAT）的取舍，以及瘦身误差对「手臂转到哪个角度」这类连续动作输出的影响</li>
+          <li>能组织一次端到端压测：吞吐、最坏卡顿、内存会不会越跑越涨、温度高了会不会降频——并写出可执行的结论</li>
+        </ol></div>
+      </div>
+      <div class="subphase s-arch" id="p5">
+        <div class="sp-head"><div class="sp-tag">P5</div><div><div class="sp-title">方案架构与安全交付（~11 h）</div></div></div>
+        <table><thead><tr><th>#</th><th>内容</th><th>时间</th><th>关键收获</th></tr></thead><tbody>
+          <tr><td>17</td><td><a href="../architect/architecture_methodology.html">软件架构方法论</a></td><td>3 h</td><td>把系统画明白、把决策记下来：C4（从全景到零件的四层画法）、ADR（「当时为什么这么选」的一页纸记录）——方案文档的骨架</td></tr>
+          <tr><td>18</td><td><a href="../embedded-realtime/iso26262_engineering.html">ISO 26262 功能安全工程</a></td><td>3 h</td><td>汽车行业「怎么证明这台机器不会伤人」的完整方法论（迁移阅读）：危害分析即「把所有能出的事故先想一遍」，ASIL 即按严重度分级</td></tr>
+          <tr><td>19</td><td><a href="edge_cloud_robot_arch.html">端边云一体化通信架构</a></td><td>3 h</td><td>从一台机器人到一个车队：哪些活在机器人身上做（端）、哪些在园区机房做（边）、哪些在云端做，断网了各自降级成什么样</td></tr>
+          <tr><td>20</td><td><a href="../architect/observability_engineering.html">可观测性工程</a></td><td>2 h</td><td>给车队装「行车记录仪 + 体检报告」：指标 / 日志 / 追踪三件套，远程诊断和数据回灌闭环的地基</td></tr>
+        </tbody></table>
+        <div class="sum-row"><span class="total">~59 h</span></div>
+        <div class="checkpoint"><div class="cp-head">✅ 完成标志</div><ol>
+          <li>能独立写出一份具身智能方案建议书：场景约束 → 系统全景图 → 模型 / 系统 / 部署选型 → 风险与降级 → 里程碑与验收标准</li>
+          <li>能把「机器人伤到人怎么办」从恐惧转化为工程论证：先把能出的事故想全，再定义什么叫安全状态，最后设计兜底与分级刹车</li>
+          <li>能设计数据闭环：车队遇到异常片段 → 自动回传 → 整理标注 → 重新训练 → 先小范围试运行再全量——并说清每一环的合规边界</li>
+          <li>自检：给一个全新场景（如医院配送机器人），能不能一天内给出有理有据的初步方案框架——能，就是合格的解决方案专家</li>
+        </ol></div>
+      </div>
+      <div class="path-nav"><a href="robotics_comm_directory.html">← 目录</a><a href="robotics_comm_study_path.html">机器人通信路径</a><a href="../embedded-realtime/embedded_study_path.html">嵌入式与实时路径</a><a href="../neural-networks/neural_networks_directory.html">神经网络目录</a><a href="../reinforcement/reinforcement_directory.html">强化学习目录</a><a href="../interview/STUDY_PATH.html">全站路径</a></div>
+    </section>
+  </main>
+</div>
+<script src="../assets/site-theme-toggle.js" defer></script>
+</body>
+</html>
