@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ISO 26262 功能安全工程实践 · ASIL / V-Model / 工具链 — Tech Notes</title>
-<meta name="description" content="ISO 26262 功能安全工程实践：ASIL 等级 / V-Model 全生命周期 / 工具链认证 / Coding Guideline / 真实成本 · 不是 vague 理论，是 PM/EM 视角实战">
+<meta name="description" content="ISO 26262 功能安全到底是什么：ASIL 等级怎么定、V-Model 每层要交什么、工具链为什么不能随便升级 GCC、Coding Guideline 管什么、以及做功能安全一年要多花多少钱——写给被术语劝退的工程师的通俗版">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/embedded-realtime/iso26262_engineering.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/embedded-realtime/iso26262_engineering.html">
 <meta property="og:title" content="ISO 26262 功能安全工程实践 · ASIL / V-Model / 工具链">
-<meta property="og:description" content="ISO 26262 功能安全工程实践：ASIL 等级 / V-Model 全生命周期 / 工具链认证 / Coding Guideline / 真实成本 · 不是 vague 理论，是 PM/EM 视角实战">
+<meta property="og:description" content="ISO 26262 功能安全到底是什么：ASIL 等级怎么定、V-Model 每层要交什么、工具链为什么不能随便升级 GCC、Coding Guideline 管什么、以及做功能安全一年要多花多少钱——写给被术语劝退的工程师的通俗版">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ISO 26262 功能安全工程实践 · ASIL / V-Model / 工具链">
-<meta name="twitter:description" content="ISO 26262 功能安全工程实践：ASIL 等级 / V-Model 全生命周期 / 工具链认证 / Coding Guideline / 真实成本 · 不是 vague 理论，是 PM/EM 视角实战">
+<meta name="twitter:description" content="ISO 26262 功能安全到底是什么：ASIL 等级怎么定、V-Model 每层要交什么、工具链为什么不能随便升级 GCC、Coding Guideline 管什么、以及做功能安全一年要多花多少钱——写给被术语劝退的工程师的通俗版">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -89,7 +89,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="embedded_realtime_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 105 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 115 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -132,7 +132,7 @@
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★★☆</span>
         <span class="pill cyan">功能安全</span>
-        <span class="pill green">阅读时长 ~105 min</span>
+        <span class="pill green">阅读时长 ~115 min</span>
         <span class="pill amber">前置 嵌入式基础</span>
       </div>
     </header>
@@ -151,25 +151,25 @@
     </div>
   </div>
 
-  <p><strong>ISO 26262</strong>（<em>Road vehicles — Functional safety</em>）2011 年首版、2018 年第二版，是汽车 E/E 系统功能安全的行业门槛。直接从标准文本读进去几乎一定会迷路：十二个 Part、上千页，通篇是 <code>shall</code> 和推荐度表格，读完依然不知道明天该干什么。所以这一章从<strong>钱和法律</strong>讲——理解了车企在怕什么，才会理解为什么改一行代码要填三份表。</p>
+  <p><strong>ISO 26262</strong>（<em>Road vehicles — Functional safety</em>，汽车功能安全的国际标准。"功能安全"说的是：系统出了故障时，不能因为故障而伤到人——比如转向助力突然失效，危险不在"少了助力"本身，而在车会突然变重、驾驶员措手不及）2011 年首版、2018 年第二版，是汽车 E/E 系统（Electronic/Electrical，车上所有带电的电子电气部件——控制器、传感器、线束都算）功能安全的行业门槛。直接从标准文本读进去几乎一定会迷路：十二个 Part（分册）、上千页，通篇是 <code>shall</code>（标准用语里的"必须"，写出来就是强制要求）和推荐度表格，读完依然不知道明天该干什么。所以这一章从<strong>钱和法律</strong>讲起——先弄懂车企在怕什么，你才会理解为什么改一行代码要填三份表。</p>
 
-  <div class="def"><strong>功能安全</strong>的官方定义浓缩成一句：<em>不存在由 E/E 系统的失效行为导致的不合理风险</em>。三个词都是限定语——<strong>E/E 系统</strong>（不管纯机械失效）、<strong>失效行为</strong>（不管系统正常工作时的不足）、<strong>不合理风险</strong>（不是"零风险"，是降到社会可接受）。<strong>这三个限定语划出的边界，比定义本身更值得记。</strong></div>
+  <div class="def"><strong>功能安全</strong>的官方定义浓缩成一句：<em>不存在由 E/E 系统的失效行为导致的不合理风险</em>。这句话里三个词都是限定语，每个限定语都划掉了一片"以为要管、其实不管"的区域——<strong>E/E 系统</strong>：只管电子电气系统的失效，纯机械的断裂不归它管；<strong>失效行为</strong>：只管系统坏了之后的错误动作，不管它正常工作时表现得好不好；<strong>不合理风险</strong>：目标不是"零风险"，而是把风险降到社会可接受的水平。<strong>这三个限定语划出的边界，比定义本身更值得记。</strong></div>
 
   <h3 id="s1-1">先算一笔账：不合规的代价是什么量级</h3>
 
-  <p>汽车行业对流程的偏执不是文化洁癖，是被赔出来的（量级仅说明数量级）：<strong>丰田非预期加速</strong>北美召回 900 万辆量级、与美国司法部达成 12 亿美元量级和解，诉讼中原告方专家的公开报告指出被审查的电子油门软件存在<strong>单点故障、栈使用不可分析、上万处编码规范违规</strong>；<strong>高田气囊</strong>召回数千万至上亿个部件、公司破产。哪怕只是 OTA 能修的缺陷，固定成本也在<strong>每辆车几十到几百美元</strong>量级。</p>
+  <p>汽车行业对流程的偏执不是文化洁癖，是被一起起事故赔出来的（下面数字仅说明数量级）：<strong>丰田非预期加速</strong>案在北美召回 900 万辆量级的汽车、与美国司法部达成 12 亿美元量级的和解；诉讼中原告方专家的公开报告指出，被审查的电子油门软件存在<strong>单点故障</strong>（某个环节只有一个、坏了没有备份兜底）、<strong>栈使用不可分析</strong>（算不出内存栈最深会用到多少，可能悄悄溢出）、<strong>上万处编码规范违规</strong>这三个问题；<strong>高田气囊</strong>召回数千万至上亿个部件，公司直接破产。哪怕只是 OTA（Over-the-Air，远程软件升级）能修好的缺陷，召回的固定成本也在<strong>每辆车几十到几百美元</strong>量级。</p>
 
-  <div class="box real">某 Tier 1 的 EPS 项目，因为定点评审时拿不出完整的软件安全需求追溯矩阵，被 OEM 从供应商短名单里划掉。技术方案没问题，代码质量在同行里也算好——<strong>输在没有证据链</strong>。在车规项目里，<strong>做到了但证明不了，等于没做到</strong>。</div>
+  <div class="box real">某 <strong>Tier 1</strong>（一级供应商，直接给整车厂供货的公司，比如博世、大陆）的 <strong>EPS</strong>（Electric Power Steering，电动助力转向）项目，在<strong>定点评审</strong>（OEM 挑选供应商时做的资格审查）时拿不出完整的软件安全需求<strong>追溯矩阵</strong>（一张把"每条需求 ↔ 每处代码实现 ↔ 每个测试用例"对应起来、可以双向查证的表），被 <strong>OEM</strong>（Original Equipment Manufacturer，整车厂——造车卖车的那一方）从供应商短名单里划掉。技术方案没问题，代码质量在同行里也算好——<strong>输在没有证据链</strong>。在车规项目里，<strong>做到了但证明不了，等于没做到</strong>。</div>
 
   <h3 id="s1-2">安全不是测出来的，是设计和流程保证的</h3>
 
-  <p>这句话有严格的数学理由。ASIL D 的随机硬件失效目标典型在 <strong>10 FIT，也就是 10⁻⁸ 次/小时</strong>。要以合理置信度观察到这个量级的事件，累计运行小时数得在 10⁸–10⁹ h——一支 1000 辆的车队每天跑 8 小时也要 <strong>34 年</strong>，而且只验证了<strong>一个</strong>配置、<strong>一个</strong>软件版本，改一行代码统计证据就归零。</p>
+  <p>这句话有严格的数学理由。<strong>ASIL D</strong>（Automotive Safety Integrity Level，汽车功能安全的完整性等级，从 A 到 D 共四档，D 最严、要求最多；另有 QM 表示"无需功能安全措施"）对<strong>随机硬件失效</strong>（元器件老化、干扰这类带随机性的物理失效）的目标值典型是 <strong>10 FIT</strong>——FIT（Failure In Time）是失效率单位，10 FIT 就是 10⁻⁸ 次/小时，好比要求这套系统连续运行一亿小时才允许坏一次。要想以合理的置信度"亲眼观察到"这么罕见的事件，累计运行小时数得在 10⁸–10⁹ 小时——一支 1000 辆的车队每天每辆跑 8 小时也要跑 <strong>34 年</strong>；而且这还只验证了<strong>一个</strong>硬件配置、<strong>一个</strong>软件版本，改一行代码，统计证据就归零重来。</p>
 
-  <p>结论很硬：<strong>这个量级的安全性在物理上无法被测试证明</strong>。既然不能"测出来"，标准只能退一步——用<strong>结构化的论证</strong>替代统计证据：需求是否完整、架构有没有单点故障、每条安全需求是否都有实现与验证、工具是否可信。这就是 V 模型、追溯矩阵、Safety Case 存在的根本原因。</p>
+  <p>结论很硬：<strong>这个量级的安全性在物理上无法靠测试证明</strong>。既然测不出来，标准只能退一步——用<strong>结构化的论证</strong>替代统计证据：逐项回答四个问题——需求是否完整？架构有没有单点故障？每条安全需求是否都有对应的实现和验证？用到的工具是否可信？<strong>V 模型</strong>（把开发流程画成字母 V：左半边从需求逐层往下拆到代码，右半边从代码逐层往上验证回需求，左右一一对应）、追溯矩阵、<strong>Safety Case</strong>（把所有安全证据汇集成一份"为什么这套系统足够安全"的总论证文档），存在的根本原因就在这里。</p>
 
   <div class="analogy">类比：你没法靠"这座桥我压过一千次都没塌"来证明它能承重 50 吨，你得给出材料参数、受力计算、焊缝检验记录、第三方复核。<strong>测试是抽样，论证才是覆盖。</strong>功能安全走的是桥梁工程那条路，不是互联网 A/B 测试那条路。</div>
 
-  <p>而"失效"本身分两类，<strong>治理路径完全不同</strong>——这是整套标准的分岔点，也是 Part 5 与 Part 6 分家的原因：</p>
+  <p>而"失效"本身分两类，治理路径完全不同——这是整套标准的分岔点，也是 Part 5（硬件分册）与 Part 6（软件分册）分开写的原因：</p>
 
   <div class="fig">
     <svg viewBox="0 0 860 300" style="min-width:700px;height:auto" role="img" aria-label="系统性失效与随机硬件失效的两条治理路径：随机硬件失效由器件物理老化与瞬态干扰引起，可用概率量化，治理手段是冗余、诊断覆盖率与硬件指标 SPFM/LFM/PMHF，归 Part 5；系统性失效由需求缺失、设计错误与软件缺陷引起，概率无意义，治理手段是流程、V 模型、评审、编码规范与结构覆盖率，归 Part 6 和 Part 8">
@@ -239,7 +239,7 @@
       <text x="594" y="211" class="tg">C &lt; 100 FIT</text>
       <text x="594" y="230" class="tg">D &lt; 10 FIT</text>
     </svg>
-    <p class="cap">目标值取自 Part 5 推荐值，正式项目以原文为准。三个数字都由 <strong>FMEDA</strong> 算出，而它的关键输入「诊断覆盖率」正是<strong>你写的自检代码</strong>能抓到多少比例的失效模式——所以 §5 那些看门狗、RAM 自检、双通道比较不是"额外的活"，它们直接进硬件指标的分子。</p>
+    <p class="cap">目标值取自 Part 5 推荐值，正式项目以原文为准。三个数字都由 <strong>FMEDA</strong>（Failure Modes, Effects and Diagnostic Analysis，把硬件里每个部件的失效模式逐条过一遍、逐条问"这个失效能不能被检测到"的表格化分析方法）算出，而它的关键输入「诊断覆盖率」正是<strong>你写的自检代码</strong>能抓到多少比例的失效模式——所以 §5 那些看门狗、RAM 自检、双通道比较不是"额外的活"，它们直接进硬件指标的分子。</p>
   </div>
 
   <h3 id="s1-3">三条边界：26262 明确<em>不管</em>什么</h3>
@@ -297,20 +297,20 @@
 
   <h3 id="s1-4">从 IEC 61508 而来：为什么汽车要单开一本</h3>
 
-  <p><strong>IEC 61508</strong>（1998）是通用工业功能安全的"母标准"，用 SIL 1–4 分级，假设的是化工厂、电梯这类<strong>低批量、有专业操作员、可以停机检修</strong>的系统。汽车四条都不同：</p>
+  <p><strong>IEC 61508</strong>（1998）是通用工业功能安全的"母标准"，26262 等于把这套体系改写成汽车的方言版本。它用 <strong>SIL</strong>（Safety Integrity Level，安全完整性等级，1–4 四档，可以理解为 ASIL 的工业版前身）分级，假设的对象是化工厂、电梯这类<strong>低批量、有专业操作员、可以停机检修</strong>的系统。汽车这四条假设全都不成立：</p>
 
   <ul>
     <li><strong>批量巨大</strong>：一个车型几十万到几百万辆，10⁻⁸/h 乘上车队规模才是真实的事故期望值；</li>
     <li><strong>操作者不专业</strong>：于是引入了 <strong>Controllability</strong> 这一维——同样的失效，专业司机能救回来、普通人不能，风险等级就不同。这是 61508 里没有的；</li>
     <li><strong>不能停机</strong>：车在高速上不能"进入安全停机状态"等维修，所以 26262 有大量关于<strong>降级运行</strong>与<strong>安全状态</strong>的要求；</li>
-    <li><strong>成本压力极端</strong>：一个 ECU 贵 5 美元，乘 200 万辆就是 1000 万美元。这直接解释了 ASIL 分解（<a href="#s4">§4</a>）为什么受欢迎——它是<strong>用架构换硬件成本</strong>。</li>
+    <li><strong>成本压力极端</strong>：一个 <strong>ECU</strong>（Electronic Control Unit，电子控制单元——车上每个带 MCU 的控制器盒子都是一颗 ECU）贵 5 美元，乘 200 万辆就是 1000 万美元。这直接解释了 ASIL 分解（<a href="#s4">§4</a>）为什么受欢迎——它是<strong>用架构换硬件成本</strong>。</li>
   </ul>
 
   <p>同源的行业分支还有医疗 <strong>IEC 62304</strong>、航空 <strong>DO-178C</strong>、铁路 <strong>EN 50128</strong>、工业机械 <strong>ISO 13849</strong>。骨架高度相似（分级 + V 模型 + 工具认证 + 覆盖率），所以做过其中任何一个，转到 26262 只需要换词汇表。</p>
 
   <h3 id="s1-5">十二个 Part 里，你真正会翻的是哪几本</h3>
 
-  <p>十二个 Part 不是并列的十二本书，它们各自钉在安全生命周期的某个位置上：</p>
+  <p>十二个 Part 不是并列的十二本书，它们各自钉在<strong>安全生命周期</strong>（Safety Lifecycle，一个车型从概念设计到量产、运营、报废的全流程；标准给每个阶段规定了必须做什么、必须交出什么）的某个位置上：</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 400" style="min-width:780px;height:auto" role="img" aria-label="ISO 26262 十二个 Part 与 V 模型生命周期的对应关系：Part 3 概念阶段对应相关项定义与 HARA；Part 4 系统级开发；Part 5 硬件级开发与 Part 6 软件级开发并列在 V 的底部两侧；Part 7 生产运营与退役在 V 之后；Part 2 功能安全管理、Part 8 支持过程与 Part 9 面向 ASIL 的分析横跨整个生命周期；Part 1 词汇、Part 10 指引、Part 11 半导体、Part 12 摩托车是参考类；软件工程师主要用 Part 6 和 Part 8">
@@ -387,13 +387,13 @@
     </tbody>
   </table>
 
-  <div class="note">差别<strong>不在"代码写得更严谨"</strong>——ASIL 版本里每一行防御性代码背后都挂着一个可追溯的需求编号（函数头注释写 <code>@satisfies SWSR-BRK-0142</code>、<code>@asil B</code>、<code>@wcet 18 us</code>）。评审时没人问"你为什么加了范围检查"，只问"<code>SWSR-BRK-0142</code> 的测试用例在哪、覆盖率报告里这个分支覆到了吗"。</div>
+  <div class="note">差别<strong>不在"代码写得更严谨"</strong>——ASIL 版本里每一行防御性代码背后都挂着一个可追溯的需求编号（函数头注释写 <code>@satisfies SWSR-BRK-0142</code>、<code>@asil B</code>、<code>@wcet 18 us</code>——分别表示：满足哪条需求、什么安全等级、最坏执行时间 WCET（Worst-Case Execution Time，一段代码最坏情况要跑多久）为 18 微秒）。评审时没人问"你为什么加了范围检查"，只问"<code>SWSR-BRK-0142</code> 的测试用例在哪、覆盖率报告里这个分支覆到了吗"。</div>
 
   <h3 id="s1-7">不合规的实际后果</h3>
 
   <ul>
     <li><strong>进不了供应商名单</strong>：OEM 定点评审会直接要求过程能力证据。这是最"无声"的淘汰方式——你甚至不会知道自己是因为这个被刷掉的。</li>
-    <li><strong>型式认证与准入</strong>：功能安全在多数市场不是逐条法定强制，但它是行业公认的 state of the art；一旦出事，法庭上"你有没有遵循行业公认实践"就是决定性问题。信息安全（UN R155/R156）在欧盟等市场<strong>已经是法定的型式认证前置条件</strong>。</li>
+    <li><strong>型式认证与准入</strong>（Type Approval，政府对一款车型的合规性准入审查，通过了才允许上市销售）：功能安全在多数市场不是逐条法定强制，但它是行业公认的 state of the art（公认最佳实践）；一旦出事，法庭上"你有没有遵循行业公认实践"就是决定性问题。信息安全（UN R155/R156）在欧盟等市场<strong>已经是法定的型式认证前置条件</strong>。</li>
     <li><strong>产品责任</strong>：民事赔偿之外，部分司法辖区对"明知有缺陷而未处理"存在刑事追责路径——这也是 Safety Manager 的签字是个人签字、不是部门盖章的原因。</li>
   </ul>
 
@@ -412,9 +412,9 @@
     </div>
   </div>
 
-  <p><strong>ASIL</strong>（Automotive Safety Integrity Level，汽车安全完整性等级）分 A / B / C / D 四级，加上 <strong>QM</strong>（Quality Management，即"按常规质量流程做就行，没有额外的功能安全要求"）。D 最严。</p>
+  <p><strong>ASIL</strong>（Automotive Safety Integrity Level，汽车安全完整性等级——§1 里出现过，这里是正式定义）分 A / B / C / D 四级，从 A 到 D 要求逐级变严（D 最严）；另有 <strong>QM</strong>（Quality Management，质量管理档：按常规质量流程开发就行，没有额外的功能安全要求）。</p>
 
-  <div class="box danger">先记住这一章最重要的一句话：<strong>ASIL 是「危害事件」的属性，不是零件、不是 ECU、更不是"我们团队"的属性。</strong>说"我们是 ASIL D 团队"在语义上是错的；正确的说法是"这条安全目标是 ASIL D，它被分配到了我负责的这个软件组件上"。这个区分不是咬文嚼字——它直接决定了同一块 MCU 上可以同时跑 QM 和 ASIL D 的代码（前提是做好隔离，见 <a href="#s4">§4</a>）。</div>
+  <div class="box danger">先记住这一章最重要的一句话：<strong>ASIL 是「危害事件」的属性，不是零件、不是 ECU、更不是"我们团队"的属性。</strong>说"我们是 ASIL D 团队"在语义上是错的；正确的说法是"这条安全目标是 ASIL D，它被分配到了我负责的这个软件组件上"。这个区分不是咬文嚼字——它直接决定了同一块 <strong>MCU</strong>（Microcontroller Unit，微控制器——ECU 里真正跑程序的那颗芯片）上可以同时跑 QM 和 ASIL D 的代码（前提是做好隔离，见 <a href="#s4">§4</a>）。</div>
 
   <div class="asil-grid">
     <div class="asil-box asil-qm">QM<br><small>无 safety</small></div>
@@ -426,7 +426,7 @@
 
   <h3 id="s2-1">HARA：ASIL 是怎么被"算"出来的</h3>
 
-  <p><strong>HARA</strong>（危害分析与风险评估）是概念阶段的核心活动，也是整个项目里唯一能<strong>凭空创造 ASIL</strong> 的地方。它的输出决定了后面几年几十个人的工作量，所以 HARA 会议通常由 Safety Manager 主持，系统、软件、硬件、整车、法务都要在场。</p>
+  <p><strong>HARA</strong>（Hazard Analysis and Risk Assessment，危害分析与风险评估）是概念阶段的核心活动，也是整个项目里唯一能<strong>凭空创造 ASIL</strong> 的地方——后面几年几十个人的工作要求，都由它打出来的分决定，所以 HARA 会议通常由 <strong>Safety Manager</strong>（功能安全经理，对"这套系统足够安全"的论证负最终责任的角色）主持，系统、软件、硬件、整车、法务都要在场。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 406" style="min-width:780px;height:auto" role="img" aria-label="HARA 五步流程与 ASIL 推导：先做相关项定义划清边界，再穷举运行场景乘失效行为的组合，筛出危害事件，对每个危害事件独立打 S 严重度、E 暴露概率、C 可控性三个分，查表得到 ASIL，最后为每个危害事件写一条安全目标并给出 FTTI 与安全状态；三个维度分别是伤害严重度 S0 到 S3、场景出现概率 E0 到 E4、一般司机能否避险 C0 到 C3；S0 或 C0 直接判 QM，E0 不分配 ASIL">
@@ -492,8 +492,8 @@
   <p>五步里只有两步容易做错，值得单独点出来：</p>
 
   <ul>
-    <li><strong>① 相关项定义</strong>常见坑：把电源、时钟、总线当成"环境"而不写进依赖，结果整个供电失效的危害没被分析到。<strong>这一步做糙了，后面所有分析都会漏。</strong></li>
-    <li><strong>② 穷举</strong>是主要工作量：场景维度（高速直行 / 泊车 / 静止 / 弯道 / 湿滑 / 拖挂）× 失效行为维度（<strong>丧失</strong>、<strong>非预期激活</strong>、<strong>过量</strong>、<strong>过少</strong>、<strong>时序过早/过晚</strong>、<strong>方向错误</strong>）。</li>
+    <li><strong>① 相关项定义</strong>（Item Definition——26262 里的"相关项"就是你要做功能安全的那个系统本身；这一步要划清它的边界：管什么、不管什么、跟哪些东西交互）常见坑：把电源、时钟、总线当成"环境"而不写进依赖，结果整个供电失效的危害没被分析到。<strong>这一步做糙了，后面所有分析都会漏。</strong></li>
+    <li><strong>② 穷举</strong>是主要工作量：场景维度（高速直行 / 泊车 / 静止 / 弯道 / 湿滑 / 拖挂）× 失效行为维度（<strong>丧失</strong>——该动的不动、<strong>非预期激活</strong>——不该动的自己动了、<strong>过量</strong>、<strong>过少</strong>、<strong>时序过早/过晚</strong>、<strong>方向错误</strong>）。两组相乘，就是需要逐个打分的场景数。</li>
   </ul>
 
   <h3 id="s2-2">FTTI：留给你的时间预算</h3>
@@ -538,7 +538,7 @@
 
   <h3 id="s2-3">完整推导表 + 一个记得住的口诀</h3>
 
-  <p>S0 与 C0 直接出 QM，E0 不分配 ASIL。剩下的 S1–S3 × E1–E4 × C1–C3 共 36 种组合，就是 Part 3 的 ASIL 确定表——而这 36 格其实只有<strong>一条加法规则</strong>：</p>
+  <p>S0（没有伤害）和 C0（司机完全可控）这两种情况直接判 QM，E0（场景罕见到可以忽略）则不分配 ASIL。剩下的 S1–S3 × E1–E4 × C1–C3 共 36 种组合，就是 Part 3 的 ASIL 确定表——而这 36 格背后其实只有<strong>一条加法规则</strong>：</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 350" style="min-width:760px;height:auto" role="img" aria-label="S 乘 E 乘 C 决定 ASIL 的完整 36 格矩阵，按 S1、S2、S3 三块分列，每块的行是 E1 到 E4、列是 C1 到 C3；S1 块只有 E3C3 为 A、E4C2 为 A、E4C3 为 B，其余全是 QM；S2 块 E2C3 为 A、E3C2 为 A、E3C3 为 B、E4C1 为 A、E4C2 为 B、E4C3 为 C，其余 QM；S3 块 E1C3 为 A、E2C2 为 A、E2C3 为 B、E3C1 为 A、E3C2 为 B、E3C3 为 C、E4C1 为 B、E4C2 为 C、E4C3 为 D，其余 QM；整张表等价于把 S、E、C 三个数字相加，和小于等于 6 是 QM、7 是 A、8 是 B、9 是 C、10 是 D">
@@ -591,18 +591,18 @@
 
   <div class="panel orange">
     <h4>例 1 · 转向助力异常：同一个 ECU，两种失效模式，两个 ASIL</h4>
-    <p>同一个 EPS 控制器：<strong>助力丧失</strong>（方向盘变重、机械连接完好）是 S3·E4·<strong>C2</strong>（多数司机能靠体力控住）→ 9 → <strong>ASIL C</strong>；<strong>非预期转向扭矩</strong>是 S3·E4·<strong>C3</strong>（车主动往路肩去，反打时间窗只有几百毫秒）→ 10 → <strong>ASIL D</strong>。</p>
-    <p>所以这个项目同时有一条 ASIL D 和一条 ASIL C 需求。架构按最高那条定，但两条的<strong>验证证据可以不同</strong>——ASIL C 那条不需要 MC/DC。混在一起统统按 D 做，是很多项目白花钱的原因。</p>
+    <p>同一个 EPS 控制器，两种失效模式各打一次分：<strong>助力丧失</strong>（方向盘变重，但机械连接完好，还能打方向）评为 S3·E4·<strong>C2</strong>——多数司机能靠体力控住，三项相加 3+4+2=9，落在 <strong>ASIL C</strong>；<strong>非预期转向扭矩</strong>（车主动往路肩拽，司机反打的时间窗只有几百毫秒）评为 S3·E4·<strong>C3</strong>，相加等于 10，落在 <strong>ASIL D</strong>。</p>
+    <p>所以这个项目会同时带着一条 ASIL D 和一条 ASIL C 的需求。整体架构按最高那条（D）来定，但两条需求的<strong>验证证据可以不同</strong>——ASIL C 那条不需要做到 MC/DC（Modified Condition/Decision Coverage，一种比分支覆盖更细的覆盖率准则，§8 详谈）。把两条混在一起统统按 D 做，是很多项目白花钱的原因。</p>
   </div>
 
   <div class="panel yellow">
     <h4>例 2 · 仪表车速显示偏低 20 km/h：C 评级会吵很久的边界案例</h4>
-    <p><strong>S</strong> 折中落 <strong>S2</strong>，<strong>E = E4</strong> 没争议，<strong>C</strong> 是真正的争论点——反方认为 C3（察觉不到持续偏低的示数），正方认为 <strong>C2</strong>（司机有风噪、导航限速提示、周围车流、ADAS 限速识别等线索）。采信 C2 → 8 → <strong>ASIL B</strong>，采信 C3 → ASIL C。行业实践里数字仪表的<strong>安全相关指示</strong>常落 <strong>ASIL A–B</strong>，同屏的导航与皮肤是 QM——这就是仪表 SoC 普遍走<strong>混合关键度</strong>架构的原因。</p>
+    <p>这一例的打分：<strong>S</strong> 折中落在 <strong>S2</strong>（车速表持续偏低 20 km/h，可能诱发超速但不算致命），<strong>E = E4</strong>（几乎每次开车都在发生）没有争议，<strong>C</strong> 才是真正会吵起来的点——反方认为该给 C3（司机察觉不到示数持续偏低），正方认为该给 <strong>C2</strong>（司机还有风噪、导航限速提示、周围车流、ADAS 限速识别等多条线索可以交叉印证）。采信 C2，相加等于 8，落在 <strong>ASIL B</strong>；采信 C3 则落到 ASIL C。行业实践里，数字仪表的<strong>安全相关指示</strong>（车速、报警灯）通常落在 <strong>ASIL A–B</strong>，而同一块屏上的导航和主题皮肤是 QM——这就是仪表 SoC 普遍采用<strong>混合关键度</strong>（mixed criticality，同一颗芯片上同时跑着不同安全等级的软件、彼此隔离）架构的原因。</p>
   </div>
 
   <h3 id="s2-5">从 HARA 结果到你手上的需求</h3>
 
-  <p>HARA 的输出不会直接变成代码。中间有三次转换，每一次都继承 ASIL，而<strong>每一层都必须能往上追溯到同一个危害事件</strong>：</p>
+  <p>HARA 的输出不会直接变成代码：中间要经过三次转换（功能安全需求 → 技术安全需求 → 软件安全需求），每一次转换都原样继承 ASIL，而且<strong>每一层的需求都必须能往上追溯到同一个危害事件</strong>——追溯链断在哪一层，哪一层就要返工：</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 470" style="min-width:800px;height:auto" role="img" aria-label="安全需求从危害事件到软件安全需求的四级细化：第一级是 HARA 输出的危害事件与安全目标，例如高速非预期全力制动 S3E4C3 得 ASIL D，安全目标是应避免非预期制动力矩输出，FTTI 60 毫秒，安全状态是切断制动执行器驱动；第二级是功能安全需求；第三级是技术安全需求，这一层发生 ASIL 分解，主通道与监控通道各标 ASIL B 括号 D，而两通道互不干扰这条仍是 ASIL D；第四级是软件安全需求，是工程师 sprint 里的 ticket；括号 D 是分解标记，读作 ASIL B 源自 D">
@@ -665,7 +665,7 @@
     </tbody>
   </table>
 
-  <div class="note">这张表是<strong>量级参考，不是查表结论</strong>：同一功能在不同整车架构、不同 ODD 下 ASIL 完全可能不同——"ACC 非预期加速"在有独立扭矩监控的动力系统上可以降级。<strong>永远不要从这张表反推自己项目的 ASIL，要从自己项目的 HARA 拿。</strong></div>
+  <div class="note">这张表只是<strong>量级参考，不是查表结论</strong>：同一个功能，在不同的整车架构、不同的 <strong>ODD</strong>（Operational Design Domain，设计运行域——这套功能被允许工作的场景范围）下，ASIL 完全可能不同——"ACC 非预期加速"在有独立扭矩监控的动力系统上就可以降级。<strong>永远不要从这张表反推自己项目的 ASIL，必须从自己项目的 HARA 里拿。</strong></div>
 </section>
 
 <!-- ================================================================
@@ -760,23 +760,23 @@
 
   <ul>
     <li><strong>安全目标 ↔ 整车确认</strong>：每条安全目标都有对应的整车测试场景与通过判据；残余风险被论证为可接受。</li>
-    <li><strong>FSR ↔ 系统测试</strong>：每条 FSR 有测试用例；<strong>故障注入</strong>能证明安全机制真的触发、且在 FTTI 内完成。</li>
-    <li><strong>TSR ↔ HSI 测试</strong>：硬件-软件接口规格上的每一项在真实 ECU 上被测到；诊断覆盖率达标。</li>
+    <li><strong>FSR</strong>（Functional Safety Requirement，功能安全需求——从安全目标细化出来的系统层需求）↔ 系统测试：每条 FSR 有测试用例；<strong>故障注入</strong>（Fault Injection，故意制造一个故障——拔掉传感器、翻转一个内存位——看安全机制会不会按预期接住）能证明安全机制真的触发、且在 FTTI 内完成。</li>
+    <li><strong>TSR ↔ HSI 测试</strong>：TSR（Technical Safety Requirement，技术安全需求——系统架构层的安全需求）逐条测到；HSI（Hardware-Software Interface，硬件软件接口规格——寄存器、中断、时序这些软硬件"交接处"的约定）上的每一项在真实 ECU 上被测到；诊断覆盖率达标。</li>
     <li><strong>软件架构 ↔ 软件集成</strong>：接口测试通过；栈 / 堆 / CPU 负载实测在预算内；函数与调用覆盖率达标。</li>
-    <li><strong>单元设计 ↔ 单元验证</strong>：基于需求的测试全通过；结构覆盖率达该 ASIL 门槛（<a href="#s8">§8</a>）；静态分析零未处理告警。</li>
+    <li><strong>单元设计 ↔ 单元验证</strong>：基于需求的测试全通过；结构覆盖率达该 ASIL 门槛（<a href="#s8">§8</a>）；<strong>静态分析</strong>（Static Analysis，不运行代码、直接扫源码找缺陷的工具——未初始化变量、越界访问、空指针解引用这类）零未处理告警。</li>
   </ul>
 
   <div class="box tip">最实用的读法是<strong>从右往左</strong>。项目后期出问题几乎都表现为"某一层的验证证据缺失或对不上"，而根因通常在左臂——需求写得不可验证（"系统应快速响应"这种），到右臂就写不出通过判据。所以一条软件安全需求写完先自问：<strong>我能不能给它写出一个会失败的测试？</strong>写不出来，这条需求就不合格。</div>
 
   <h3 id="s3-2">安全生命周期：V 模型只是中间那一段</h3>
 
-  <p>V 模型覆盖的只是"产品开发"。安全生命周期从概念阶段起、经产线刷写与现场故障监控直到报废处理，比 V 长得多；<strong>任何变更（新车型、新供应商、OTA 功能）都要回到起点做「变更影响分析」</strong>，判断它是"影响安全"（走完整流程）还是"不影响安全"（也需要论证，不是拍脑袋）。</p>
+  <p>V 模型覆盖的只是"产品开发"这一段。安全生命周期从概念阶段起、经产线刷写与现场故障监控直到报废处理，比 V 长得多；<strong>任何变更（新车型、新供应商、OTA 功能）都要回到起点做「变更影响分析」</strong>——先回答"这个改动碰没碰到安全需求"，碰到了就走完整流程重新验证，没碰到也要写出论证，不能拍脑袋说"不影响"。</p>
 
   <p>对软件工程师最实际的影响在<strong>运营阶段</strong>：在量产车上推一个 OTA，先要回答"这个改动是否影响任何安全需求"。答"是"就要重跑对应层级的验证、更新 Safety Case、让独立评审人复核；答"否"也得写一份变更影响分析来证明这个"否"。<strong>没有"这就是个小改动"这种说法。</strong></p>
 
   <h3 id="s3-3">Confirmation Measures：三种独立评审，别混为一谈</h3>
 
-  <p>26262 不相信"自己检查自己"，于是引入 <strong>确认措施</strong>。它是三件<strong>不同的事</strong>，新人最常把它们混在一起说：</p>
+  <p>26262 不相信"自己检查自己"，于是引入 <strong>确认措施</strong>（Confirmation Measures，Part 2 规定的三种"必须由别人来查"的活动）。它们是三件<strong>不同的事</strong>——查的对象、查的人、查的时机都不一样，新人最常把三件混成一件说：</p>
 
   <table>
     <thead><tr><th>措施</th><th>检查对象 / 回答的问题</th><th>典型执行者</th></tr></thead>
@@ -815,9 +815,9 @@
 
   <h3 id="s3-4">Safety Plan 与 Safety Case：一头一尾两份主文档</h3>
 
-  <p><strong>Safety Plan</strong> 在项目<strong>启动时</strong>就要写完并通过确认评审：适用哪些 26262 活动、每项的负责人与时间点、确认措施做到哪个独立性档位、用哪些工具、裁剪了什么及理由。它是后续"功能安全审核"的对照基准——审核员拿这份计划来问"你说要做的这条，做了吗"。</p>
+  <p><strong>Safety Plan</strong>（安全计划——全项目功能安全工作的总说明书：做哪些 26262 活动、每项谁负责、什么时间点、确认措施做到哪一档独立性、用什么工具、裁剪了什么以及为什么）在项目<strong>启动时</strong>就要写完并通过确认评审。它是后续"功能安全审核"的对照基准——审核员拿这份计划逐条来问"你说要做的这条，做了吗"，答不上来就是不符合项。</p>
 
-  <p><strong>Safety Case</strong> 是项目<strong>结束时</strong>的收敛物。它不是"把所有文档装订在一起"，而是一条可以自顶向下逐层追问的<strong>论证链</strong>：</p>
+  <p><strong>Safety Case</strong>（§1 提过：把所有安全证据汇成"为什么这套系统足够安全"的总论证文档）是项目<strong>结束时</strong>的收敛物。它不是"把所有文档装订在一起"，而是一条自顶向下逐层追问的<strong>论证链</strong>——顶层一句"本产品功能安全可接受"，下面每一层都在回答上一层的一个疑问：</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 430" style="min-width:760px;height:auto" role="img" aria-label="安全案例的论证结构：顶层是断言本产品的功能安全可接受；下一层是论证，分为所有危害已被识别、每条安全目标都有安全机制覆盖、实现与验证符合该 ASIL 的方法要求三支；再下一层是证据，包括 HARA 报告与安全分析、故障注入与覆盖率报告、静态分析与规范一致性报告、追溯矩阵与评审记录；底层是独立功能安全评估的背书；追溯矩阵是把论证与证据连起来的那些超链接">
@@ -881,7 +881,7 @@
     </div>
   </div>
 
-  <p><strong>ASIL D 极难也极贵</strong>：MC/DC 覆盖、组织级独立评估、认证工具链、硬件冗余，成本是 ASIL B 的数倍。所以标准给了一条正规出路——<strong>ASIL 分解</strong>：把一条高 ASIL 需求拆成两条<strong>互相独立</strong>的低 ASIL 需求，任意一条生效就能达成安全目标。</p>
+  <p><strong>ASIL D 极难也极贵</strong>：它要求 MC/DC 覆盖（一种非常严格的测试覆盖标准，粗略说是"每个判断条件都要单独证明起过作用"，§8.4 专门讲）、组织级独立评估（§3.3 说的 I3 档：由外部机构或独立部门做最终评估）、认证工具链（连编译器都要带认证证据包，§7 详述）、硬件冗余（关键部分做两套互为备份）——这几项加起来，成本是 ASIL B 的数倍。所以标准给了一条正规出路——<strong>ASIL 分解</strong>：把一条高 ASIL 需求拆成两条<strong>互相独立</strong>的低 ASIL 需求，任意一条生效就能达成安全目标。</p>
 
   <div class="analogy">类比：金库要求"被撬开的概率低于百万分之一"。可以造一把百万分之一的超级锁（ASIL D），也可以装两把千分之一的普通锁（两个 ASIL B）——<strong>前提是两把锁不能被同一把万能钥匙打开</strong>。两把锁同厂、同模具、同批材料，"独立"这个假设就崩了，风险其实还是千分之一。<strong>ASIL 分解 99% 的争议都在这句"前提"上。</strong></div>
 
@@ -942,7 +942,7 @@
 
   <h3 id="s4-2">FFI：独立性是分解成立的唯一前提</h3>
 
-  <p><strong>FFI（Freedom From Interference，互不干扰）</strong>指的是：一个元件的失效不会导致另一个元件失效。Part 6 把软件层面的干扰归为<strong>三个维度</strong>，这三个词、以及每个维度的技术手段与证据强度都要能张口就说：</p>
+  <p><strong>FFI（Freedom From Interference，免于干扰）</strong>说的是：一个元件坏了、行为失常了，也不能把旁边本来正常的元件带坏——好比一栋楼里两个防火分区，一间着火，另一间必须照常运转。Part 6 把软件层面的干扰归为<strong>三个维度</strong>（时间、内存、信息交换，下面这张图逐项列了各自的干扰形式、技术手段和证据强度），这三个词、以及每个维度的技术手段与证据强度都要能张口就说：</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 440" style="min-width:800px;height:auto" role="img" aria-label="免于干扰 FFI 的三个维度与各自的技术手段和证据强度：时间与执行维度的干扰形式是死循环占死 CPU、长时间关中断、持锁不放、优先级设计失误、栈溢出，手段是操作系统的执行时间预算监控、程序流监控、不共享阻塞资源，证据强度强；内存维度的干扰形式是野指针、数组越界、共享可写全局变量、DMA 目标地址算错，手段是 MPU 或 MMU 分区、全静态分配加只读常量段，MPU 是最强的一种因为违规访问在硬件层被拦下；信息交换维度的干扰形式是数据损坏、丢失、重复、乱序、过期、串线，手段是 E2E 保护即 CRC 加计数器加数据 ID 加超时，以及单向通道隔离，强度强且可量化残余错误率">
@@ -1007,7 +1007,7 @@
     </svg>
   </div>
 
-  <p>这些干扰要靠<strong>安全分析</strong>找出来，而不是凭经验列举。项目里会同时用到三种分析法，方向与输出各不相同，混用是常见减分点：</p>
+  <p>这些干扰要靠<strong>安全分析</strong>（一整套系统性的排查方法）找出来，而不是凭经验拍脑袋列举。项目里会同时用到三种分析法——<strong>FMEA</strong>（自下而上：从每个零件出发，问"它坏了会影响什么"）、<strong>FTA</strong>（自上而下：从一个已知的顶层危害倒推"哪些原因组合会导致它"）、<strong>FMEDA</strong>（§1 提过：在 FMEA 基础上配上失效率与诊断覆盖率、定量算出硬件指标）——三者方向与输出各不相同，混用是常见减分点：</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 300" style="min-width:800px;height:auto" role="img" aria-label="FMEA、FTA 与 FMEDA 三种安全分析法的定位：FMEA 是自下而上的归纳法，从零件的失效模式出发推它的影响，输入是设计与零件清单，输出是失效模式清单与风险优先级，适合找遗漏的失效模式；FTA 是自上而下的演绎法，从一个已知的顶层危害出发拆解出所有能导致它的原因组合，输入是危害事件，输出是故障树与最小割集，适合发现单点故障与共因；FMEDA 是定量的，在 FMEA 基础上给每个失效模式配失效率与诊断覆盖率，输出是 SPFM、LFM、PMHF 三个硬件指标；DFA 相关失效分析专门用来支撑 ASIL 分解的独立性论证">
@@ -1053,25 +1053,25 @@
 
   <div class="panel red">
     <h4>违例 1 · 共享一把互斥锁（时间干扰）</h4>
-    <p>两个通道访问同一个"标定参数表"，为线程安全共用一把 mutex。但主通道任何一个"持锁期间死循环 / 被无限抢占"的失效，会<strong>同时让监控通道饿死</strong>：一个失效击穿两个通道 = 相关失效，分解论证不成立。</p>
-    <p><strong>修法</strong>：标定数据启动时校验 CRC 后固化、运行期只读，<strong>每个通道一份只读副本</strong>；必须可变时用"单写多读 + 双缓冲 + 每读者独立索引"。再进一层：两份标定<strong>由不同编译单元甚至不同数据源</strong>生成，顺手削弱共因。</p>
+    <p>两个通道访问同一个"标定参数表"，为线程安全共用一把 mutex（互斥锁——同一时刻只允许一个线程持有的锁）。但主通道只要出现"持锁期间死循环 / 被无限抢占"的失效，就会<strong>同时让监控通道饿死</strong>（永远抢不到锁、只能干等）——一个失效击穿两个通道，就是相关失效，分解论证不成立。</p>
+    <p><strong>修法</strong>：标定数据启动时校验 CRC（Cyclic Redundancy Check，循环冗余校验——给数据算一个"指纹"，数据被改坏指纹就对不上）后固化、运行期只读，<strong>每个通道一份只读副本</strong>；必须可变时用"单写多读 + 双缓冲 + 每读者独立索引"。再进一层：两份标定<strong>由不同编译单元甚至不同数据源</strong>生成，顺手削弱共因。</p>
   </div>
 
   <div class="panel red">
     <h4>违例 2 · 共享一个硬件定时器 / 共享中断（时间 + 共因）</h4>
-    <p>两个通道的周期任务都挂在同一个硬件定时器中断上，理由是"省一个外设"。定时器一旦时钟树配置错误或晶振漂移，<strong>两个通道同时慢下来</strong>，而比较结果依然一致、监控完全察觉不到——这就是<strong>共因失效</strong>。</p>
-    <p><strong>修法</strong>：监控通道用<strong>独立时基</strong>（独立晶振、独立 PLL 分支，或外部看门狗芯片自带的时基——<strong>它不来自被监控的 MCU</strong>）。共享中断同理：一个通道 ISR 的长执行会推迟同优先级另一个的 ISR。</p>
+    <p>两个通道的周期任务都挂在同一个硬件定时器中断上，理由是"省一个外设"。定时器一旦时钟树配置错误或晶振漂移，<strong>两个通道会同时慢下来</strong>，而两边结果依然一致、比较监控完全察觉不到——这就是<strong>共因失效</strong>（两个本该"独立"的通道，其实被同一个根因一起打坏，独立性假设落空）。</p>
+    <p><strong>修法</strong>：监控通道用<strong>独立时基</strong>（独立晶振、独立 PLL 分支——PLL 是从主时钟分频倍频出各路时钟的电路，源头还是同一条线就谈不上独立；或外部看门狗芯片自带的时基——<strong>它不来自被监控的 MCU</strong>）。共享中断同理：一个通道的 ISR（Interrupt Service Routine，中断服务程序——硬件事件一来就插进来优先执行的那段代码）执行太长，同优先级另一个通道的 ISR 就会被推迟。</p>
   </div>
 
   <div class="panel red">
     <h4>违例 3 · 共享内存但没做保护（内存 + 信息交换）</h4>
-    <p>ADAS 域控常见写法：QM 的感知进程把 <code>{count, items[64]}</code> 写进共享内存，ASIL B 的规划模块直接 <code>for (i &lt; shm-&gt;count)</code> 读。三个雷一起踩：QM 能写到 ASIL B 会读的内存、数据无完整性校验、<code>count</code> 未做范围检查（被写坏成 5000 就是 ASIL B 侧越界崩溃）。</p>
-    <p><strong>修法必须三件一起上</strong>：① MPU 让 QM 侧只能写自己那块；② E2E 校验完整性与新鲜度；③ 消费侧做范围检查，失败就降级。③ 不能省——<strong>CRC 只证明"数据没被改坏"，不证明发送方算出来的值合理</strong>；QM 模块本来就有出 bug 的权利。</p>
+    <p>ADAS 域控（Advanced Driver Assistance System，高级驾驶辅助系统——车上跑感知、规划这些大算法的中央计算控制器）里常见这种写法：QM 的感知进程把 <code>{count, items[64]}</code> 写进共享内存，ASIL B 的规划模块直接 <code>for (i &lt; shm-&gt;count)</code> 读。三个雷一起踩：QM 能写到 ASIL B 会读的内存、数据没有完整性校验、<code>count</code> 未做范围检查（一旦被写坏成 5000，ASIL B 侧就越界崩溃）。</p>
+    <p><strong>修法必须三件一起上</strong>：① MPU（Memory Protection Unit，内存保护单元——CPU 里的硬件部件，给每段内存划好读写权限，越权访问立刻触发异常）让 QM 侧只能写自己那块；② E2E 保护（End-to-End，端到端保护——发送方给每条数据附上校验码和计数器，接收方逐条核验，防数据在传输途中被改坏、丢失、重复或变旧）校验完整性与新鲜度；③ 消费侧做范围检查，失败就降级。③ 不能省——<strong>CRC 只证明"数据没被改坏"，不证明发送方算出来的值合理</strong>；QM 模块本来就有出 bug 的权利。</p>
   </div>
 
   <h3 id="s4-4">MPU 分区：内存 FFI 最硬的一道证据</h3>
 
-  <p>MPU 分区的落地形态是一张"每个分区一份 region 表、上下文切换时重载"的静态配置。关键在<strong>共享通道要按单方向开权限</strong>：</p>
+  <p>MPU 分区的落地形态，是一张"每个分区一份 region 表（region = MPU 划出来的一块带读写执行权限的内存区域）、上下文切换时重载"的静态配置。关键在<strong>共享通道要按单方向开权限</strong>：</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 340" style="min-width:760px;height:auto" role="img" aria-label="软件架构上的三层隔离与保护：MPU 分区表把安全分区的代码段设为只读可执行、数据与栈设为可读写、来自 QM 分区的共享数据设为只读、发往 QM 分区的共享数据设为只写、其余地址空间无权限从而越界立刻触发异常；异常处理器必须记录故障上下文并进入安全状态且它本身是最高 ASIL；配套的看门狗与程序流监控负责时间维度；三个实战要点是 region 数量有限、对齐约束浪费内存、异常处理器必须是最高 ASIL">
@@ -1125,7 +1125,7 @@
 
   <p>这个模式在行业里叫 <strong>3 层监控概念</strong>：第 1 层是功能本身，第 2 层是功能监控（合理性校验），第 3 层是控制器自身监控（看门狗 + 指令集自检 + RAM/ROM 测试）。它几乎是所有 ASIL C/D 单 MCU 方案的默认骨架。</p>
 
-  <div class="box real"><strong>"物理上分开"不等于"独立"。</strong>把两个通道摆在同一颗双核 MCU 的两个核上，仍然共享 L2 与内存控制器、同一路电源与时钟、同一份编译器与标定数据——这样的分解论证会被直接打回。</div>
+  <div class="box real"><strong>"物理上分开"不等于"独立"。</strong>把两个通道摆在同一颗双核 MCU 的两个核上，它们仍然共享 L2 缓存（CPU 与内存之间的二级高速缓存）与内存控制器、同一路电源与时钟、同一份编译器与标定数据——这样的分解论证会被直接打回。</div>
 </section>
 
 <!-- ================================================================
@@ -1146,9 +1146,9 @@
 
   <p>26262 几乎不说"你必须用某个技术"，它说"对 ASIL X，这个方法的推荐度是 <code>++</code> / <code>+</code> / <code>o</code>"。<strong><code>++</code></strong>默认就该做，不做<strong>必须写出充分理由并通过评审</strong>（评估人会重点盯这里）；<strong><code>+</code></strong>不做也要有记录，门槛低一些；<strong><code>o</code></strong>是<strong>既不推荐也不反对</strong>，自由选择。</p>
 
-  <div class="box danger">一个流传极广的误解：<strong>方法表里没有"不推荐"这一档</strong>，只有 <code>++</code> / <code>+</code> / <code>o</code>（IEC 61508 才有明确的 NR）。所以严格说标准从来没有"禁止动态内存"——它是通过<strong>其它要求间接把它挤出去的</strong>：内存与执行时间要能被分析、要避免不确定行为、要满足编码规范（而 MISRA / AUTOSAR C++ 明确禁止运行期分配）。说"标准禁止 new"是二手知识，说清这条传导链才是理解。</div>
+  <div class="box danger">一个流传极广的误解：<strong>方法表里没有"不推荐"这一档</strong>，只有 <code>++</code> / <code>+</code> / <code>o</code>（IEC 61508 才有明确的 NR，Not Recommended"不推荐"档）。所以严格说标准从来没有"禁止动态内存"——它是通过<strong>其它要求间接把它挤出去的</strong>：内存与执行时间要能被分析、要避免不确定行为、要满足编码规范（而 MISRA / AUTOSAR C++ 这两套车规编码规范——前者出自汽车工业软件可靠性协会、后者出自汽车开放系统架构联盟 AUTOSAR，§6 细讲——明确禁止运行期分配）。说"标准禁止 new"是二手知识，说清这条传导链才是理解。</div>
 
-  <p>还有一个常被忽略的机制：<strong>可以用等效方法替代</strong>——表里推荐"半形式化验证"，你用带前后置条件的契约式设计 + 形式化静态分析，完全可以论证等效。</p>
+  <p>还有一个常被忽略的机制：<strong>可以用等效方法替代</strong>——比如表里推荐"半形式化验证"（介于自然语言评审和数学证明之间、可逐条核查的验证方式），你用契约式设计（Design by Contract，契约式设计——每个函数先声明"我要求输入满足什么、我保证输出满足什么"）+ 形式化静态分析（§8.7 会讲），完全可以论证等效。</p>
 
   <div class="box star">"你怎么用 Part 6 的表"的标准答法是三步：<strong>① 启动时把该 ASIL 那一列抄进"方法采纳矩阵"，逐项标记"采用 / 等效替代 / 不采用+理由"；② 矩阵进安全计划、由确认评审通过；③ 过程中是自查清单，交付时是 Safety Case 的一节。</strong>关键是说出"矩阵"这个<strong>交付物</strong>——很多人只知道有表。</div>
 
@@ -1171,7 +1171,7 @@
     </tbody>
   </table>
 
-  <p>"不用动态内存"的落地形态是<strong>定容容器</strong>：一个 <code>StaticVector&lt;T, N&gt;</code>，就地存储、<code>push_back</code> 满了返回 <code>false</code>、绝不抛异常也绝不申请内存（❌/✅ 对照见 <a href="#s6-3">§6.3</a>）。</p>
+  <p>"不用动态内存"的落地形态是<strong>定容容器</strong>（容量在写代码时就定死的容器）：一个 <code>StaticVector&lt;T, N&gt;</code>，数据就存在自己肚子里（就地存储）、<code>push_back</code> 满了返回 <code>false</code>、绝不抛异常也绝不申请内存（❌/✅ 对照见 <a href="#s6-3">§6.3</a>）。</p>
 
   <div class="box tip">真正要记住的不是模板怎么写，而是<strong>容量常数的来历</strong>：<code>N</code> 必须由一条需求或一份分析支撑，而"容量不够"必须是一个<strong>可诊断、可测试的事件</strong>（溢出时 <code>diag_.report(...)</code>），不是静悄悄截断。评审的三连问："<code>N=64</code> 从哪来？超过 64 的场景真的不会出现吗？出现了系统行为是什么、那个行为安全吗？"</div>
 
@@ -1217,7 +1217,7 @@
      *       常见做法是使能信号"需要持续脉冲维持"，MCU 一死就自动断。 */</span>
 }</pre>
 
-  <p><strong>程序流监控</strong>换一个维度：在关键路径上埋检查点（<code>acquire → validate → compute → actuate</code>），每个点把一个唯一 ID <strong>带顺序地</strong>混进签名——用旋转异或 <code>sig = rotl(sig,7) ^ id</code> 而非单纯异或，否则 A→B 和 B→A 同值。周期末比对签名与耗时窗口，一致才允许该任务参与喂狗。两个细节：检查点 ID 取<strong>汉明距离较大</strong>的值（避免单个位翻转变成另一个合法 ID），期望签名由<strong>构建期工具</strong>算出。</p>
+  <p><strong>程序流监控</strong>换一个维度：在关键路径上埋检查点（<code>acquire → validate → compute → actuate</code>），每个点把一个唯一 ID <strong>带顺序地</strong>混进签名——用旋转异或 <code>sig = rotl(sig,7) ^ id</code> 而非单纯异或，否则 A→B 和 B→A 同值。周期末比对签名与耗时窗口，一致才允许该任务参与喂狗。两个细节：检查点 ID 取<strong>汉明距离较大</strong>的值（汉明距离 = 两个值有多少个二进制位不同；取得远，一个位翻转就不会把合法 ID 变成另一个合法 ID），期望签名由<strong>构建期工具</strong>（编译时运行的工具，不是运行时）算出。</p>
 
   <div class="box tip">更强的形式是<strong>问答式（challenge-response）外部看门狗</strong>：外部芯片发一个随机数，MCU 必须用<strong>与被监控逻辑相关</strong>的方式算出应答（比如要遍历一遍程序流签名）。这样"喂狗"本身就无法被失控的定时中断伪造，而且外部芯片顺带提供了<strong>独立时基</strong>。ASIL D 的单 MCU 方案里这几乎是标配。</div>
 
@@ -1320,7 +1320,7 @@
 
   <h4 id="s5-6">④ 双通道 / 多样性冗余与比较</h4>
 
-  <p>冗余分两种，价值完全不同：<strong>同构冗余</strong>（同一份代码跑两遍、锁步核）只能挡<strong>随机硬件失效</strong>，<strong>挡不住软件 bug</strong>——同样输入同样 bug，两边错得一模一样；<strong>多样性冗余</strong>（不同算法、不同数值表示、不同工程师）能挡一部分<strong>系统性失效</strong>，但成本高，且"多样性到底有多大"很难量化论证。</p>
+  <p>冗余分两种，价值完全不同：<strong>同构冗余</strong>（同一份代码跑两遍——典型是锁步核：两个核同步执行同样的指令、硬件实时互相比对结果）只能挡<strong>随机硬件失效</strong>，<strong>挡不住软件 bug</strong>——同样输入同样 bug，两边错得一模一样；<strong>多样性冗余</strong>（不同算法、不同数值表示、不同工程师写的）能挡一部分<strong>系统性失效</strong>，但成本高，且"多样性到底有多大"很难量化论证。</p>
 
 <pre><span class="cm">/* 双通道 + 多样性比较：注意三个刻意的设计选择 */</span>
 
@@ -1364,8 +1364,8 @@
   <p>两个词经常被混用，但它们抓的是不同的东西：<strong>范围检查看单个信号（这个值物理上可能吗），合理性检查看信号之间的关系（这几个值放在一起说得通吗）。</strong>合理性检查有三种常见形态，抓的失效各不相同：</p>
 
   <ul>
-    <li><strong>多路互相印证</strong>：四个轮速直行时速差不可能超过百分之几，转弯时按阿克曼几何有确定关系——<code>spread &gt; allowedSpread(steeringAngle, speed)</code> 就报。</li>
-    <li><strong>变化率（梯度）检查</strong>：值在范围内，但跳变在物理上不可能。水温一个周期内涨 40 °C，传感器没坏，是信号被干扰或 AD 读错。</li>
+    <li><strong>多路互相印证</strong>：四个轮速直行时速差不可能超过百分之几，转弯时按阿克曼几何（车辆转向的经典几何关系，四个轮子沿同一个圆心滚动、内外轮转角有确定比例）有确定关系——<code>spread &gt; allowedSpread(steeringAngle, speed)</code> 就报。</li>
+    <li><strong>变化率（梯度）检查</strong>：值在范围内，但跳变在物理上不可能。水温一个周期内涨 40 °C，传感器没坏，是信号被干扰或 AD（模数转换采样）读错。</li>
     <li><strong>跨信号一致性</strong>：踏板没踩、车速在升、ADAS 与 ESC 都没激活，却收到了制动力矩请求。<strong>每个信号单独看都合法</strong>，组合起来说明上游逻辑出了问题——这正是 §2 例 1 那个"非预期制动"的软件侧检测点。</li>
   </ul>
 
@@ -1416,7 +1416,7 @@
     </tbody>
   </table>
 
-  <p>另一个正交维度是<strong>可自动化程度</strong>：Automated / Partially automated（工具报候选、人来确认）/ Non-automated。这个标注直接告诉你哪些规则能进 CI 门禁，哪些必须列进代码评审 checklist。</p>
+  <p>另一个正交维度是<strong>可自动化程度</strong>：Automated / Partially automated（工具报候选、人来确认）/ Non-automated。这个标注直接告诉你哪些规则能进 CI 门禁（CI，Continuous Integration，持续集成——每次提交代码都自动编译、跑检查的服务器流水线；门禁即"不过就不许合并"），哪些必须列进代码评审 checklist。</p>
 
   <h3 id="s6-3">八组「违规 ❌ / 合规 ✅」对照，以及每条禁令的真实理由</h3>
 
@@ -1538,19 +1538,19 @@
 
   <h4>② 禁异常 · 理由不是"异常慢"</h4>
 
-  <p>正常路径上的零成本实现确实几乎没开销。真正的四条是：<strong>抛出路径的时间不可预测</strong>（栈展开耗时取决于调用深度与对象数量）、<strong>控制流不可见</strong>（每个可能抛出的调用都是一条隐藏分支，结构覆盖率报告里看不到这些边，MC/DC 更无从谈起）、<strong>依赖运行期支持</strong>（unwinder 与异常表都要进工具认证）、<strong>和禁动态内存冲突</strong>。展开见<a href="#s11">本章面试题</a>第 7 题。</p>
+  <p>正常路径上的零成本实现确实几乎没开销。真正的四条是：<strong>抛出路径的时间不可预测</strong>（栈展开——异常逐层退出并沿途析构局部对象的过程——耗时取决于调用深度与对象数量）、<strong>控制流不可见</strong>（每个可能抛出的调用都是一条隐藏分支，结构覆盖率报告里看不到这些边，MC/DC 更无从谈起）、<strong>依赖运行期支持</strong>（unwinder 与异常表都要进工具认证）、<strong>和禁动态内存冲突</strong>。展开见<a href="#s11">本章面试题</a>第 7 题。</p>
 
-  <p>一个值得说出来的副作用：<strong>禁异常后构造函数不能报错</strong>，所以车规代码普遍用<strong>两段式初始化</strong>——真正的初始化放在返回错误码的 <code>init()</code> 里。这也解释了为什么车规代码库里很少见到 RAII 式的"构造即获取资源"。构建侧要一起堵死（<code>-fno-exceptions -fno-rtti</code>）。</p>
+  <p>一个值得说出来的副作用：<strong>禁异常后构造函数不能报错</strong>，所以车规代码普遍用<strong>两段式初始化</strong>——真正的初始化放在返回错误码的 <code>init()</code> 里。这也解释了为什么车规代码库里很少见到 RAII 式的"构造即获取资源"（RAII 是 C++ 惯用法：对象构造时拿到资源、析构时自动释放，依赖构造函数抛异常报告失败）。构建侧要一起堵死（<code>-fno-exceptions -fno-rtti</code>）。</p>
 
   <h4>③ 禁 RTTI · ④ 限制模板 · ⑤ 限制多重继承 · ⑥ 禁 C 风格 cast</h4>
 
   <p><strong><code>dynamic_cast</code></strong> 的执行时间取决于继承图形状（多重继承要走类型图搜索），<strong>不是常数时间</strong>；<code>typeid</code> 要在镜像里保留类型信息、增大 Flash。更本质的是：需要在运行期问"你到底是什么类型"，说明<strong>系统的行为没有被静态确定</strong>。替代路径两条：交给虚函数，或用带标签的联合 + 不写 <code>default</code> 的 <code>switch</code>。</p>
 
-  <p><strong>模板</strong>是允许但受约束的：<strong>代码膨胀</strong>（每个实例化一份代码，而 Flash 与栈预算是硬约束）、<strong>覆盖率与追溯的对应关系变复杂</strong>（一行源码对应多个实例化，"这一行覆盖了吗"不再有唯一答案）、<strong>"实际调用的是哪一份"难以静态确定</strong>。落地形态是<strong>类型参数化保留、数值参数改成函数参数</strong>，约束用 <code>static_assert</code> 而不是 <code>enable_if</code> 链；常见门槛：模板嵌套深度 ≤ 3、禁递归模板实例化。</p>
+  <p><strong>模板</strong>是允许但受约束的：<strong>代码膨胀</strong>（每个实例化一份代码，而 Flash 与栈预算是硬约束）、<strong>覆盖率与追溯的对应关系变复杂</strong>（一行源码对应多个实例化，"这一行覆盖了吗"不再有唯一答案）、<strong>"实际调用的是哪一份"难以静态确定</strong>。落地形态是<strong>类型参数化保留、数值参数改成函数参数</strong>，约束用 <code>static_assert</code>（编译期断言）而不是 <code>enable_if</code> 链（一套靠模板匹配失败来筛重载的晦涩技巧）；常见门槛：模板嵌套深度 ≤ 3、禁递归模板实例化。</p>
 
   <p><strong>多重继承</strong>的菱形带来虚基类，虚基类带来复杂的对象布局、构造顺序与指针调整。落地形式：<strong>最多继承一个"实现基类"，其余必须是纯接口</strong>，状态用<strong>组合</strong>。顺带两条几乎都是 required 的规则：不再被继承的类标 <code>final</code>、虚函数一律 <code>override</code>——它们把"我以为我覆写了但其实新建了一个函数"变成编译错误。</p>
 
-  <p><strong>C 风格 cast</strong> 的问题是<strong>掩盖了到底发生了什么</strong>：<code>(Header*)raw</code> 可能同时是 reinterpret、去 const 和对齐 UB。合规写法是先查长度、再用 <code>std::memcpy</code> 做字节复制（不违反严格别名、不依赖对齐，优化后通常和一次加载指令等价），窄化必须显式并先检查值域。</p>
+  <p><strong>C 风格 cast</strong> 的问题是<strong>掩盖了到底发生了什么</strong>：<code>(Header*)raw</code> 可能同时是 reinterpret、去 const 和对齐 UB（Undefined Behavior，未定义行为——标准把结果交给编译器随意处理：可能崩溃、可能静默算错、可能整段代码被"合法地"优化掉）。合规写法是先查长度、再用 <code>std::memcpy</code> 做字节复制（不违反严格别名、不依赖对齐，优化后通常和一次加载指令等价），窄化必须显式并先检查值域。</p>
 
   <h4>⑦ 禁隐式转换 · ⑧ 禁递归与无界循环</h4>
 
@@ -1560,11 +1560,11 @@
 
   <h3 id="s6-4">偏离（Deviation）：什么时候可以违规，要走什么手续</h3>
 
-  <p>规范不可能永远对，真实项目里合理的偏离有三类：<strong>硬件寄存器访问</strong>（必须做整数到指针的转换、必须 <code>volatile</code>、必须位操作）、<strong>第三方 / 供应商代码</strong>（MCAL 驱动、协议栈往往不完全合规，处理方式是隔离成独立模块、整体走一次"复用论证"而不是逐条偏离）、<strong>规则本身适得其反</strong>（"单一出口"把可以早返回的函数变成五层嵌套）。</p>
+  <p>规范不可能永远对，真实项目里合理的偏离有三类：<strong>硬件寄存器访问</strong>（必须做整数到指针的转换、必须 <code>volatile</code>、必须位操作）、<strong>第三方 / 供应商代码</strong>（MCAL 驱动、协议栈往往不完全合规——MCAL，Microcontroller Abstraction Layer，微控制器抽象层，芯片厂商提供的最底层驱动；处理方式是隔离成独立模块、整体走一次"复用论证"而不是逐条偏离）、<strong>规则本身适得其反</strong>（"单一出口"把可以早返回的函数变成五层嵌套）。</p>
 
   <p>手续五步，每步留记录：<strong>提出</strong>（违反哪条、位置、为什么必须这么写——"没想到别的写法"不是理由，"合规写法会引入更大的风险"才是）→ <strong>风险分析</strong>（这条规则本来防什么？此处风险多大）→ <strong>补偿措施</strong>（额外评审、额外单元测试、<code>static_assert</code>、运行期检查、形式化验证——<strong>这一步是偏离能否被接受的关键</strong>）→ <strong>批准</strong>（安全经理签字，高 ASIL 还要独立评审人）→ <strong>登记</strong>（进台账、在 Safety Case 汇总，代码里加抑制标记）。</p>
 
-  <p>代码里的偏离注释<strong>不是给人看的，是给审计看的</strong>，四要素缺一不可：偏离编号、违反的规则、理由、补偿措施 + 批准记录。例如寄存器访问那类必然的偏离，注释里要写清"地址常量由芯片头文件生成并做 <code>static_assert</code> 校验、该模块 100% 语句+分支覆盖并经 HIL 寄存器回读验证、该模块被 MPU 限制在外设地址区间内"。</p>
+  <p>代码里的偏离注释<strong>不是给人看的，是给审计看的</strong>，四要素缺一不可：偏离编号、违反的规则、理由、补偿措施 + 批准记录。例如寄存器访问那类必然的偏离，注释里要写清"地址常量由芯片头文件生成并做 <code>static_assert</code> 校验、该模块 100% 语句+分支覆盖并经 HIL 寄存器回读验证（HIL，Hardware-in-the-Loop，硬件在环——把真实控制器接上台架、由仿真环境模拟传感器和执行器来喂信号测试）、该模块被 MPU 限制在外设地址区间内"。</p>
 
   <div class="box danger">最常见的滥用：<strong>把抑制标记当成"消警告"的手段</strong>。为了让 CI 变绿批量加抑制注释而不走偏离流程，这在功能安全审核里是<strong>过程违规</strong>，比几个真实违规严重得多——它说明整个流程失效了。<strong>正确的门禁：抑制标记必须引用偏离台账里存在的编号，CI 交叉校验，引用不存在的编号直接构建失败。</strong></div>
 
@@ -1595,7 +1595,7 @@
     <li><strong>合规性报告缺了"工具认证状态"就不能作为证据。</strong>Helix QAC 出的那份 PDF 要包含三样：采用的规则集与版本、每条规则的检查结果与偏离引用、以及<strong>工具版本与其认证状态</strong>（<a href="#s7">§7</a>）。最后一项是新人最容易忽略的一环。</li>
   </ul>
 
-  <div class="box real">一个真实的踩坑：某项目在 CI 里只用 clang-tidy 做门禁、每次 PR 都干净，临近里程碑第一次跑认证过的商业工具，一次性冒出四千多条违规——两个工具规则集重叠只有一半，而且商业工具做<strong>跨编译单元</strong>分析（clang-tidy 默认只看单个 TU）。<strong>补救花了约六周。</strong>教训：<strong>正式工具必须第一天就进 CI，哪怕每晚跑一次。</strong>合规性欠债不会随重构慢慢还掉，只会在里程碑当天一次性引爆。</div>
+  <div class="box real">一个真实的踩坑：某项目在 CI 里只用 clang-tidy 做门禁、每次 PR 都干净，临近里程碑第一次跑认证过的商业工具，一次性冒出四千多条违规——两个工具规则集重叠只有一半，而且商业工具做<strong>跨编译单元</strong>分析（clang-tidy 默认只看单个 TU，TU 即编译单元——一次编译所能看到的最大代码单元）。<strong>补救花了约六周。</strong>教训：<strong>正式工具必须第一天就进 CI，哪怕每晚跑一次。</strong>合规性欠债不会随重构慢慢还掉，只会在里程碑当天一次性引爆。</div>
 </section>
 
 <!-- ================================================================
@@ -1610,7 +1610,7 @@
     </div>
   </div>
 
-  <p>这一节回答一个新人必然会问的问题：<strong>凭什么我不能把项目的 GCC 从 9 升到 13？</strong>Part 8 里有一章专门讲"对软件工具使用的置信度"，出发点很朴素：你的安全论证建立在"代码正确"之上，但交付的是编译器生成的机器码、依赖的是静态分析工具给出的结论。<strong>如果工具会出错，整条证据链就有一个未经检验的假设。</strong></p>
+  <p>这一节回答一个新人必然会问的问题：<strong>凭什么我不能把项目的 GCC 从 9 升到 13？</strong>Part 8 里有一章专门讲"对软件工具使用的置信度"（<strong>TCL</strong>，Tool Confidence Level，工具置信度等级——按「工具出错影响多大（TI）× 出错能不能被发现（TD）」两问定级：TCL1 不需要额外措施，TCL2 / TCL3 要补验证活动或改用带认证包的工具），出发点很朴素：你的安全论证建立在"代码正确"之上，但交付的是编译器生成的机器码、依赖的是静态分析工具给出的结论。<strong>如果工具会出错，整条证据链就有一个未经检验的假设。</strong></p>
 
   <div class="analogy">类比：法庭上你拿 DNA 报告做证据，对方律师第一件事不是质疑 DNA 理论，而是问"你这台测序仪校准过吗、校准记录在哪"。<strong>仪器未经校准，报告就没有证据效力。</strong>编译器和静态分析工具就是功能安全项目里的测序仪。</div>
 
@@ -1794,9 +1794,9 @@ _Z12willOverflowii:
     </tbody>
   </table>
 
-  <p>第三条路线最有代表性的手段是<strong>双编译器交叉比对（diverse compilation）</strong>：同一份源码用两个不同编译器（甚至不同优化等级）各编一遍，在同一套测试向量上逐组比对<strong>行为</strong>。它不证明编译器没 bug，但能把"两个独立编译器在同一处同时出同样的错"压得很低——这正是 TD 论证需要的东西。太慢，通常只在 nightly 跑。</p>
+  <p>第三条路线最有代表性的手段是<strong>双编译器交叉比对（diverse compilation）</strong>：同一份源码用两个不同编译器（甚至不同优化等级）各编一遍，在同一套测试向量（一组组预先准备好的输入和对应的期望输出）上逐组比对<strong>行为</strong>。它不证明编译器没 bug，但能把"两个独立编译器在同一处同时出同样的错"压得很低——这正是 TD 论证需要的东西。太慢，通常只在 nightly（每晚定时跑的构建任务）里跑。</p>
 
-  <div class="box real">这个方法最大的价值是个意外收获：<strong>它抓出来的绝大多数差异是自己代码里的未定义行为，而不是编译器 bug。</strong>某项目第一次跑比对发现 17 处差异，最后定位为 15 处 UB（有符号溢出、未初始化读、严格别名违规）+ 2 处浮点契约不一致（一侧用了 FMA 融合乘加，需要在 <code>allowed_flags</code> 里统一），<strong>编译器 bug 零处</strong>。即使项目不做工具认证，这个手段也值得上。</div>
+  <div class="box real">这个方法最大的价值是个意外收获：<strong>它抓出来的绝大多数差异是自己代码里的未定义行为，而不是编译器 bug。</strong>某项目第一次跑比对发现 17 处差异，最后定位为 15 处 UB（有符号溢出、未初始化读、严格别名违规）+ 2 处浮点契约不一致（一侧用了 FMA 融合乘加——FMA，Fused Multiply-Add，把乘法和加法合并成一条指令、中间不舍入的运算，会改变浮点结果——需要在 <code>allowed_flags</code> 里统一），<strong>编译器 bug 零处</strong>。即使项目不做工具认证，这个手段也值得上。</div>
 </section>
 
 <!-- ================================================================
@@ -1842,7 +1842,7 @@ _Z12willOverflowii:
     </tbody>
   </table>
 
-  <p>环境缩写常被混用，准确的区分是<strong>"被测的到底是什么"</strong>：<strong>MIL</strong> 是控制模型（还没有代码）；<strong>SIL</strong> 是编译到 PC 上运行的<strong>同一份源码</strong>（单元/集成测试主战场：快、可并行、易覆盖）；<strong>PIL</strong> 是跑在<strong>目标核</strong>或其指令集模拟器上的目标码；<strong>HIL</strong> 是真实 ECU + 实时仿真的车辆环境；<strong>VIL</strong> 是真车在台架上、环境仿真，用于 ADAS 场景确认。</p>
+  <p>环境缩写常被混用，准确的区分是<strong>"被测的到底是什么"</strong>：<strong>MIL</strong>（Model-in-the-Loop，模型在环）是控制模型（还没有代码）；<strong>SIL</strong>（Software-in-the-Loop，软件在环）是编译到 PC 上运行的<strong>同一份源码</strong>（单元/集成测试主战场：快、可并行、易覆盖）；<strong>PIL</strong>（Processor-in-the-Loop，处理器在环）是跑在<strong>目标核</strong>或其指令集模拟器上的目标码；<strong>HIL</strong>（Hardware-in-the-Loop，硬件在环）是真实 ECU + 实时仿真的车辆环境；<strong>VIL</strong>（Vehicle-in-the-Loop，整车在环）是真车在台架上、环境仿真，用于 ADAS 场景确认。</p>
 
   <div class="box tip"><strong>SIL 与 PIL 的差异必须被显式验证，不能假设。</strong>常见的 SIL 通过、PIL 失败原因：<code>int</code> 宽度不同、<code>char</code> 符号性不同、浮点在 x86 上用 80 位中间精度而目标核只有 32 位、字节序、结构体填充与对齐、不同优化等级下的求值顺序。所以正规项目做 <strong>back-to-back 测试</strong>：同一组向量在 SIL 与 PIL 上各跑一遍逐位比对——这同时是 §7 里提高 TD 的措施之一。</div>
 
@@ -1926,7 +1926,7 @@ _Z12willOverflowii:
 
   <div class="box danger">报告里<strong>每条用例都要同时记「期望」和「实测的时间数字」</strong>，因为它证明的不只是"机制触发了"，而是"在 FTTI 内触发了"。一个真实的 FAIL：注入"计数器冻结"，期望判 <code>kRepeated</code> 并在 3 帧后进安全状态，实测 <code>kRepeated</code> 确实置位<strong>但没有进入安全状态</strong>——根因是消费侧把它当成 <code>kNoNewData</code>，走了"沿用上一帧"且没有计数上限。<strong>正是 §5 点名的那个 bug：单元测试全绿、代码评审通过，只有故障注入能抓到。</strong></div>
 
-  <div class="box real">故障注入用例的数量常被严重低估：中等规模 ASIL D 的 ECU 仅通信与时序两类就能到<strong>数百条</strong>，加上电气故障，HIL 上一轮完整回归要<strong>十几到几十小时</strong>。<strong>务实做法：能在 SIL 上做的注入（接口值、时序、协议层）尽量前移，HIL 只留真正需要真实硬件的（电气、时钟、ECC）。</strong>见过项目把所有注入都堆在 HIL 上，台架排期直接决定了关键路径。</div>
+  <div class="box real">故障注入用例的数量常被严重低估：中等规模 ASIL D 的 ECU 仅通信与时序两类就能到<strong>数百条</strong>，加上电气故障，HIL 上一轮完整回归要<strong>十几到几十小时</strong>。<strong>务实做法：能在 SIL 上做的注入（接口值、时序、协议层）尽量前移，HIL 只留真正需要真实硬件的（电气、时钟、ECC）。</strong>见过项目把所有注入都堆在 HIL 上，台架排期直接决定了关键路径。（ECC：Error Correcting Code，纠错码——内存每个字都附带校验位，单个位翻转能被硬件自动纠正或报出，表里说的 ECC 注入就是人为造一次这种翻转来验证自检逻辑。）</div>
 
   <h3 id="s8-7">形式化方法：证明"不会发生"，而不是"没测出来"</h3>
 
@@ -1959,7 +1959,7 @@ _Z12willOverflowii:
     </div>
   </div>
 
-  <div class="warn"><strong>本节所有数字都是经验量级，不是行业统计。</strong>跨公司差异可以到两三倍。用它们做<strong>估算的起点和"数量级 sanity check"</strong>是合适的，写进正式报价单请用自己组织的历史数据。</div>
+  <div class="warn"><strong>本节所有数字都是经验量级，不是行业统计。</strong>跨公司差异可以到两三倍。用它们做<strong>估算的起点和"数量级 sanity check"（大致核对一下数字合不合理）</strong>是合适的，写进正式报价单请用自己组织的历史数据。</div>
 
   <h3 id="s9-1">额外成本从哪来：五块</h3>
 
@@ -2081,11 +2081,11 @@ _Z12willOverflowii:
 
   <h3 id="s10-1">ISO 21448（SOTIF）：系统没坏，但行为不安全</h3>
 
-  <div class="def"><strong>SOTIF</strong>（预期功能安全，ISO 21448:2022）关注<strong>在没有故障的前提下</strong>，由<strong>功能不足</strong>和<strong>触发条件</strong>共同导致的危害。<br>· <strong>功能不足</strong>：算法 / 传感器的固有性能局限，如毫米波雷达对静止金属物的分辨能力、摄像头的动态范围。<br>· <strong>触发条件</strong>：把局限暴露出来的场景，如"逆光 + 白色车厢 + 高速接近"。<br>两者<strong>必须同时出现</strong>才构成危害——这就是 SOTIF 分析的基本结构。</div>
+  <div class="def"><strong>SOTIF</strong>（Safety Of The Intended Functionality，预期功能安全，ISO 21448:2022）关注<strong>在没有故障的前提下</strong>，由<strong>功能不足</strong>和<strong>触发条件</strong>共同导致的危害。<br>· <strong>功能不足</strong>：算法 / 传感器的固有性能局限，如毫米波雷达对静止金属物的分辨能力、摄像头的动态范围。<br>· <strong>触发条件</strong>：把局限暴露出来的场景，如"逆光 + 白色车厢 + 高速接近"。<br>两者<strong>必须同时出现</strong>才构成危害——这就是 SOTIF 分析的基本结构。</div>
 
-  <p>方法论核心是一张"四象限"图（安全/不安全 × 已知/未知场景）：<strong>区域 1</strong>（已知且安全）要尽量扩大；<strong>区域 2</strong>（已知的不安全）通过改进功能或限制 ODD 转成区域 1；<strong>区域 3</strong>（<strong>未知的不安全</strong>）要靠场景探索挖出来变成区域 2 再消除。</p>
+  <p>方法论核心是一张"四象限"图（安全/不安全 × 已知/未知场景）：<strong>区域 1</strong>（已知且安全）要尽量扩大；<strong>区域 2</strong>（已知的不安全）通过改进功能或限制 ODD（Operational Design Domain，设计运行域——声明"本系统只在哪些条件下能安全工作"的边界，比如"白天、能见度好、有车道线的高速"）转成区域 1；<strong>区域 3</strong>（<strong>未知的不安全</strong>）要靠场景探索挖出来变成区域 2 再消除。</p>
 
-  <p><strong>区域 3 是 SOTIF 的全部难点</strong>——你要证明"我不知道的危险场景已经足够少了"。功能安全靠"分析失效模式 + 加安全机制"，而 SOTIF 只能靠<strong>大规模场景收集、仿真、真实路测里程与统计论证</strong>。这就是自动驾驶公司要跑几千万公里、建场景库、做影子模式的原因。</p>
+  <p><strong>区域 3 是 SOTIF 的全部难点</strong>——你要证明"我不知道的危险场景已经足够少了"。功能安全靠"分析失效模式 + 加安全机制"，而 SOTIF 只能靠<strong>大规模场景收集、仿真、真实路测里程与统计论证</strong>。这就是自动驾驶公司要跑几千万公里、建场景库、做影子模式（shadow mode——新算法在后台跟着真实驾驶默默运行、只记录不控车，拿它与人类操作的差异当统计数据）的原因。</p>
 
   <table>
     <thead><tr><th>维度</th><th>ISO 26262（功能安全）</th><th>ISO 21448（SOTIF）</th></tr></thead>
@@ -2099,7 +2099,7 @@ _Z12willOverflowii:
     </tbody>
   </table>
 
-  <div class="box tip"><strong>两者在同一个功能上是叠加而非二选一。</strong>把同一个 AEB 按"没刹 / 没识别 / 误刹"切成三刀，就能看清边界落在哪一侧——展开见<a href="#s11">本章面试题</a>第 1 题。</div>
+  <div class="box tip"><strong>两者在同一个功能上是叠加而非二选一。</strong>把同一个 AEB（Automatic Emergency Braking，自动紧急制动——快撞上时自动帮驾驶员刹车的功能）按"没刹 / 没识别 / 误刹"切成三刀，就能看清边界落在哪一侧——展开见<a href="#s11">本章面试题</a>第 1 题。</div>
 
   <p>SOTIF 落到代码上最典型的形态，是<strong>把"我不确定"变成一等公民</strong>。只有功能安全思维的接口是 <code>{float distanceM; bool valid;}</code>——它只区分"传感器好不好"，不区分"识别准不准"。SOTIF 视角要把这两件事拆开，并额外暴露 ODD 状态：</p>
 
@@ -2137,7 +2137,7 @@ _Z12willOverflowii:
 
   <p>核心命题一句话：<strong>一个可被入侵的 ECU，同时是一个功能安全问题。</strong>攻击者伪造的制动指令在 26262 视角下就是一次"非预期激活"，后果和位翻转完全一样，只是原因不同。</p>
 
-  <p>但两个体系的<strong>失效模型不同</strong>，防护手段不能互相替代。最清晰的例子是 CRC 与 MAC：E2E 的 CRC + 计数器防<strong>随机</strong>错误，无攻击者模型、不需要密钥；SecOC 的 MAC + 新鲜度值防<strong>有意</strong>的伪造与重放，攻击者知道算法、能读总线、能构造报文，所以必须有密钥管理与安全存储（HSM）。<strong>两者不能互换</strong>：CRC 算法公开，攻击者轻易算得出正确值；MAC 虽也挡随机错误，但开销远高于 CRC。</p>
+  <p>但两个体系的<strong>失效模型不同</strong>，防护手段不能互相替代。最清晰的例子是 CRC 与 MAC：E2E 的 CRC + 计数器防<strong>随机</strong>错误，无攻击者模型、不需要密钥；SecOC（Secure Onboard Communication，AUTOSAR 定义的车载信息安全通信框架）的 MAC（Message Authentication Code，消息认证码——用只有收发双方知道的密钥给报文算出的"签名"，没有密钥就伪造不出来）+ 新鲜度值防<strong>有意</strong>的伪造与重放（把之前截获的合法报文原样再发一遍），攻击者知道算法、能读总线、能构造报文，所以必须有密钥管理与安全存储（HSM，Hardware Security Module，硬件安全模块——芯片里专门保管密钥、执行密码运算的独立硬件单元）。<strong>两者不能互换</strong>：CRC 算法公开，攻击者轻易算得出正确值；MAC 虽也挡随机错误，但开销远高于 CRC。</p>
 
   <p>所以工程上两层是<strong>叠加</strong>的：同一条制动指令的帧里既有 E2E 的 <code>crc + counter</code>，也有 SecOC 的 <code>freshness + mac</code>。接收侧的顺序固定为四步：</p>
 
@@ -2190,10 +2190,10 @@ _Z12willOverflowii:
     <li><strong>分析要互为输入</strong>：TARA 识别出的"攻击可能导致的损害场景"要回灌进 HARA，HARA 识别出的高 ASIL 资产要作为 TARA 的重点保护对象。各写各的一定会出现"一边假设网关可信、一边假设网关是攻击面"这种自相矛盾。</li>
     <li><strong>共用一套需求管理与追溯基础设施</strong>：三类需求进同一个需求库、用属性区分，<a href="#s9-3">§9.3</a> 那套追溯自动化对三者同样适用——这是三标合一里投入产出比最高的复用。</li>
     <li><strong>成本不是简单相加</strong>：总成本明显上升（<strong>量级参考 +30%–50%</strong>，视 ADAS 复杂度），但流程基础设施是复用的，边际成本低于第一套。</li>
-    <li><strong>量产后的工作量分布完全不同</strong>：26262 在 SOP 之后主要是变更影响分析；信息安全在 SOP 之后才刚开始——漏洞监控、补丁、事件响应要持续整个车辆生命周期。<strong>这部分长期人力经常在立项时被完全忽略。</strong></li>
+    <li><strong>量产后的工作量分布完全不同</strong>：26262 在 SOP（Start of Production，量产启动）之后主要是变更影响分析；信息安全在 SOP 之后才刚开始——漏洞监控、补丁、事件响应要持续整个车辆生命周期。<strong>这部分长期人力经常在立项时被完全忽略。</strong></li>
   </ul>
 
-  <p>项目跑在 Adaptive Platform 上时，E2E、SecOC、身份与访问管理、更新与配置管理在平台层都有对应服务，见 <a href="autosar_ap_deep_dive.html">AUTOSAR Adaptive Platform 深入</a>；车载网络侧的时间确定性与冗余见 <a href="automotive_networking.html">车载网络</a>、<a href="../robotics-comm/tsn_deep_dive.html">TSN 深入</a>；本主题的整体地图见 <a href="landscape.html">嵌入式 / 实时全景</a>，硬实时调度侧见 <a href="preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
+  <p>项目跑在 Adaptive Platform 上时（AUTOSAR Adaptive Platform，面向高性能计算控制器的 AUTOSAR 平台形态），E2E、SecOC、身份与访问管理、更新与配置管理在平台层都有对应服务，见 <a href="autosar_ap_deep_dive.html">AUTOSAR Adaptive Platform 深入</a>；车载网络侧的时间确定性与冗余见 <a href="automotive_networking.html">车载网络</a>、<a href="../robotics-comm/tsn_deep_dive.html">TSN 深入</a>；本主题的整体地图见 <a href="landscape.html">嵌入式 / 实时全景</a>，硬实时调度侧见 <a href="preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
 
   <div class="card">
     <div class="card-title">🎯 关键 take-aways</div>

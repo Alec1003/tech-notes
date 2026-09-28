@@ -1095,11 +1095,11 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <p>Method 是一次跨进程往返，失败模式比本地调用丰富得多：提供方没起来、起来了但没 Offer、Offer 了但处理线程卡住、网络丢包、返回报文丢了。<strong>所有这些在消费方看来都是「Future 一直不 ready」</strong>，所以每一次调用都必须有超时和降级路径。</p>
 
-  <p>提供方一侧的对应陷阱是<strong>重入</strong>：<code>kEvent</code> 模式下中间件会在多个线程上并发调进你 <code>override</code> 的函数，于是在方法实现里做耗时操作（读文件、等另一个服务）会占满中间件线程池，导致<strong>这个服务的所有方法一起变慢</strong>。需要严格单线程语义就换 <code>kPoll</code>，代价是自己保证轮询足够频繁。</p>
+  <p>提供方一侧的对应陷阱是<strong>重入</strong>（reentrant——同一个方法还没执行完，又被中间件的另一个线程再次调进来）：<code>kEvent</code> 模式下中间件会在多个线程上并发调进你 <code>override</code> 的函数，于是在方法实现里做耗时操作（读文件、等另一个服务）会占满中间件线程池，导致<strong>这个服务的所有方法一起变慢</strong>。需要严格单线程语义就换 <code>kPoll</code>，代价是自己保证轮询足够频繁。</p>
 
   <h4>③ 大规模系统的启动风暴</h4>
 
-  <p>几十个应用、几百个服务实例同时上电时，SD 报文数是「实例数 × 初始阶段的重复次数」，而这个组播尖峰恰好和「所有应用都在初始化、CPU 与内存带宽最紧张」的时刻重合。症状是冷启动偶发某几个服务发现失败或延迟数秒、重启又好了。缓解手段与取舍见 <a href="#s11-2">§11.2 第 5 题</a>，最有效的一条是<strong>由 SM 分阶段把应用带起来</strong>，它同时缓解了 CPU 争用。</p>
+  <p>几十个应用、几百个服务实例同时上电时（这就是启动风暴——thundering herd：所有进程一起开机、一起发服务发现报文，网络瞬间被挤爆，好比散场时所有人同时涌向同一个出口），SD 报文数是「实例数 × 初始阶段的重复次数」，而这个组播尖峰恰好和「所有应用都在初始化、CPU 与内存带宽最紧张」的时刻重合。症状是冷启动偶发某几个服务发现失败或延迟数秒、重启又好了。缓解手段与取舍见 <a href="#s11-2">§11.2 第 5 题</a>，最有效的一条是<strong>由 SM 分阶段把应用带起来</strong>，它同时缓解了 CPU 争用。</p>
 
   <div class="box star">被问「服务发现挺好，那它的代价是什么」，除了上面的启动尖峰与 TTL 延迟，还要答出第三层：<strong>测试空间爆炸</strong>——「A 先起 B 后起」「B 中途崩」「网络中断 3 秒又恢复」这些在 CP 里根本不存在的时序组合，现在每一个都是必须覆盖的用例。这才是「动态」的真实账单。</div>
 </section>
@@ -1348,7 +1348,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s5-1">ara::per (Persistency)</h3>
 
-  <p>先回答那个最自然的疑问：<strong>为什么不能直接 <code>fopen</code> + <code>fwrite</code>？</strong>在服务器上这么写完全没问题，在车上不行——原因不是「规范要求」，而是车规场景的四条物理现实。</p>
+  <p>ara::per（Persistency，持久化——管的是「断电之后还得在」的那部分数据：用户设置、标定值、里程统计，好比给每个应用配了一个防摔防水、丢不了页的记事本）。先回答那个最自然的疑问：<strong>为什么不能直接 <code>fopen</code> + <code>fwrite</code>？</strong>在服务器上这么写完全没问题，在车上不行——原因不是「规范要求」，而是车规场景的四条物理现实。</p>
 
   <table>
     <thead><tr><th>车规现实</th><th>直接 fopen 会发生什么</th><th>ara::per 怎么处理</th></tr></thead>
@@ -1393,7 +1393,7 @@ kvs-&gt;SetValue&lt;<span class="kw">bool</span>&gt;(<span class="str">"lane_ass
 <span class="cm">// 失败也不致命：修改仍在内存里，下次还能重试。</span>
 kvs-&gt;SyncToStorage();</pre>
 
-  <p>File Storage 的接口形态同理：拿到的是<strong>访问器而不是 <code>FILE*</code></strong>，读写返回 <code>Result</code>，并且 <code>SyncToFile()</code> 明确区分「写进缓冲」和「保证落到介质」。它最常见的反模式是被当成日志盘用——每 100 ms 写一行再 sync 一次，几年足以写坏块，而且每次 sync 都是一次同步 I/O，在 eMMC 上偶发几十毫秒的阻塞会直接打穿控制周期的时间预算。</p>
+  <p>File Storage 的接口形态同理：拿到的是<strong>访问器而不是 <code>FILE*</code></strong>，读写返回 <code>Result</code>，并且 <code>SyncToFile()</code> 明确区分「写进缓冲」和「保证落到介质」。它最常见的反模式（anti-pattern——图省事、短期内看不出问题、后患却很大的典型错误用法）是被当成日志盘用——每 100 ms 写一行再 sync 一次，几年足以写坏块，而且每次 sync 都是一次同步 I/O，在 eMMC 上偶发几十毫秒的阻塞会直接打穿控制周期的时间预算。</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 340" role="img" aria-label="ara::per 的两种存储形态与掉电一致性机制：键值存储按键存取并整区原子提交，文件存储按文件同步；写入路径是先写新副本、校验、再原子切换，打开时校验失败可恢复冗余副本或重置为清单默认值" style="min-width:760px;height:auto">
@@ -1458,7 +1458,7 @@ kvs-&gt;SyncToStorage();</pre>
 
   <p>HSM（车载常见形态是 SoC 内的独立安全子系统或独立安全芯片）提供一块应用侧<strong>物理上读不到</strong>的存储与运算单元：应用把「用槽位 3 的私钥签这段数据」交给它，它只返回签名结果，<strong>私钥自生产阶段注入后任何软件路径都取不出来</strong>。值得付这个硬件成本，是因为车<strong>物理可接触</strong>——攻击者能拆 ECU、焊下 eMMC、静态分析固件，藏在文件或代码里的密钥必然被提取，而泄露影响的是整个车型的全部车辆。</p>
 
-  <p>三条工程约束：<strong>性能要算</strong>——HSM 吞吐远低于主 CPU，典型架构是「非对称运算走 HSM，会话密钥由 HSM 派生后交给主 CPU 做对称加密」，把每帧图像都送进 HSM 是常见设计错误；<strong>启动早期不可用</strong>——依赖它的功能要能处理「现在还拿不到」而不是死等；<strong>密钥轮换必须在设计阶段考虑</strong>——「一个型号一把密钥永不更换」在 UN R155 语境下已不可接受。</p>
+  <p>三条工程约束：<strong>性能要算</strong>——HSM 吞吐远低于主 CPU，典型架构是「非对称运算走 HSM，会话密钥由 HSM 派生后交给主 CPU 做对称加密」，把每帧图像都送进 HSM 是常见设计错误；<strong>启动早期不可用</strong>——依赖它的功能要能处理「现在还拿不到」而不是死等；<strong>密钥轮换必须在设计阶段考虑</strong>——「一个型号一把密钥永不更换」在 UN R155（联合国强制车辆网络安全法规——要求整车厂建立网络安全管理体系并通过型式批准，不合规的车在某些市场根本不能上市）语境下已不可接受。</p>
 
   <h3 id="s5-3">ara::iam (Identity and Access Management)</h3>
 
@@ -1603,7 +1603,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>资源分配：清单里的声明如何落到 Linux 机制上</h4>
 
-  <p>Execution Manifest 除了启动依赖，还声明这个进程要多少资源、跑在哪些核上、用什么调度策略。EM 负责把这些声明翻译成底层机制——在 Linux 上就是 cgroup（Linux 的资源管控机制，把进程分组并限制每组的 CPU、内存用量）、CPU 亲和（affinity——把进程钉在指定的核上跑）与调度策略：</p>
+  <p>Execution Manifest（执行清单——每个应用随可执行文件一起交付的配置文件，写明它依赖谁、要什么资源，相当于进程随身的「需求单」）除了启动依赖，还声明这个进程要多少资源、跑在哪些核上、用什么调度策略。EM 负责把这些声明翻译成底层机制——在 Linux 上就是 cgroup（Linux 的资源管控机制，把进程分组并限制每组的 CPU、内存用量）、CPU 亲和（affinity——把进程钉在指定的核上跑）与调度策略：</p>
 
   <table>
     <thead><tr><th>清单里的声明</th><th>Linux 上的落地</th><th>为什么需要它</th></tr></thead>
@@ -1801,7 +1801,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <div class="box danger"><strong>验签的位置与时机常被做错。</strong>三个真实错误：① 只在下载完成时验一次，然后把包存到可写分区，安装时直接读——攻击者若能写那个分区就绕过了校验。<strong>正确做法是在安装前（真正读取内容时）再次校验</strong>。② 只验整包哈希不验签名——哈希只防传输损坏，不防伪造。③ 把公钥放在可被 OTA 更新的分区里，于是「换掉公钥」成为攻击的第一步；信任根必须在不可写介质或 HSM 内。</div>
+  <div class="box danger"><strong>验签的位置与时机常被做错。</strong>三个真实错误：① 只在下载完成时验一次，然后把包存到可写分区，安装时直接读——攻击者若能写那个分区就绕过了校验。<strong>正确做法是在安装前（真正读取内容时）再次校验</strong>。② 只验整包哈希不验签名——哈希只防传输损坏，不防伪造。③ 把公钥放在可被 OTA 更新的分区里，于是「换掉公钥」成为攻击的第一步；信任根（root of trust——整个安全链条里那个「天生只能信它、没法被替换」的起点，好比锁具的钥匙坯源头）必须在不可写介质或 HSM 内。</div>
 
   <h4>UCM 的状态机</h4>
 
@@ -1883,7 +1883,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <div class="box tip">调用侧有四个容易漏掉的约束：<strong>传输必须分块</strong>（几百 MB 的包放不进车端内存，而且分块才能断点续传），<strong>失败必须显式中止并删除传输</strong>（否则暂存空间一直被占，泄漏几次就再也装不下任何升级包）；<strong>Processing 的失败原因要分开处理</strong>——签名无效是安全事件、不要重试，依赖不满足是编排问题，差分基线不匹配要改下全量包，空间不足要先清理；<strong>「激活已发起」必须在调 Activate 之前先持久化</strong>，否则重启后没人知道刚才在升级，也就没人去做确认或回滚；<strong>自检通过才 Finish、否则主动 Rollback</strong>，主动回退比等看门狗超时干净得多。</div>
+  <div class="box tip">调用侧有四个容易漏掉的约束：<strong>传输必须分块</strong>（几百 MB 的包放不进车端内存，而且分块才能断点续传），<strong>失败必须显式中止并删除传输</strong>（否则暂存空间一直被占，泄漏几次就再也装不下任何升级包）；<strong>Processing 的失败原因要分开处理</strong>——签名无效是安全事件、不要重试，依赖不满足是编排问题，差分（delta——升级包只带新旧版本的差异部分，体积小得多，但要求车端现状与它的基准版本严格一致）基线不匹配要改下全量包，空间不足要先清理；<strong>「激活已发起」必须在调 Activate 之前先持久化</strong>，否则重启后没人知道刚才在升级，也就没人去做确认或回滚；<strong>自检通过才 Finish、否则主动 Rollback</strong>，主动回退比等看门狗（watchdog——独立于应用的一个硬件计时器，应用必须定期「喂」它证明自己没卡死；一旦喂不上，它就强制重启系统）超时干净得多。</div>
 
   <h3 id="s7-2">关键特性</h3>
 
@@ -1944,7 +1944,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>UCM Master 与多 ECU 协调</h4>
 
-  <p>一次整车升级往往涉及多个 ECU：中央计算单元上的 AP、几个 zonal 上的 CP、可能还有 Tier1（一级供应商——直接向主机厂交付零部件与控制器的公司）的独立控制器。它们的升级机制完全不同（AP 走 UCM，CP 走诊断协议刷写），但<strong>必须作为一个整体成功或失败</strong>——新版本的感知输出格式可能只有新版本的规划才能解析。这个协调角色就是 <strong>UCM Master</strong>：它自己也是一个服务，向后端呈现「整车软件版本」这一个概念，向内把整车升级分解为对各 ECU 的操作。</p>
+  <p>一次整车升级往往涉及多个 ECU：中央计算单元上的 AP、几个 zonal（区域控制器——按车身物理位置分区的控制节点，§1 三代拓扑里第三代的那 4–6 个角节点就是它）上的 CP、可能还有 Tier1（一级供应商——直接向主机厂交付零部件与控制器的公司）的独立控制器。它们的升级机制完全不同（AP 走 UCM，CP 走诊断协议刷写），但<strong>必须作为一个整体成功或失败</strong>——新版本的感知输出格式可能只有新版本的规划才能解析。这个协调角色就是 <strong>UCM Master</strong>：它自己也是一个服务，向后端呈现「整车软件版本」这一个概念，向内把整车升级分解为对各 ECU 的操作。</p>
 
   <div class="pipeline">
     <div class="pipeline-stage s1">整车升级活动<span class="ext">后端下发一份「目标整车版本」</span></div>
@@ -1960,7 +1960,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <p>关键设计是<strong>把「写入」和「激活」彻底分开</strong>：先让所有 ECU 都把新版本准备好但都不激活（这一阶段任意失败都可以无痛放弃），只有全部就绪后才进入激活阶段。这样把「可能部分失败的长过程」压缩成了「一个尽可能短的切换窗口」。</p>
 
-  <div class="box danger"><strong>但要诚实：真正的多 ECU 原子性做不到。</strong>激活窗口再短也不是零，而 CP 侧的刷写往往要几十秒到几分钟、无法与 AP 同步完成。现实做法是「尽力原子 + 明确的部分失败处理」：定义好哪些组合是「可容忍的中间版本」，并为每个 ECU 准备独立回滚。整车级一致性最终靠<strong>接口向后兼容设计</strong>而不是事务机制来保证。</div>
+  <div class="box danger"><strong>但要诚实：真正的多 ECU 原子性做不到。</strong>原子性（atomicity）指「要么所有 ECU 都升级成功、要么全部保持原样，绝不出现一半新一半旧的中间态」。激活窗口再短也不是零，而 CP 侧的刷写往往要几十秒到几分钟、无法与 AP 同步完成。现实做法是「尽力原子 + 明确的部分失败处理」：定义好哪些组合是「可容忍的中间版本」，并为每个 ECU 准备独立回滚。整车级一致性最终靠<strong>接口向后兼容设计</strong>而不是事务机制来保证。</div>
 
   <h3 id="s7-3">为什么车端 OTA 比手机 OTA 难得多</h3>
 
@@ -2042,7 +2042,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     <div class="pipeline-stage s5">调试与集成测试<span class="ext">日志 / 抓包 / gdbserver / HIL</span></div>
   </div>
 
-  <p>两处最容易低估工作量：<strong>ARXML 建模不是「写个 IDL」</strong>——接口定义之外还有与整车网络设计耦合的部署建模，<strong>接口建模是几小时的工作，部署建模是几周的工作</strong>；<strong>「代码生成」是构建图里的一个真实节点</strong>——改一行 ARXML 可能导致上百个生成文件变化，CI 里必须把生成物纳入缓存与依赖追踪，否则每次提交都是全量构建。</p>
+  <p>两处最容易低估工作量：<strong>ARXML 建模不是「写个 IDL」</strong>——接口定义之外还有与整车网络设计耦合的部署建模，<strong>接口建模是几小时的工作，部署建模是几周的工作</strong>；<strong>「代码生成」是构建图里的一个真实节点</strong>——改一行 ARXML 可能导致上百个生成文件变化，CI（Continuous Integration，持续集成——每次提交代码都自动构建、自动跑测试的服务器流程，相当于给仓库配了一个不知疲倦的质检员）里必须把生成物纳入缓存与依赖追踪，否则每次提交都是全量构建。</p>
 
   <div class="box tip"><strong>工程布局里藏着一条关键纪律。</strong>版本控制的真正源头是 <code>model/</code> 下的 ARXML，生成物<strong>不要提交</strong>；而单元测试必须能在开发机上<strong>不依赖任何 AP 运行时</strong>跑起来——这要求把业务逻辑和 <code>ara::</code> 调用分开：Skeleton 的 <code>override</code> 里只做参数转换，算法放进一个纯 C++ 类。否则每跑一次单测都要拉起整套平台，单测退化成集成测试、几分钟一轮，最后没人跑。</div>
 
@@ -2085,7 +2085,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h3 id="s8-4">CI 与 SIL / HIL 测试</h3>
 
-  <p>AP 项目的测试金字塔和普通 C++ 项目形状不同：<strong>下面两层在 CI 里跑得很快，上面两层慢且贵，所以「往下推」是主要的工程优化方向</strong>。</p>
+  <p>AP 项目的测试金字塔和普通 C++ 项目形状不同：<strong>下面两层在 CI 里跑得很快，上面两层慢且贵，所以「往下推」是主要的工程优化方向</strong>。上面两层就是 SIL（Software in the Loop，软件在环——不接真实硬件，在开发机上用目标架构的模拟环境加仿真车辆模型跑测试）和 HIL（Hardware in the Loop，硬件在环——把真实的 ECU 接到实时仿真机上，让仿真器扮演整辆车和它「对话」）：</p>
 
   <table>
     <thead><tr><th>层级</th><th>跑在哪</th><th>能验证什么</th><th>一轮耗时</th><th>限制</th></tr></thead>
@@ -2162,7 +2162,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <p>结果是在 AP 上做<strong>高等级</strong> ASIL 成本很高——不是「买个认证过的 Linux」就能解决，而是要连同流程、工具鉴定、验证证据、变更管理一起做。它在预算与排期里是一个必须提前规划的大项，不是尾期的补充工作。</p>
+  <p>结果是在 AP 上做<strong>高等级</strong> ASIL 成本很高——不是「买个认证过的 Linux」就能解决，而是要连同流程、工具鉴定（tool qualification——连你用来开发安全软件的编译器、代码生成器这类工具，都得按流程证明它们本身足够可靠，这是一套独立的认证工作）、验证证据、变更管理一起做。它在预算与排期里是一个必须提前规划的大项，不是尾期的补充工作。</p>
 
   <h4>所以现实里怎么做：把高 ASIL 挪出去</h4>
 
@@ -2227,7 +2227,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <p><strong>安全相关且面向攻击暴露的通信通常两者都要做</strong>，而且要注意叠加顺序与带宽预算——在一条 CAN 报文的 8 字节里同时塞 E2E 和 SecOC 的保护字段，留给实际数据的空间会非常紧张，这也是以太网化的一个推动因素。</p>
+  <p><strong>安全相关且面向攻击暴露的通信通常两者都要做</strong>，而且要注意叠加顺序与带宽预算——在一条 CAN（Controller Area Network，传统车里那套低速总线，一条报文的数据区只有 8 字节）报文的 8 字节里同时塞 E2E 和 SecOC 的保护字段，留给实际数据的空间会非常紧张，这也是以太网化的一个推动因素。</p>
 
   <h4>标准与法规的约束</h4>
 
@@ -2245,7 +2245,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h3 id="s9-4">把安全机制串起来看</h3>
 
-  <p>单看每个机制都像是零散的要求，串起来才能看出设计意图——<strong>它们构成一条从「检测」到「响应」的链，而 AP 的角色是被监控者而非监控者</strong>：</p>
+  <p>单看每个机制都像是零散的要求，串起来才能看出设计意图——<strong>它们构成一条从「检测」到「响应」的链：数据坏了由 E2E 发现，进程卡死由 PHM 上报，整机失去响应由硬件看门狗兜底，发现之后由 SM 决定怎么降级</strong>；而 AP 在这条链里的角色是被监控的对象，不是做监控的那一方：</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 380" role="img" aria-label="AP 与功能安全的分层结构：一颗 SoC 上用 hypervisor 把 QM 分区与安全相关分区隔开，AP 侧靠端到端保护和平台健康监督抓数据与进程级问题，硬件看门狗抓整机失去响应，安全岛 MCU 对 AP 输出做合理性检查并承载高 ASIL 需求" style="min-width:760px;height:auto">
@@ -2298,7 +2298,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </svg>
   </div>
 
-  <p>由此得到一条很有效的快速检验：<strong>看一个车载架构的监控链有没有跨出被监控者的失效域。</strong>跨不出去的监控，在最需要它的场景里恰好是失效的。</p>
+  <p>由此得到一条很有效的快速检验：<strong>看一个车载架构的监控链有没有跨出被监控者的失效域</strong>（失效域指一套部件坏掉时会被它一起拖下水的范围——监控者和被监控者必须待在不同的失效域里，监控结论才可信）。跨不出去的监控，在最需要它的场景里恰好是失效的。</p>
 </section>
 
 <!-- ================================================================
@@ -2313,7 +2313,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </div>
   </div>
 
-  <div class="box info">这一章讨论的是产业格局，而<strong>格局类信息的可靠性远低于技术细节</strong>：各家的平台选择通常不完整公开，公开表态与实际落地也常有差距，且随车型代际快速变化。所以下面刻意<strong>只给结构性判断，不给具体主机厂的技术断言</strong>。要做决策请查目标项目的一手资料。</div>
+  <div class="box info">这一章讨论的是产业格局，而<strong>格局类信息的可靠性远低于技术细节</strong>：各家的平台选择通常不完整公开，公开表态与实际落地也常有差距，且随车型代际快速变化。所以下面刻意<strong>只给结构性判断，不给具体主机厂（整车厂——造整车的汽车公司，与给它供货的 Tier1 相对）的技术断言</strong>。要做决策请查目标项目的一手资料。</div>
 
   <h3 id="s10-1">采用 status</h3>
 
@@ -2346,7 +2346,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <div class="box tip">值得注意的是<strong>两条路线正在互相靠近</strong>：AP 侧在吸收云原生的工程实践（容器化部署、更现代的构建与 CI、把零拷贝 IPC 这类现实需求纳入生态），自研路线则在补齐 AP 早就解决的问题（服务发现的启动风暴、E2E 保护、生命周期与状态管理、OTA 的原子性与回滚）。所以<strong>「学 AP」的价值不完全在于将来是否会用它</strong>——它是这些问题被系统性梳理过的一份公开答案，即便走自研路线，这些问题也一个都躲不过。这也是面试里问 AP 的真实意图：考的是你有没有这套问题意识。</div>
+  <div class="box tip">值得注意的是<strong>两条路线正在互相靠近</strong>：AP 侧在吸收云原生（cloud-native——互联网公司围绕容器、微服务、动态编排形成的那套工程与部署方式）的工程实践（容器化部署、更现代的构建与 CI、把零拷贝 IPC 这类现实需求纳入生态），自研路线则在补齐 AP 早就解决的问题（服务发现的启动风暴、E2E 保护、生命周期与状态管理、OTA 的原子性与回滚）。所以<strong>「学 AP」的价值不完全在于将来是否会用它</strong>——它是这些问题被系统性梳理过的一份公开答案，即便走自研路线，这些问题也一个都躲不过。这也是面试里问 AP 的真实意图：考的是你有没有这套问题意识。</div>
 
   <h3 id="s10-3">SDV 趋势与未来判断</h3>
 

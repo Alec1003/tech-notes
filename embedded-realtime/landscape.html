@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>嵌入式 / 实时系统 / 车端 C++ 全景 — Tech Notes</title>
-<meta name="description" content="嵌入式 / 实时系统 / 车端 C++ 全景 — Tech Notes：从硬实时 RTOS 到 AUTOSAR-AP · PREEMPT_RT / MISRA / ISO 26262 / 车端 C++ 实战">
+<meta name="description" content="实时不是快，是最坏延迟有上界。本文用白话把 RTOS 选型、PREEMPT_RT 调优、AUTOSAR CP/AP、车端 C++ 编码规范、ISO 26262 功能安全、嵌入式调试与性能优化串成一张全景地图，给被术语劝退的工程师一条能顺着读下去的路径">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/embedded-realtime/landscape.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/embedded-realtime/landscape.html">
 <meta property="og:title" content="嵌入式 / 实时系统 / 车端 C++ 全景">
-<meta property="og:description" content="嵌入式 / 实时系统 / 车端 C++ 全景 — Tech Notes：从硬实时 RTOS 到 AUTOSAR-AP · PREEMPT_RT / MISRA / ISO 26262 / 车端 C++ 实战">
+<meta property="og:description" content="实时不是快，是最坏延迟有上界。本文用白话把 RTOS 选型、PREEMPT_RT 调优、AUTOSAR CP/AP、车端 C++ 编码规范、ISO 26262 功能安全、嵌入式调试与性能优化串成一张全景地图，给被术语劝退的工程师一条能顺着读下去的路径">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="嵌入式 / 实时系统 / 车端 C++ 全景">
-<meta name="twitter:description" content="嵌入式 / 实时系统 / 车端 C++ 全景 — Tech Notes：从硬实时 RTOS 到 AUTOSAR-AP · PREEMPT_RT / MISRA / ISO 26262 / 车端 C++ 实战">
+<meta name="twitter:description" content="实时不是快，是最坏延迟有上界。本文用白话把 RTOS 选型、PREEMPT_RT 调优、AUTOSAR CP/AP、车端 C++ 编码规范、ISO 26262 功能安全、嵌入式调试与性能优化串成一张全景地图，给被术语劝退的工程师一条能顺着读下去的路径">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -340,7 +340,7 @@
 
   <h3 id="s1-4">为什么 WCET 测不准，只能给保守上界</h3>
 
-  <p>WCET 是整个实时工程里最硬的一块骨头。直觉上「跑一百万次取最大值」就够了，但这在现代处理器上是错的：<strong>执行时间不只取决于代码，还取决于你无法完全控制的微架构状态</strong>。</p>
+  <p>WCET（Worst-Case Execution Time，最坏情况执行时间——同一段代码在最不利的输入与硬件状态下要跑多久）是整个实时工程里最硬的一块骨头。直觉上「跑一百万次取最大值」就够了，但这在现代处理器上是错的：<strong>执行时间不只取决于代码，还取决于你无法完全控制的微架构状态</strong>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 320" style="min-width:720px;height:auto" role="img" aria-label="WCET 的构成：横轴是执行时间，实测只能覆盖从最好情况到实测最大值这一段，实测最大值到真实 WCET 之间是测不到的区域，真实 WCET 到静态分析上界之间是保守裕度。让这一段无法被实测填满的原因有五个：缓存状态、分支预测器与预取器、动态调频与热降频、DRAM 刷新与系统管理中断与总线争用、以及路径爆炸">
@@ -402,7 +402,7 @@
     </svg>
   </div>
 
-  <p>所以工业界<strong>两条腿走路</strong>：静态分析工具（AbsInt aiT、Rapita RapiTime）沿控制流图算出一个<strong>保证不低于真实值的上界</strong>，再用大量实测取上包络交叉验证。上界与实测最大值之间那段「浪费」，就是确定性的价格。</p>
+  <p>所以工业界<strong>两条腿走路</strong>：静态分析工具（AbsInt aiT、Rapita RapiTime）沿控制流图算出一个<strong>保证不低于真实值的上界</strong>，再用大量实测取上包络（把所有实测点都包在下面的那条最大边界线）交叉验证。上界与实测最大值之间那段「浪费」，就是确定性的价格。</p>
 
   <div class="box star">
     被问「你们的 WCET 怎么定的」，回答「压测一周取最大值再乘 2」会立刻暴露层次。正确表述是：<strong>实测只能给出下界，上界必须来自静态分析或对硬件行为的保守假设</strong>。
@@ -428,12 +428,12 @@
   </table>
 
   <div class="box danger">
-    <strong>「低延迟」和「实时」是两个正交的目标，经常被混为一谈。</strong>高频交易把分位数压到极致——晚 1 µs 只是少赚钱，所以它可以为平均性能牺牲最坏情况（开 turbo boost、忙等轮询吃满 CPU）；实时系统要的是上界可论证，宁可平均慢一倍也不接受一个无法解释的尖峰。手段大量重叠，但<strong>验收标准根本不同</strong>：一边看 P99.9 曲线，一边看 Max 和它的成因分析。低延迟那一侧见 <a href="../perf-debug/low_latency_guide.html">低延时实战指南</a>。
+    <strong>「低延迟」和「实时」是两个正交的目标，经常被混为一谈。</strong>高频交易把分位数压到极致——晚 1 µs 只是少赚钱，所以它可以为平均性能牺牲最坏情况（开 turbo boost、忙等轮询吃满 CPU）；实时系统要的是上界可论证，宁可平均慢一倍也不接受一个无法解释的尖峰。手段大量重叠，但<strong>验收标准根本不同</strong>：一边看 P99.9 曲线（99.9% 的请求都快于这个值，看的是长尾），一边看 Max 和它的成因分析。低延迟那一侧见 <a href="../perf-debug/low_latency_guide.html">低延时实战指南</a>。
   </div>
 
   <h3 id="s1-5">Linux vs RTOS 何时用</h3>
 
-  <p>选型受两条谱系夹住：硬件给多少算力，以及这个算力上跑得起哪种软件形态。<strong>两者之间那道真正的坎是 MMU</strong>——没有 MMU 就没有 Linux，讨论直接结束。</p>
+  <p>选型受两条谱系夹住：硬件给多少算力，以及这个算力上跑得起哪种软件形态。<strong>两者之间那道真正的坎是 MMU</strong>（Memory Management Unit，内存管理单元——CPU 里负责把程序地址翻译成物理地址的部件，没有它就跑不了带进程隔离的现代操作系统）——没有 MMU 就没有 Linux，讨论直接结束。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 240" style="min-width:720px;height:auto" role="img" aria-label="算力谱系：从 MCU 到 MPU 到 SoC 到域控制器。MCU 是 KB 级内存、无 MMU、几十到几百兆赫兹，跑裸机或 RTOS；MPU 有 MMU、几十到几百兆字节内存，可跑 RTOS 或实时 Linux；SoC 是多核加 GPU 或 NPU、GB 级内存，跑 Linux 或 QNX；域控制器是多颗 SoC 与安全 MCU 共板，混合关键，AP 与 CP 共存">
@@ -550,11 +550,11 @@
     </div>
   </div>
 
-  <p>通用 Linux 的最坏调度延迟能到几百毫秒，原因不是「代码写得慢」，而是<strong>内核里存在大量不可抢占的区间</strong>：自旋锁临界区、软中断处理、硬中断上下文。高优先级实时线程就绪时如果 CPU 正在跑这些区间，它只能等——<strong>等多久取决于当时恰好在跑哪段代码，而这不可控</strong>。PREEMPT_RT 近二十年的工作就是系统性地消灭这些区间。</p>
+  <p>通用 Linux 的最坏调度延迟能到几百毫秒，原因不是「代码写得慢」，而是<strong>内核里存在大量不可抢占的区间</strong>：自旋锁临界区（拿着锁原地打转等别人放锁的一段代码，期间内核不允许被切换走）、软中断处理、硬中断上下文。高优先级实时线程就绪时如果 CPU 正在跑这些区间，它只能等——<strong>等多久取决于当时恰好在跑哪段代码，而这不可控</strong>。PREEMPT_RT 近二十年的工作就是系统性地消灭这些区间。</p>
 
   <h3 id="s2-1">核心改动（概览）</h3>
 
-  <p>五项改动一句话概括：<strong>自旋锁换成可睡眠、支持优先级继承的 RT mutex</strong>（真不能睡的地方留显式的 <code>raw_spinlock_t</code>）、<strong>中断主体挪进受调度器管辖的内核线程</strong>、<strong>软中断不再无条件在中断返回路径上批量执行、RCU 回调可卸载到指定核</strong>、<strong>定时器改用 <code>hrtimer</code></strong> 把唤醒精度从毫秒推进到微秒。逐项实现与配置的坑见 <a href="preempt_rt_deep_dive.html#s2">RT patch 的 5 大核心改动</a>。</p>
+  <p>五项改动一句话概括：<strong>自旋锁换成可睡眠、支持优先级继承的 RT mutex</strong>（真不能睡的地方留显式的 <code>raw_spinlock_t</code>）、<strong>中断主体挪进受调度器管辖的内核线程</strong>、<strong>软中断不再无条件在中断返回路径上批量执行、RCU 回调可卸载到指定核</strong>（RCU，Read-Copy-Update，内核在「读多写少」场景下不用锁的同步机制，它的回调是随时可能冒出来占 CPU 的小任务）、<strong>定时器改用 <code>hrtimer</code></strong>（高精度定时器）把唤醒精度从毫秒推进到微秒。逐项实现与配置的坑见 <a href="preempt_rt_deep_dive.html#s2">RT patch 的 5 大核心改动</a>。</p>
 
   <p>其中<strong>优先级继承</strong>值得单独看一眼，它是「实时」和「加锁能用就行」的分界（原理见 <a href="../system/kernel_synchronization.html">内核同步机制</a>）：</p>
 
@@ -626,12 +626,12 @@
   </table>
 
   <div class="box danger">
-    <strong>最容易踩的一步：以为装完 RT 内核就有实时性了。</strong>未调优的 RT 内核，<code>cyclictest</code> 的 Max 经常和普通内核差不多，甚至因为多了线程化开销而更差。RT 内核只是让「有可能做到」变成可能，剩下九成工作在<strong>隔离配置和应用代码</strong>里。
+    <strong>最容易踩的一步：以为装完 RT 内核就有实时性了。</strong>未调优的 RT 内核，<code>cyclictest</code>（实时圈公认的标准延迟测试工具）的 Max 经常和普通内核差不多，甚至因为多了线程化开销而更差。RT 内核只是让「有可能做到」变成可能，剩下九成工作在<strong>隔离配置和应用代码</strong>里。
   </div>
 
   <h3 id="s2-2">主线化：2024 年那个节点为什么重要</h3>
 
-  <p>约二十年分批上游化，最后一批在 <strong>Linux 6.12（2024-11，LTS）</strong>合入，<code>CONFIG_PREEMPT_RT</code> 成了常规配置项。<strong>意义不在延迟数字（基本没变），而在于不必再 rebase 一大摞补丁、也不必担心某次驱动改动默默破坏 RT 语义</strong>。对选型的影响就一句：<strong>「长期维护风险」这一项可以从决策表里划掉了</strong>。生态与版本现状见 <a href="preempt_rt_deep_dive.html#s9">PREEMPT_RT 深入 · 2026 现状</a>。</p>
+  <p>约二十年分批上游化，最后一批在 <strong>Linux 6.12（2024-11，LTS，长期支持版）</strong>合入，<code>CONFIG_PREEMPT_RT</code> 成了常规配置项。<strong>意义不在延迟数字（基本没变），而在于不必再 rebase 一大摞补丁、也不必担心某次驱动改动默默破坏 RT 语义</strong>。对选型的影响就一句：<strong>「长期维护风险」这一项可以从决策表里划掉了</strong>。生态与版本现状见 <a href="preempt_rt_deep_dive.html#s9">PREEMPT_RT 深入 · 2026 现状</a>。</p>
 
   <h3 id="s2-6">判据：什么时候 PREEMPT_RT 够用，什么时候不够</h3>
 
@@ -648,7 +648,7 @@
 
   <h3 id="s2-3">典型配置 + tuning</h3>
 
-  <p>「装完 RT 内核」到「延迟真的下去了」之间隔着一整套隔离配置：核隔离、停 timer tick、RCU 卸载、中断亲和、禁深度 C-state、锁频，再加应用侧的锁页与优先级。参数逐条列在 <a href="#s7">§7.4</a>，原理见 <a href="preempt_rt_deep_dive.html#s4">系统级与应用级调优</a>，最常踩的十个坑见 <a href="preempt_rt_deep_dive.html#s6">调优陷阱</a>。</p>
+  <p>「装完 RT 内核」到「延迟真的下去了」之间隔着一整套隔离配置：核隔离、停 timer tick、RCU 卸载、中断亲和、禁深度 C-state、锁频，再加应用侧的锁页与优先级。这里的 C-state（CPU 的睡眠档位，档位越深睡得越死、醒来越慢，最深的档唤醒要上百微秒）也要禁掉。参数逐条列在 <a href="#s7">§7.4</a>，原理见 <a href="preempt_rt_deep_dive.html#s4">系统级与应用级调优</a>，最常踩的十个坑见 <a href="preempt_rt_deep_dive.html#s6">调优陷阱</a>。</p>
 
   <h3 id="s2-4">测延迟工具</h3>
 
@@ -683,7 +683,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     </div>
   </div>
 
-  <p>技术差异（调度算法、IPC 原语）<strong>没有想象中重要</strong>——所有主流 RTOS 都是固定优先级抢占式调度，都有信号量、消息队列、互斥量和优先级继承，应用代码结构大同小异。真正决定选型的是四件更「外围」的事：<strong>认证证据拿不拿得到、生态里有没有你的芯片和外设驱动、内存装不装得下、授权成本与团队熟悉度</strong>。</p>
+  <p>技术差异（调度算法、IPC（Inter-Process Communication，进程间通信）原语）<strong>没有想象中重要</strong>——所有主流 RTOS 都是固定优先级抢占式调度，都有信号量、消息队列、互斥量和优先级继承，应用代码结构大同小异。真正决定选型的是四件更「外围」的事：<strong>认证证据拿不拿得到、生态里有没有你的芯片和外设驱动、内存装不装得下、授权成本与团队熟悉度</strong>。</p>
 
   <p>先把「所有 RTOS 共有的那一半」说清，差异才看得明白。第一件是<strong>抢占式调度</strong>——它是标配不是因为效率高，而是因为只有它能把响应时间与「别人正在干什么」解耦。</p>
 
@@ -719,7 +719,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     </svg>
   </div>
 
-  <p>第二件是<strong>固定优先级</strong>，配套的分析方法叫速率单调（RM）：<strong>周期越短、优先级越高</strong>。理论上还有更优的动态方案 EDF，但它几乎不进产品，原因值得知道：</p>
+  <p>第二件是<strong>固定优先级</strong>，配套的分析方法叫速率单调（RM）：<strong>周期越短、优先级越高</strong>。理论上还有更优的动态方案 EDF（Earliest Deadline First，最早截止期优先：谁的截止时间最近谁先跑），但它几乎不进产品，原因值得知道：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 310" style="min-width:700px;height:auto" role="img" aria-label="速率单调与最早截止的可调度性对比。速率单调在 CPU 利用率约 69% 以内一定可调度，超过则要逐任务计算响应时间；最早截止只要利用率不超过 100% 就一定可调度。但速率单调是固定优先级、实现简单，超载时先掉低优先级任务、行为可预测；最早截止能跑满利用率，却要动态计算优先级，且一旦超载会出现连环错过">
@@ -962,7 +962,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
   </div>
 
   <div class="box star">
-    面试问「你为什么选 X」，差答案是罗列特性，好答案是<strong>给出被否掉的候选和否掉的理由</strong>：「最初想用 Zephyr 因为要 BLE Mesh；但项目要过 SIL 2，当时能直接拿到证据包的只有商业内核，加上主控只有 64 KB RAM，最后选 SafeRTOS，蓝牙移到独立模组上。」——同时展示了硬约束意识、成本意识和架构拆分能力。
+    面试问「你为什么选 X」，差答案是罗列特性，好答案是<strong>给出被否掉的候选和否掉的理由</strong>：「最初想用 Zephyr 因为要 BLE Mesh；但项目要过 SIL 2（IEC 61508 的安全完整性等级第 2 级），当时能直接拿到证据包的只有商业内核，加上主控只有 64 KB RAM，最后选 SafeRTOS，蓝牙移到独立模组上。」——同时展示了硬约束意识、成本意识和架构拆分能力。
   </div>
 </section>
 
@@ -1016,7 +1016,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s4-1">AUTOSAR AP 关键概念（够用即可，深入见专篇）</h3>
 
-  <p>写 AP 应用基本就是在用 <strong>ARA</strong> 这套标准化 C++ 命名空间：<code>ara::com</code>（服务化通信）、<code>ara::exec</code>（执行管理）、<code>ara::per</code>、<code>ara::log</code>、<code>ara::crypto</code>、<code>ara::ucm</code>。另外三个词要有概念：<strong>Adaptive Application</strong> 是可独立部署、启停、升级的进程，接近微服务但受严格的资源与启动时序约束；<strong>Execution Management</strong> 按依赖关系拉起各应用并管理机器状态，决定「上电到功能可用」的行为，<strong>是量产项目最常出问题的一块</strong>；<strong>UCM</strong> 是 OTA 在标准里的落点。</p>
+  <p>写 AP 应用基本就是在用 <strong>ARA</strong>（Adaptive AUTOSAR 的标准化 C++ 运行时库，函数都以 <code>ara::</code> 开头）这套命名空间：<code>ara::com</code>（服务化通信）、<code>ara::exec</code>（执行管理）、<code>ara::per</code>、<code>ara::log</code>、<code>ara::crypto</code>、<code>ara::ucm</code>。另外三个词要有概念：<strong>Adaptive Application</strong> 是可独立部署、启停、升级的进程，接近微服务但受严格的资源与启动时序约束；<strong>Execution Management</strong> 按依赖关系拉起各应用并管理机器状态，决定「上电到功能可用」的行为，<strong>是量产项目最常出问题的一块</strong>；<strong>UCM</strong> 是 OTA 在标准里的落点。</p>
 
   <p>接口长什么样、序列化怎么做见 <a href="autosar_ap_deep_dive.html#s3">ARA::Com 深入</a>，状态机见 <a href="autosar_ap_deep_dive.html#s6">Execution Management</a>，升级与回滚流程见 <a href="autosar_ap_deep_dive.html#s7">UCM</a>，SOME/IP 报文格式与服务发现见 <a href="automotive_networking.html#s7">车端网络 · SOME-IP / DDS</a>。</p>
 
@@ -1071,7 +1071,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     </div>
   </div>
 
-  <p>车端 C++ <strong>不允许「随便写」</strong>：多个 guideline 把语言裁剪成一个可分析的子集。初接触的人常觉得这些规则是官僚主义，但几乎每条背后都有能说清的工程理由，而且理由往往指向同一件事——<strong>让程序的时间与空间行为可以被离线论证</strong>。这一节的目标是让你能对每条禁令回答「为什么」。</p>
+  <p>车端 C++ <strong>不允许「随便写」</strong>：多个 guideline（其中最有名的是 MISRA——汽车业发起、后来成为通用嵌入式事实标准的编码规范组织——与 AUTOSAR 两套）把语言裁剪成一个可分析的子集。初接触的人常觉得这些规则是官僚主义，但几乎每条背后都有能说清的工程理由，而且理由往往指向同一件事——<strong>让程序的时间与空间行为可以被离线论证</strong>。这一节的目标是让你能对每条禁令回答「为什么」。</p>
 
   <table>
     <thead><tr><th>Guideline</th><th>来源</th><th>覆盖标准</th><th>主要限制</th></tr></thead>
@@ -1266,7 +1266,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     <strong>不要过度解读第三组。</strong>虚函数<strong>并没有被禁</strong>（AP 的整个接口体系就建立在抽象类之上），被禁的是 RTTI 与 <code>dynamic_cast</code>；上图说的只是<strong>硬实时热路径</strong>上的取舍。用模板换掉所有虚函数会带来代码膨胀，对只读段紧张的 MCU 是更糟的交易。
   </div>
 
-  <p>两条容易在评审里含糊过去：第五组的超时上界必须由「最坏等待时间 / 单次循环耗时」算出并写进设计文档，<strong>不能是拍脑袋的 10000</strong>；第六组的强类型单位通常配合定点数用，因为许多安全 MCU 没有硬件 FPU。完整代码见 <a href="../cpp/embedded_cpp.html">嵌入式 C++</a>，认证流程见 <a href="iso26262_engineering.html#s6">Coding Guideline 强制</a>。</p>
+  <p>两条容易在评审里含糊过去：第五组的超时上界必须由「最坏等待时间 / 单次循环耗时」算出并写进设计文档，<strong>不能是拍脑袋的 10000</strong>；第六组的强类型单位通常配合定点数（不用浮点、用整数按固定比例表示小数，可精确预估每步耗时）使用，因为许多安全 MCU 没有硬件 FPU（浮点运算单元，专门算小数的电路）。完整代码见 <a href="../cpp/embedded_cpp.html">嵌入式 C++</a>，认证流程见 <a href="iso26262_engineering.html#s6">Coding Guideline 强制</a>。</p>
 
   <h3 id="s5-2">实战 toolchain 与落地方式</h3>
 
@@ -1313,7 +1313,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     </tbody>
   </table>
 
-  <p><strong>IEC 61508 是母标准</strong>，ISO 26262、EN 50128、IEC 62304 都是它在各行业的具体化；DO-178C 是航空独立发展出的一支，思路相通但更强调需求覆盖与结构化覆盖率。<strong>掌握其中一套之后，迁到另一个行业主要是学词汇表——方法论是通用的</strong>，这对职业路径是个不错的性质。</p>
+  <p><strong>IEC 61508 是母标准</strong>，ISO 26262（汽车功能安全标准）、EN 50128、IEC 62304 都是它在各行业的具体化；DO-178C 是航空独立发展出的一支，思路相通但更强调需求覆盖与结构化覆盖率。<strong>掌握其中一套之后，迁到另一个行业主要是学词汇表——方法论是通用的</strong>，这对职业路径是个不错的性质。</p>
 
   <h3 id="s6-3">等级之间的量化差异</h3>
 
@@ -1414,10 +1414,10 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
   </div>
 
   <div class="warn">
-    <strong>横向经验</strong>：电信设备不走 ASIL，但运营商入网测试、NEBS、行业审计的结构非常相似。<strong>难的不是标准条文，而是接受「证据和代码同等重要」这件事</strong>，所以做过任意一种高合规行业的人适应期都短很多。
+    <strong>横向经验</strong>：电信设备不走 ASIL，但运营商入网测试、NEBS（电信设备的结构与环境标准）、行业审计的结构非常相似。<strong>难的不是标准条文，而是接受「证据和代码同等重要」这件事</strong>，所以做过任意一种高合规行业的人适应期都短很多。
   </div>
 
-  <p>逐层的 V 模型活动见 <a href="iso26262_engineering.html#s3">V-Model 全生命周期</a>，软件层活动见 <a href="iso26262_engineering.html#s5">软件层活动</a>，工具置信度评估见 <a href="iso26262_engineering.html#s7">工具链认证</a>，测试与验证见 <a href="iso26262_engineering.html#s8">测试 + 验证</a>，真实成本结构见 <a href="iso26262_engineering.html#s9">真实成本 + 项目管理</a>；配套的 ISO/SAE 21434 与 SOTIF 见 <a href="iso26262_engineering.html#s10">SOTIF + Cybersecurity 配套</a>。</p>
+  <p>逐层的 V 模型（左边从需求逐层细化到代码、右边逐层验证回去，两层之间必须能互相对上的开发流程模型）活动见 <a href="iso26262_engineering.html#s3">V-Model 全生命周期</a>，软件层活动见 <a href="iso26262_engineering.html#s5">软件层活动</a>，工具置信度评估见 <a href="iso26262_engineering.html#s7">工具链认证</a>，测试与验证见 <a href="iso26262_engineering.html#s8">测试 + 验证</a>，真实成本结构见 <a href="iso26262_engineering.html#s9">真实成本 + 项目管理</a>；配套的 ISO/SAE 21434 与 SOTIF 见 <a href="iso26262_engineering.html#s10">SOTIF + Cybersecurity 配套</a>。</p>
 </section>
 
 <section class="chapter" id="s7">
@@ -1489,10 +1489,10 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s7-6">③ 内存锁定与预分配：把缺页挡在启动阶段</h3>
 
-  <p>一次<strong>主缺页</strong>可能是毫秒量级，足以毁掉任何实时预算。实时线程<strong>稳态时必须一次缺页都不发生</strong>，四个动作缺一个都不算做完：<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>；<code>mallopt(M_TRIM_THRESHOLD, -1)</code> 与 <code>mallopt(M_MMAP_MAX, 0)</code> 让 glibc 别把内存还给内核、别走惰性映射的 <code>mmap</code>；分配一大块再释放<strong>预热堆</strong>；最后在一个 <code>noinline</code> 函数里声明按 <a href="#s9">§9.4</a> 定大小的数组并 <code>memset</code>，把<strong>栈也预先踩实</strong>（不加 <code>noinline</code> 编译器会把这个「没用」的数组优化掉）。</p>
+  <p>一次<strong>主缺页</strong>（major page fault：数据不在内存里、必须进内核从磁盘调进来）可能是毫秒量级，足以毁掉任何实时预算。实时线程<strong>稳态时必须一次缺页都不发生</strong>，四个动作缺一个都不算做完：<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>；<code>mallopt(M_TRIM_THRESHOLD, -1)</code> 与 <code>mallopt(M_MMAP_MAX, 0)</code> 让 glibc 别把内存还给内核、别走惰性映射的 <code>mmap</code>；分配一大块再释放<strong>预热堆</strong>；最后在一个 <code>noinline</code> 函数里声明按 <a href="#s9">§9.4</a> 定大小的数组并 <code>memset</code>，把<strong>栈也预先踩实</strong>（不加 <code>noinline</code> 编译器会把这个「没用」的数组优化掉）。</p>
 
   <div class="box tip">
-    <strong>验收判据只有一条</strong>：稳态跑 60 秒，<code>ps -o min_flt,maj_flt</code> 两次读数一模一样。禁忌不止 <code>new</code>：<code>printf</code>、日志库、<code>std::string</code> 拼接、第一次调用某个动态库函数（PLT 解析，可用 <code>LD_BIND_NOW</code> 提前绑定）、甚至第一次用浮点（某些平台会惰性初始化 FPU 状态）——<strong>任何可能进内核、可能阻塞、可能分配内存的调用都要清出热路径</strong>。
+    <strong>验收判据只有一条</strong>：稳态跑 60 秒，<code>ps -o min_flt,maj_flt</code> 两次读数一模一样。禁忌不止 <code>new</code>：<code>printf</code>、日志库、<code>std::string</code> 拼接、第一次调用某个动态库函数（PLT 解析：第一次调用时多出来的「查函数地址」步骤，可用 <code>LD_BIND_NOW</code> 提前绑定）、甚至第一次用浮点（某些平台会惰性初始化 FPU 状态）——<strong>任何可能进内核、可能阻塞、可能分配内存的调用都要清出热路径</strong>。
   </div>
 
   <h3 id="s7-7">④ 无锁环形缓冲：实时线程与非实时线程之间唯一安全的桥</h3>
@@ -1543,7 +1543,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
     </svg>
   </div>
 
-  <p>为什么不用别的：互斥量队列的界包含消费者的整个临界区；<code>std::queue</code> 会动态分配；MPMC 无锁队列能用但复杂得多——<strong>SPSC 够用时永远优先 SPSC，它的正确性可以用眼睛看明白</strong>。逐条对比见 <a href="#s11-3">§11.3 第 10 题</a>，<code>volatile</code> 与 <code>atomic</code> 的区别见 <a href="../cpp/memory_model.html">C++ 内存模型</a>。</p>
+  <p>为什么不用别的：互斥量队列的界包含消费者的整个临界区；<code>std::queue</code> 会动态分配；MPMC（多生产者多消费者）无锁队列能用但复杂得多——<strong>SPSC 够用时永远优先 SPSC，它的正确性可以用眼睛看明白</strong>。逐条对比见 <a href="#s11-3">§11.3 第 10 题</a>，<code>volatile</code> 与 <code>atomic</code> 的区别见 <a href="../cpp/memory_model.html">C++ 内存模型</a>。</p>
 
   <h3 id="s7-8">⑤ 时间：<code>CLOCK_MONOTONIC</code> 与为什么不能用 <code>CLOCK_REALTIME</code></h3>
 
@@ -1566,7 +1566,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s7-9">⑥ 周期任务：<code>TIMER_ABSTIME</code> 与相对 sleep 的累积误差</h3>
 
-  <p>区分度极高的一道面试题，也是项目里极常见的 bug。<code>doWork(); usleep(1000);</code> 的实际周期是「工作耗时 W + 1000 µs + 唤醒延迟 L」，而且这个误差<strong>每一轮都重新累加</strong>：跑 1 小时（360 万轮），只要平均 W + L 有 80 µs 就漂了 288 秒。症状是时间戳对不上、与 PLC / 总线主站逐渐失步、采样率比标称低几个百分点。</p>
+  <p>区分度极高的一道面试题，也是项目里极常见的 bug。<code>doWork(); usleep(1000);</code> 的实际周期是「工作耗时 W + 1000 µs + 唤醒延迟 L」，而且这个误差<strong>每一轮都重新累加</strong>：跑 1 小时（360 万轮），只要平均 W + L 有 80 µs 就漂了 288 秒。症状是时间戳对不上、与 PLC（可编程逻辑控制器，工业现场管设备的小电脑）/ 总线主站逐渐失步、采样率比标称低几个百分点。</p>
 
   <p>正确写法是 <code>clock_gettime(CLOCK_MONOTONIC, &amp;next)</code> 只在循环外取一次，之后每轮 <code>next += 周期</code> 并用 <code>clock_nanosleep(..., TIMER_ABSTIME, &amp;next, nullptr)</code> 睡到那个<strong>绝对时刻</strong>。三个不能漏的细节：时钟必须与取时间那次一致；<code>EINTR</code> 时要 <code>continue</code> 继续睡到<strong>同一个</strong>时刻而不是重算；还要做<strong>超时检测</strong>并计数上报，同时明确「落后太多是追赶还是重新对齐」（通常选重新对齐）。完整实现见 <a href="#s11-2">§11.2 第 7 题</a>。</p>
 
@@ -1610,7 +1610,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s7-1">把六件事串起来：一个车端采集链路</h3>
 
-  <p>综合起来，一条车端 telemetry 链路这样分层：<strong>硬实时的采集端只做最少的事并把数据塞进环形缓冲，所有可能阻塞的动作都推到低优先级线程</strong>。</p>
+  <p>综合起来，一条车端 telemetry（遥测：把设备运行数据采集起来、上报到云端或诊断仪）链路这样分层：<strong>硬实时的采集端只做最少的事并把数据塞进环形缓冲，所有可能阻塞的动作都推到低优先级线程</strong>。</p>
 
   <table>
     <thead><tr><th>层</th><th>线程属性</th><th>关键设计</th><th>手法</th></tr></thead>
@@ -1656,7 +1656,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
   <p>嵌入式调试与服务端调试最大的差别：<strong>观测行为本身会改变被观测的时序</strong>。在 1 ms 周期的控制环里加一行 <code>printf</code> 可能直接把周期撑爆，于是你要找的 bug 消失了，换来一个新的。核心技能因此是<strong>按侵入程度选工具</strong>。</p>
 
   <div class="box danger">
-    <strong>海森堡 bug 是这个领域的常态。</strong>「加了打印就不复现，去掉又复现」几乎总意味着问题与<strong>时序或竞态</strong>有关：未加保护的共享变量、缺少的内存屏障、恰好落在中断边界上的状态更新。正确反应不是加更多打印，而是<strong>换一种零 / 低侵入的手段</strong>（GPIO 翻转、RTT、硬件 trace），把时序保持原样再看。
+    <strong>海森堡 bug 是这个领域的常态</strong>（一观测就消失、不观测又出现的问题——名字借用物理学的「观测会改变被观测对象」）。「加了打印就不复现，去掉又复现」几乎总意味着问题与<strong>时序或竞态</strong>有关：未加保护的共享变量、缺少的内存屏障、恰好落在中断边界上的状态更新。正确反应不是加更多打印，而是<strong>换一种零 / 低侵入的手段</strong>（GPIO 翻转、RTT、硬件 trace），把时序保持原样再看。
   </div>
 
   <h3 id="s8-5">手段谱系：按侵入程度排序</h3>
@@ -1680,7 +1680,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s8-6">GPIO 翻转法：朴素但最有效的时延测量</h3>
 
-  <p>做法土到不值一提：在关心的代码前后各翻一次 GPIO，用示波器量脉冲。MCU 上一定用 <code>BSRR</code> 这类<strong>置位 / 清零专用寄存器</strong>，不要用 <code>ODR ^= mask</code>——那是读-改-写，更慢而且不原子（写法见 <a href="#s11-2">§11.2 第 8 题</a>）。示波器上一次读出三个量：<strong>脉冲宽度</strong> = 执行时间（最宽那个就是实测最坏值）、<strong>上升沿间隔</strong> = 实际周期、<strong>触发源到上升沿</strong> = 中断延迟；开无限余辉看边沿的「胖度」就是抖动的可视化。Linux 用户态走 GPIO 字符设备（<strong>不要再用已废弃的 sysfs</strong>），但那段路径本身有开销。</p>
+  <p>做法土到不值一提：在关心的代码前后各翻一次 GPIO，用示波器量脉冲。MCU 上一定用 <code>BSRR</code> 这类<strong>置位 / 清零专用寄存器</strong>，不要用 <code>ODR ^= mask</code>——那是读-改-写，更慢而且不原子（写法见 <a href="#s11-2">§11.2 第 8 题</a>）。示波器上一次读出三个量：<strong>脉冲宽度</strong> = 执行时间（最宽那个就是实测最坏值）、<strong>上升沿间隔</strong> = 实际周期、<strong>触发源到上升沿</strong> = 中断延迟；开无限余辉（让旧波形留在屏幕上不擦除）看边沿的「胖度」就是抖动的可视化。Linux 用户态走 GPIO 字符设备（<strong>不要再用已废弃的 sysfs</strong>），但那段路径本身有开销。</p>
 
   <div class="box star">
     它的价值不在于「没有更好的工具」，而在于<strong>测的是物理世界里真实发生的时间</strong>。软件内部的计时都在被测系统之内，会被同样的调度延迟与缓存效应影响；示波器在系统之外，它不会撒谎。<strong>当软件说「我只用了 200 µs」而系统表现对不上时，示波器是唯一的仲裁者。</strong>
@@ -1696,7 +1696,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s8-3">典型 GDB 远程调试</h3>
 
-  <p>MCU 与 Linux 目标形态完全不同：前者调试器停整颗芯片，后者只停一个进程。</p>
+  <p>MCU 与 Linux 目标形态完全不同：前者调试器停整颗芯片，后者只停一个进程。两者的共同前提是<strong>交叉编译</strong>——在 x86 的开发电脑上，编出给 ARM 芯片跑的程序；符号（函数名、行号这些调试信息）留在主机，程序本体推到目标板。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 340" style="min-width:740px;height:auto" role="img" aria-label="交叉编译与目标板调试的两种形态。上半部分是 MCU：主机上用 arm-none-eabi 工具链编出 ELF，OpenOCD 通过 JTAG 或 SWD 探针连到芯片的调试单元，GDB 连接 OpenOCD 的 3333 端口后 load 固件、reset halt、下断点，调试器停的是整颗芯片。下半部分是 Linux 目标：主机上用 aarch64-linux-gnu 工具链编出带调试信息的可执行文件，把不带符号的版本推到目标板并运行 gdbserver，主机上的 gdb 用 target remote 连过去、从本地读符号，调试器只停这一个进程，内核和其他进程照常运行">
@@ -1751,7 +1751,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s8-4">Linux 目标上：<code>ftrace</code> 抓一次延迟尖峰</h3>
 
-  <p>「我的实时线程偶尔晚了 800 µs」有标准解法：<strong>让内核在延迟超阈值时自动把前后的事件流 dump 出来</strong>，而不是靠人守着。<code>cyclictest -b 500 --tracemark</code> 一超阈值就停掉 trace，再用 <code>trace-cmd report</code> 找 <code>tracing_mark_write</code> 往前翻——是哪个 kworker、哪个中断线程、还是一段很长的内核函数，通常一眼可见。6.x 的 <code>rtla timerlat top</code> 更好用且能区分 IRQ 层与线程层，<code>rtla osnoise hist</code> 直接量化「谁在偷 CPU、偷了多久」。</p>
+  <p>「我的实时线程偶尔晚了 800 µs」有标准解法：<strong>让内核在延迟超阈值时自动把前后的事件流 dump 出来</strong>，而不是靠人守着。<code>cyclictest -b 500 --tracemark</code> 一超阈值就停掉 trace，再用 <code>trace-cmd report</code> 找 <code>tracing_mark_write</code> 往前翻——是哪个 kworker（内核的通用后台工作线程）、哪个中断线程、还是一段很长的内核函数，通常一眼可见。6.x 的 <code>rtla timerlat top</code> 更好用且能区分 IRQ 层与线程层，<code>rtla osnoise hist</code> 直接量化「谁在偷 CPU、偷了多久」。</p>
 
   <p>需要<strong>长期在线、统计聚合</strong>时换 eBPF（<a href="../system/observability_ebpf.html">eBPF 可观测性</a>）；升级成内核崩溃或整机卡死则是另一套方法（<a href="../system/kernel_crash_analysis.html">内核崩溃分析</a>）；驱动层面见 <a href="../system/linux_device_driver.html">Linux 设备驱动</a>。</p>
 
@@ -1864,7 +1864,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
   </table>
 
   <div class="box tip">
-    有一条规则两边都成立而且最重要：<strong>先测量，再优化</strong>，区别只在于嵌入式上「测量」本身要花更多力气搭。见过太多人花两周手写汇编优化一个函数，最后发现 80% 的时间花在一次没必要的 DMA 等待上。
+    有一条规则两边都成立而且最重要：<strong>先测量，再优化</strong>，区别只在于嵌入式上「测量」本身要花更多力气搭。见过太多人花两周手写汇编优化一个函数，最后发现 80% 的时间花在一次没必要的 DMA（Direct Memory Access，直接内存访问——一块专门替 CPU 搬数据的硬件）等待上。
   </div>
 
   <h3 id="s9-1">关键瓶颈来源</h3>
@@ -1890,7 +1890,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <p>没有 MMU 的 MCU 上，<strong>栈溢出不会给你一个整洁的段错误，它会安静地覆盖掉相邻的变量</strong>，然后在几天后以完全无关的形式炸出来。这是嵌入式最难查的一类 bug，但完全可以预防——前提是你知道每个任务的最坏栈用量。</p>
 
-  <p>三种手段配合用。<code>-fstack-usage</code> 给出每个函数<strong>自己那一帧</strong>的大小，标 <code>dynamic</code> 的含 VLA 或 <code>alloca</code>（<strong>安全项目应直接禁止</strong>）；<code>-fcallgraph-info=su,da</code> 把帧大小沿调用图累加得到每条路径的最坏值，而<strong>递归与函数指针会让调用图不闭合</strong>——这正是 <a href="#s5">§5</a> 禁它们的原因。第三种最便宜：<strong>栈涂色</strong>，启动时把整块栈填成 <code>0xA5A5A5A5</code>，长跑后数还有多少字没被覆盖就是实测最高水位（<code>uxTaskGetStackHighWaterMark()</code> 就是这个原理）。</p>
+  <p>三种手段配合用。<code>-fstack-usage</code> 给出每个函数<strong>自己那一帧</strong>的大小，标 <code>dynamic</code> 的含 VLA（变长数组，长度要到运行期才知道）或 <code>alloca</code>（<strong>安全项目应直接禁止</strong>）；<code>-fcallgraph-info=su,da</code> 把帧大小沿调用图累加得到每条路径的最坏值，而<strong>递归与函数指针会让调用图不闭合</strong>——这正是 <a href="#s5">§5</a> 禁它们的原因。第三种最便宜：<strong>栈涂色</strong>，启动时把整块栈填成 <code>0xA5A5A5A5</code>，长跑后数还有多少字没被覆盖就是实测最高水位（<code>uxTaskGetStackHighWaterMark()</code> 就是这个原理）。</p>
 
   <div class="box danger">
     <strong>实测水位不能直接当作栈大小的依据。</strong>它只说明「测过的路径上用了这么多」，而最坏路径可能是一条极少走到的错误处理分支——恰恰这类路径在现场偶发触发时最容易溢出。<strong>正确做法是静态分析给上界、实测水位做交叉验证</strong>，取静态上界并留裕度，同时开<strong>栈溢出检测</strong>（MPU 保护页、RTOS 溢出钩子，或至少在栈底放个哨兵值周期检查）。
@@ -1915,7 +1915,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s9-6">功耗与确定性：DVFS 是一个陷阱</h3>
 
-  <p>DVFS 在手机上是纯收益，<strong>在实时系统里是确定性的直接破坏者</strong>：它让 WCET 失去意义（1.2 GHz 下算的 200 µs 降到 400 MHz 就是 600 µs）、切换本身是额外的抖动源、而且<strong>调速器是反应式的</strong>——它看到负载上升才升频，而实时任务恰恰在「负载刚上升那一刻」最需要算力。深度 C-state 同理。标准做法是<strong>锁频 + 禁深度睡眠</strong>（<a href="#s7">§7.4</a>），代价是功耗与发热明显上升；展开见 <a href="#s11-3">§11.3 第 11 题</a>。</p>
+  <p>DVFS（Dynamic Voltage and Frequency Scaling，动态调频调压：按负载升降 CPU 的频率与电压来省电）在手机上是纯收益，<strong>在实时系统里是确定性的直接破坏者</strong>：它让 WCET 失去意义（1.2 GHz 下算的 200 µs 降到 400 MHz 就是 600 µs）、切换本身是额外的抖动源、而且<strong>调速器是反应式的</strong>——它看到负载上升才升频，而实时任务恰恰在「负载刚上升那一刻」最需要算力。深度 C-state 同理。标准做法是<strong>锁频 + 禁深度睡眠</strong>（<a href="#s7">§7.4</a>），代价是功耗与发热明显上升；展开见 <a href="#s11-3">§11.3 第 11 题</a>。</p>
 
   <table>
     <thead><tr><th>如果你的约束是……</th><th>做法</th><th>代价</th></tr></thead>
@@ -1929,7 +1929,7 @@ T: 1 ( 4424) P:80 I:1000 C:3600000 Min:      2 Act:    5 Avg:    5 Max:      81
 
   <h3 id="s9-7">测量手段：没有 <code>perf</code> 的时候怎么办</h3>
 
-  <p>四档逐级降级。<strong>①</strong> 有 Linux 就用 <code>perf stat</code> / <code>perf record</code>，但采样式 profiler 回答的是「时间总体花在哪」，<strong>它天然看不到「那一次特别慢」</strong>。<strong>②</strong> Cortex-M 上用 <code>DWT-&gt;CYCCNT</code>（先置 <code>DEMCR</code> 的 <code>TRCENA</code>），分辨率一个时钟周期，但 32 位计数器在 200 MHz 下约 21 秒绕一圈，<strong>而且一定要自己维护最大值</strong>。<strong>③</strong> 什么都没有时回到 GPIO 打点 + 示波器（<a href="#s8">§8.6</a>）。<strong>④</strong> RTOS 自带的运行时统计回答「预算花在谁身上」，但时间基太粗，不适合测单次执行时间。</p>
+  <p>四档逐级降级。<strong>①</strong> 有 Linux 就用 <code>perf stat</code> / <code>perf record</code>，但采样式 profiler 回答的是「时间总体花在哪」，<strong>它天然看不到「那一次特别慢」</strong>。<strong>②</strong> Cortex-M 上用 <code>DWT-&gt;CYCCNT</code>（芯片内置的时钟周期计数器，先置 <code>DEMCR</code> 的 <code>TRCENA</code> 打开），分辨率一个时钟周期，但 32 位计数器在 200 MHz 下约 21 秒绕一圈，<strong>而且一定要自己维护最大值</strong>。<strong>③</strong> 什么都没有时回到 GPIO 打点 + 示波器（<a href="#s8">§8.6</a>）。<strong>④</strong> RTOS 自带的运行时统计回答「预算花在谁身上」，但时间基太粗，不适合测单次执行时间。</p>
 
   <div class="box star">
     这一章最值得强调的一句：<strong>我们测的是最大值，不是平均值</strong>。服务端 profiler 天生面向「时间总体花在哪」，实时系统关心「最慢的那一次为什么慢」。所以 <strong>trace 优先于 profile</strong>——这是 §1 的「实时 ≠ 快」在测量层面的体现。

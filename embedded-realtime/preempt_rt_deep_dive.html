@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PREEMPT_RT 深入 · Linux 准实时化内核机制 — Tech Notes</title>
-<meta name="description" content="PREEMPT_RT 深入：Linux 准实时化的内核机制 · sleeping spinlock / threaded IRQ / priority inheritance · 调优 + 测量 + 真实案例">
+<meta name="description" content="PREEMPT_RT 深入：怎么把 Linux 改造成说 1 毫秒就 1 毫秒的准实时系统。讲清 sleeping spinlock、threaded IRQ、优先级继承这些内核机制是怎么改的，配上调优步骤、延迟测量方法和真实生产案例，顺着读就能懂。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/embedded-realtime/preempt_rt_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/embedded-realtime/preempt_rt_deep_dive.html">
 <meta property="og:title" content="PREEMPT_RT 深入 · Linux 准实时化内核机制">
-<meta property="og:description" content="PREEMPT_RT 深入：Linux 准实时化的内核机制 · sleeping spinlock / threaded IRQ / priority inheritance · 调优 + 测量 + 真实案例">
+<meta property="og:description" content="PREEMPT_RT 深入：怎么把 Linux 改造成说 1 毫秒就 1 毫秒的准实时系统。讲清 sleeping spinlock、threaded IRQ、优先级继承这些内核机制是怎么改的，配上调优步骤、延迟测量方法和真实生产案例，顺着读就能懂。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PREEMPT_RT 深入 · Linux 准实时化内核机制">
-<meta name="twitter:description" content="PREEMPT_RT 深入：Linux 准实时化的内核机制 · sleeping spinlock / threaded IRQ / priority inheritance · 调优 + 测量 + 真实案例">
+<meta name="twitter:description" content="PREEMPT_RT 深入：怎么把 Linux 改造成说 1 毫秒就 1 毫秒的准实时系统。讲清 sleeping spinlock、threaded IRQ、优先级继承这些内核机制是怎么改的，配上调优步骤、延迟测量方法和真实生产案例，顺着读就能懂。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -69,7 +69,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="embedded_realtime_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 85 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 90 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -112,7 +112,7 @@
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★★★</span>
         <span class="pill cyan">实时内核</span>
-        <span class="pill green">阅读时长 ~85 min</span>
+        <span class="pill green">阅读时长 ~90 min</span>
         <span class="pill amber">前置 Linux 内核</span>
       </div>
     </header>
@@ -134,7 +134,7 @@
   <p>八成人会答「响应很快的系统」，而这个答案会让后面所有讨论都跑偏。<strong>实时性说的是「最坏情况下的响应时间有一个可以证明的上界」，不是「平均响应时间很短」。</strong>平均 5 µs、每小时尖峰 40 ms 的系统<strong>不合格</strong>；稳定 800 µs、从不超过 1 ms 的反而合格。</p>
 
   <div class="box tip">
-    <strong>生活类比：出租车 vs 地铁。</strong>市区打车平均 20 分钟到公司，比地铁的 35 分钟快得多——但堵一次车就是 90 分钟，你没法拿它赶 9 点的飞机。地铁慢，可它「最坏也就 40 分钟」。<strong>赶飞机选地铁，不是因为它快，而是因为它的最坏情况有界。</strong>mainline Linux 是出租车，PREEMPT_RT 是地铁，RTOS 是专线摆渡车。
+    <strong>生活类比：出租车 vs 地铁。</strong>市区打车平均 20 分钟到公司，比地铁的 35 分钟快得多——但堵一次车就是 90 分钟，你没法拿它赶 9 点的飞机。地铁慢，可它「最坏也就 40 分钟」。<strong>赶飞机选地铁，不是因为它快，而是因为它的最坏情况有界。</strong>mainline Linux（kernel.org 发布、没做任何实时化改造的原版内核）是出租车，PREEMPT_RT（给原版内核打上的一套实时化补丁集，让 Linux 也能「说 1 毫秒就 1 毫秒」）是地铁，RTOS（Real-Time Operating System，直接烧在单片机里、把响应时间写进保证书的小型实时操作系统）是专线摆渡车。
   </div>
 
   <div class="fig">
@@ -207,11 +207,11 @@
     </svg>
   </div>
 
-  <p>项目失败最常见的根源，是把「固实时」的需求写成「越快越好」，团队一路优化平均值，上线后被长尾打穿。<strong>需求文档里该出现的是「周期 1 ms，抖动不超过 ±100 µs，连续 72 小时不得有一次越界」。</strong></p>
+  <p>项目失败最常见的根源，是把「固实时」的需求写成「越快越好」，团队一路优化平均值，上线后被长尾（直方图最右侧那撮罕见但致命的超大延迟）打穿。<strong>需求文档里该出现的是「周期 1 ms，抖动不超过 ±100 µs，连续 72 小时不得有一次越界」。</strong></p>
 
   <h3 id="s1-2">1.2 一次唤醒的延迟由哪几段构成</h3>
 
-  <p>要谈「上界」先要把延迟拆开。<strong>总的最坏延迟按各段之和估计</strong>（严格说不能简单相加，但工程上这样取上界是安全且常用的）：</p>
+  <p>要谈「上界」先要把延迟拆开。从外设发出中断（硬件敲门：「该我跑了」）到你的控制环真正跑起来，中间隔着五道关卡：硬件把信号交给内核、中断处理函数干完活、调度器决定下一个换谁上、把当前正在跑的内核代码打断换人、最后换栈换缓存。<strong>总的最坏延迟按各段之和估计</strong>（严格说不能简单相加，但工程上这样取上界是安全且常用的）：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 300" role="img" aria-label="一次唤醒的五段延迟：中断延迟、handler 执行、调度延迟、抢占延迟、上下文切换与缓存冷启，每段标注其最坏来源；mainline 上前四段都没有可证明的上界">
@@ -260,7 +260,7 @@
 
   <h3 id="s1-3">1.3 mainline 上不可抢占的来源，逐个点名</h3>
 
-  <p>下图是理解 PREEMPT_RT 全部设计动机的钥匙：每一块红色区间都是「一旦进去，高优先级任务就得等」的地方。</p>
+  <p>先说清「抢占」（preemption）：内核把正在跑的任务按下去、让更高优先级的任务立刻上场的动作。下图是理解 PREEMPT_RT 全部设计动机的钥匙：每一块红色区间都是「一旦进去，高优先级任务就得等」的地方——因为在红色区间里的内核代码暂时不应答「换人」请求，等多久全看撞上的是哪一段。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 330" role="img" aria-label="mainline 与 PREEMPT_RT 的不可抢占区对比：mainline 的时间轴上密布自旋锁、关中断、软中断、per-CPU 保护区等不可抢占段；RT 把其中五类变成可调度的等待，只剩少量 raw_spinlock 仍不可抢占，而缺页、printk、SMI 等仍不归它管">
@@ -322,15 +322,15 @@
 
   <p>持锁者若被抢占下去，同核上另一个想拿同一把锁的任务会忙等到天荒地老——自己不下 CPU，持锁者也上不来，直接死锁。所以 <code>spin_lock()</code> 必须先 <code>preempt_disable()</code>。</p>
 
-  <p>于是<strong>抢占延迟的下界 = 内核里最长的那一段自旋锁临界区</strong>。内核有数千把锁，遍布 VFS、内存管理、网络栈与各类驱动，你没法枚举，更没法证明上界。<code>spin_lock_irqsave()</code> 更糟——它连中断一起关。</p>
+  <p>于是<strong>抢占延迟的下界 = 内核里最长的那一段自旋锁临界区</strong>（临界区：同一时刻只允许一个任务进入的那段代码）。内核有数千把锁，遍布 VFS（虚拟文件系统，Linux 里一切文件操作的公共入口层）、内存管理、网络栈与各类驱动，你没法枚举，更没法证明上界。<code>spin_lock_irqsave()</code> 更糟——它连中断一起关，等于把「不许换人」扩大成「连门铃都不许响」。</p>
 
   <h4>② 软中断的「就地执行」</h4>
 
-  <p>软中断默认在 <code>irq_exit()</code> 里<strong>借用刚被打断那个任务的时间片</strong>跑完，而被打断的可能正是你的实时线程；期间 bottom-half 被禁用、抢占被关闭。它确实有「跑够就交给 <code>ksoftirqd</code>」的退让机制，但<strong>退让阈值本身是毫秒量级</strong>，对 µs 级需求毫无意义。</p>
+  <p>软中断（softirq，内核把「不急但费时的收尾活」攒起来延迟处理的一种机制，网卡收包的后半段就是典型）默认在 <code>irq_exit()</code> 里<strong>借用刚被打断那个任务的时间片</strong>跑完，而被打断的可能正是你的实时线程；期间 bottom-half 被禁用、抢占被关闭，也就是这段时间谁也别想换人。它确实有「跑够就交给 <code>ksoftirqd</code>（内核专门收留没跑完的软中断的后台线程）」的退让机制，但<strong>退让阈值本身是毫秒量级</strong>，对 µs 级需求毫无意义。</p>
 
   <h4>③ 内存管理路径：改内核也解决不了</h4>
 
-  <p>一次普通的写内存可能触发缺页清零、直接回收（当场扫 LRU、回写脏页）、内存规整（搬页且大量持锁）；开了透明大页时一次缺页要清零 2 MB 而不是 4 KB。<strong>PREEMPT_RT 不能让缺页变快</strong>——这一类只能靠应用侧 <code>mlockall()</code> + 预分配彻底避开，这就是 §4 反复强调它的原因。</p>
+  <p>一次普通的写内存可能触发缺页（page fault，程序访问的内存还没真正分配好，内核得现场补课）清零、直接回收（当场扫 LRU、回写脏页，相当于现场翻箱倒柜腾地方）、内存规整（搬页且大量持锁）；开了透明大页（Transparent Huge Page，把 4 KB 小页合并成 2 MB 大页以省管理开销的机制）时，一次缺页要清零 2 MB 而不是 4 KB，补课时间直接放大 512 倍。<strong>PREEMPT_RT 不能让缺页变快</strong>——这一类只能靠应用侧 <code>mlockall()</code>（把内存钉死在物理内存里、不许换出到磁盘的系统调用）+ 预分配彻底避开，这就是 §4 反复强调它的原因。</p>
 
   <div class="box danger">
     <strong>④ SMI 最阴险，因为它根本不归操作系统管。</strong>x86 上固件可以让 CPU 进入 <strong>SMM</strong>——优先级高于一切、连 NMI 都被屏蔽、Linux 无法感知也无法拒绝。风扇调速、温度管理、ECC 记录、USB 键盘的传统模拟都可能用它实现。它的可怕之处在于<strong>取证困难</strong>：<code>ftrace</code> 看到的是「时间凭空跳了 300 µs，中间什么都没发生」，因为所有内核侧工具在 SMM 期间都停摆。<strong>判据正是这一点：cyclictest 报出大尖峰、而 ftrace 上找不到任何对应事件——那就是 SMI。</strong>检测手段见 §5.3。
@@ -463,11 +463,11 @@
 
   <h3 id="s2-0">2.1 二十年 out-of-tree，2024 年终于进主线</h3>
 
-  <p>它自 2004 年起长期以 out-of-tree 补丁集存在，但内容早已<strong>分批渗入主线</strong>——hrtimer、线程化中断、rtmutex 与优先级继承、<code>ftrace</code> 系列 latency tracer、<code>nohz_full</code>、printk 重写，<strong>这些今天人人都在用的基础设施最初都是为 RT 做的</strong>；2024 年最后一块拼图随 6.12 合入，<code>CONFIG_PREEMPT_RT</code> 成为正式的抢占模型选项。意义不在性能（前后延迟几乎没变）而在不必再维护内核 fork，详见 §9.1。</p>
+  <p>它自 2004 年起长期以 out-of-tree（在内核官方代码树之外单独维护，用户得自己打补丁、自己重编内核）补丁集存在，但内容早已<strong>分批渗入主线</strong>——hrtimer、线程化中断、rtmutex 与优先级继承、<code>ftrace</code> 系列 latency tracer、<code>nohz_full</code>、printk 重写，<strong>这些今天人人都在用的基础设施最初都是为 RT 做的</strong>；2024 年最后一块拼图随 6.12 合入，<code>CONFIG_PREEMPT_RT</code> 成为正式的抢占模型选项。意义不在性能（前后延迟几乎没变）而在不必再维护内核 fork（自己养一份改过的内核副本并长期跟着上游升级，成本极高），详见 §9.1。</p>
 
   <h3 id="s2-1">2.2 改造一：sleeping spinlock</h3>
 
-  <p>这是五项里影响面最大的一项。RT 把<strong>绝大多数</strong> <code>spinlock_t</code> 换成基于 rtmutex 的<strong>可睡眠锁</strong>：拿不到锁的任务进睡眠队列让出 CPU，持锁的任务<strong>不再关抢占</strong>。</p>
+  <p>这是五项里影响面最大的一项。RT 把<strong>绝大多数</strong> <code>spinlock_t</code> 换成基于 rtmutex（RT 互斥锁：拿不到锁的任务去睡眠队列排队、把 CPU 让出来，而不是原地打转）的<strong>可睡眠锁</strong>：拿不到锁的任务进睡眠队列让出 CPU，持锁的任务<strong>不再关抢占</strong>——也就是持锁期间允许高优先级任务插进来先跑。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 320" role="img" aria-label="同一句 spin_lock 在两种内核下的时间线：mainline 下持锁期间关抢占，就绪的高优先级任务必须等临界区跑完；PREEMPT_RT 下 spin_lock 是 rt_mutex，高优先级任务可立刻抢占，若也要同一把锁则睡眠等待并把优先级继承给持锁者">
@@ -504,7 +504,7 @@
     </svg>
   </div>
 
-  <p><strong>API 完全兼容</strong>——驱动源码一个字都不用改，重编译即可。但语义变了，于是产生了一条硬约束：<strong>在 RT 下 <code>spin_lock()</code> 是可能睡眠的</strong>，所以不能在真正的原子上下文里调用它。</p>
+  <p><strong>API 完全兼容</strong>——驱动源码一个字都不用改，重编译即可。但语义变了，于是产生了一条硬约束：<strong>在 RT 下 <code>spin_lock()</code> 是可能睡眠的</strong>，所以不能在真正的原子上下文（atomic context，中途不允许睡觉、也不允许被换人的执行环境，硬中断处理函数里就是典型）调用它。</p>
 
   <h4>哪些代码必须用 <code>raw_spinlock_t</code></h4>
 
@@ -528,7 +528,7 @@
 
   <h3 id="s2-2">2.3 改造二：线程化中断（threaded IRQ）</h3>
 
-  <p>mainline 的中断两半都不可抢占。RT 把 top-half 压到只剩硬件应答（屏蔽中断源、清状态位），<strong>处理逻辑整体搬进一个专属内核线程</strong>：</p>
+  <p>mainline 的中断分两半，且两半都不可抢占：top-half（中断上半部，硬件一响、内核第一时间接手的那一小段）先跑，排在其后的下半部处理也得跟着等完。RT 把 top-half 压到只剩硬件应答（屏蔽中断源、清状态位），<strong>处理逻辑整体搬进一个专属内核线程</strong>——线程和普通任务一样有名字、有优先级、能被调度：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 330" role="img" aria-label="同一个中断在 mainline 与 PREEMPT_RT 下的处理路径对比：mainline 下 top-half 与就地执行的软中断均不可抢占，要等到 preempt_enable 检查点才轮到重新调度；RT 下只有极短的 primary handler 不可抢占，其余搬进有优先级的中断线程，控制环可以排在它前面">
@@ -667,7 +667,7 @@
 
   <h3 id="s2-4">2.5 改造四：软中断线程化</h3>
 
-  <p>光把硬中断线程化还不够——软中断仍会「借用」被打断任务的时间片执行且期间禁抢占。RT 让它也在<strong>可调度的上下文</strong>中执行：推给 <code>ksoftirqd/N</code> 这样的 per-CPU 内核线程。RCU 处理与定时器软中断也各自有了承载线程（<code>rcuc/N</code>、<code>ktimers/N</code>），都以 <code>SCHED_FIFO</code> 出现在 <code>ps</code> 里，可以被排序、被观测。</p>
+  <p>光把硬中断线程化还不够——软中断仍会「借用」被打断任务的时间片执行且期间禁抢占。RT 让它也在<strong>可调度的上下文</strong>中执行：推给 <code>ksoftirqd/N</code> 这样的 per-CPU 内核线程（每个 CPU 各配一个、名字里带核编号）。RCU（Read-Copy-Update，内核读多写少的同步机制，释放旧数据靠回调延迟完成）处理与定时器软中断也各自有了承载线程（<code>rcuc/N</code>、<code>ktimers/N</code>），都以 <code>SCHED_FIFO</code>（实时调度类之一：谁优先级高谁先跑，不跑完不让位）出现在 <code>ps</code> 里，可以被排序、被观测。</p>
 
   <div class="warn">
     <strong>这项改造会咬人：软中断线程化之后网络吞吐下降是可预期的。</strong>原来收包在软中断里连续处理、cache 全热，现在要经过唤醒、调度、切换。<strong>正解是把「实时」和「吞吐」分到不同的 CPU 核上</strong>：隔离核跑控制环，非隔离核跑网络与业务，中断亲和把收包全赶过去（配置见 §3、§4）。
@@ -675,7 +675,7 @@
 
   <h3 id="s2-5">2.6 改造五：高精度定时器与 full tickless</h3>
 
-  <p>实时任务的典型形态是「每 1 ms 醒一次」。定时精度只有 jiffies（<code>CONFIG_HZ=250</code> 时是 4 ms）的话，这件事根本无从谈起。<strong>hrtimer</strong> 让定时器直接编程到硬件时钟比较器上，精度取决于时钟源而非 tick 频率。</p>
+  <p>实时任务的典型形态是「每 1 ms 醒一次」。定时精度只有 jiffies（内核的传统计时单位，靠周期时钟滴答逐格累加，<code>CONFIG_HZ=250</code> 时一格 4 ms）的话，这件事根本无从谈起——相当于想定 1 ms 的闹钟，表盘刻度却是 4 ms 一格。<strong>hrtimer</strong>（高精度定时器）让定时器直接编程到硬件时钟比较器上，精度取决于时钟源而非 tick 频率。</p>
 
 <pre><span class="cm">/* ✅ 绝对时间：本轮超时也不会把误差带到下一轮 */</span>
 <span class="kw">struct</span> timespec next;
@@ -813,7 +813,7 @@ CONFIG_IRQ_FORCED_THREADING=y
 
   <h3 id="s3-2">3.2 启动参数：一套完整的隔离配方</h3>
 
-  <p>启动参数不是「可以挑几个用」的清单，而是<strong>互相依赖的一套</strong>：漏掉任何一个，其余的效果都会打折。</p>
+  <p>启动参数不是「可以挑几个用」的清单，而是<strong>互相依赖的一套</strong>：漏掉任何一个，其余的效果都会打折。这一节的核心思路叫「CPU 隔离」——把几个核（下文称隔离核）从系统的日常杂务里摘出来、专供实时任务，让其余照常干活的核（俗称管家核）把中断、内存回收、日志这些噪声全接走。</p>
 
   <h4>组一：CPU 隔离四件套</h4>
 
@@ -946,7 +946,7 @@ $ ps -eo cls,rtprio,comm | grep -c <span class="str">'^FF.*irq/'</span>   <span 
     </tbody>
   </table>
 
-  <p>建议很简单：<strong>产品化项目走 Yocto/Buildroot 自建，因为你迟早要为了某个 BSP 驱动改内核；纯做算法验证用发行版现成的最省事。</strong>唯一不该做的是在生产设备上长期跑一个「某人两年前手编的、没人记得配置是什么」的内核。</p>
+  <p>建议很简单：<strong>产品化项目走 Yocto/Buildroot（两套主流的嵌入式 Linux 构建框架，从源码定制出整张系统镜像）自建，因为你迟早要为了某个 BSP（Board Support Package，板级支持包：让内核在自家这块板子上跑起来所需的驱动与配置集合）驱动改内核；纯做算法验证用发行版现成的最省事。</strong>唯一不该做的是在生产设备上长期跑一个「某人两年前手编的、没人记得配置是什么」的内核。</p>
 </section>
 
 <!-- ================================================================
@@ -1029,7 +1029,7 @@ $ ps -eo cls,rtprio,comm | grep -c <span class="str">'^FF.*irq/'</span>   <span 
 
   <h3 id="s4-2">4.2 运行时：sysctl 与 RT 限流的取舍</h3>
 
-  <p>先是一组没有争议的 <code>sysctl</code>：<code>vm.swappiness=0</code>，压低 <code>vm.dirty_ratio=5</code> / <code>dirty_background_ratio=2</code> 避免突然的大批量回写，<code>vm.overcommit_memory=2</code> 让分配失败发生在启动期，<code>vm.stat_interval=120</code>，<code>kernel.numa_balancing=0</code>，<code>kernel.timer_migration=0</code>。真正需要做判断的只有下面这一项。</p>
+  <p>先是一组没有争议的 <code>sysctl</code>（内核运行期参数，用 <code>sysctl -w</code> 或写进 <code>/etc/sysctl.conf</code> 生效）：<code>vm.swappiness=0</code>（尽量不把内存换出到磁盘），压低 <code>vm.dirty_ratio=5</code> / <code>dirty_background_ratio=2</code> 避免突然的大批量回写，<code>vm.overcommit_memory=2</code> 让内存分配失败发生在启动期而不是运行中途，<code>vm.stat_interval=120</code>，<code>kernel.numa_balancing=0</code>，<code>kernel.timer_migration=0</code>。真正需要做判断的只有下面这一项。</p>
 
   <h4><code>sched_rt_runtime_us</code>：设不设成 -1，是一道判断题</h4>
 
@@ -1050,7 +1050,7 @@ $ ps -eo cls,rtprio,comm | grep -c <span class="str">'^FF.*irq/'</span>   <span 
 
   <h3 id="s4-3">4.3 中断亲和：把噪声赶到管家核</h3>
 
-  <p><code>irqaffinity=</code> 只影响<strong>启动时</strong>的默认掩码，运行期新注册的设备与多队列设备的托管中断都要单独处理。上线前四个动作：<code>cat /proc/interrupts</code> 找出隔离核那几列里计数还在涨的行；对可改的逐个写 <code>echo 0-1 &gt; /proc/irq/&lt;N&gt;/smp_affinity_list</code>；<code>ethtool -L eth0 combined 2</code> 把队列数降到管家核的数量，从源头减少中断；用不上的设备直接关掉。</p>
+  <p>中断亲和（affinity，规定某个中断只允许落在哪几个核上）是 <code>irqaffinity=</code> 的延续：它只影响<strong>启动时</strong>的默认掩码，运行期新注册的设备与多队列设备的托管中断都要单独处理。上线前四个动作：<code>cat /proc/interrupts</code> 找出隔离核那几列里计数还在涨的行；对可改的逐个写 <code>echo 0-1 &gt; /proc/irq/&lt;N&gt;/smp_affinity_list</code>；<code>ethtool -L eth0 combined 2</code> 把队列数降到管家核的数量，从源头减少中断；用不上的设备直接关掉。</p>
 
   <div class="box danger">
     <strong>批量改亲和时有一部分会写入失败并返回 <code>EIO</code>——那不是脚本写错了，而是「这是内核托管中断」的明确信号。</strong>多队列网卡与 NVMe 的中断由内核按队列数自动分配，<strong>既不理会 <code>irqaffinity=</code>，也拒绝手工修改</strong>，只能靠 <code>isolcpus=managed_irq</code> 或减少队列数。很多脚本写着 <code>2&gt;/dev/null</code>，正好把这条最重要的线索吞掉——§6 陷阱 9 与 §8 案例二都栽在这里。
@@ -1062,7 +1062,7 @@ $ ps -eo cls,rtprio,comm | grep -c <span class="str">'^FF.*irq/'</span>   <span 
 
   <h3 id="s4-4">4.4 应用级（一）：优先级规划</h3>
 
-  <p>先看清自己站在哪一层。Linux 的调度类<strong>严格分层</strong>：上面一层还有可运行任务，下面一层就一点 CPU 都拿不到。</p>
+  <p>先看清自己站在哪一层。Linux 的调度类（scheduling class，内核里按排队策略划分的「班级」：FIFO/RR 是实时班，CFS/EEVDF 是普通分时班）<strong>严格分层</strong>：上面一层还有可运行任务，下面一层就一点 CPU 都拿不到。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 300" role="img" aria-label="Linux 调度类优先级栈：SCHED_DEADLINE 最高并带准入控制，其次是 SCHED_FIFO 与 SCHED_RR 的静态优先级 1 到 99，再次是 CFS 或 EEVDF 管理的普通任务，最低是 SCHED_IDLE；上层有可运行任务时下层完全拿不到 CPU">
@@ -1119,7 +1119,7 @@ $ ps -eo cls,rtprio,comm | grep -c <span class="str">'^FF.*irq/'</span>   <span 
 
   <h4>什么时候改用 <code>SCHED_DEADLINE</code></h4>
 
-  <p><code>SCHED_FIFO</code> 回答得了「谁比谁重要」，回答不了「系统整体扛不扛得住」——后者要靠 <code>SCHED_DEADLINE</code> 的三元组与准入控制：</p>
+  <p><code>SCHED_FIFO</code> 回答得了「谁比谁重要」，回答不了「系统整体扛不扛得住」——后者要靠 <code>SCHED_DEADLINE</code> 的三元组（runtime/deadline/period 三个时间参数，各自含义见下图）与准入控制（内核先替你算总账：所有任务要的 CPU 份额加起来超了，就当场拒绝设置，不让系统带病上线）：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 250" role="img" aria-label="SCHED_DEADLINE 的三个参数：period 是任务每隔多久被释放一次，deadline 是本次必须完成的相对时限，runtime 是内核为它预留的执行预算；跑满 runtime 就被限流到下个周期，所有任务的 runtime 除以 period 之和超过 1 时 sched_setattr 直接返回 EBUSY">
@@ -1282,7 +1282,7 @@ pthread_mutex_unlock(&amp;lock);</pre>
   <p>另一个方案是<strong>优先级天花板</strong>（<code>PTHREAD_PRIO_PROTECT</code>）：拿到锁就无条件提升到预设上限，不用维护等待链，开销更小更可预测；代价是必须静态分析出「所有可能用这把锁的线程里最高的优先级」，有人加了个更高优先级的线程忘了改天花板，保护就失效了。<strong>动态系统用 PI，静态可分析的系统可以考虑 PROTECT。</strong></p>
 
   <div class="box tip">
-    <strong>更好的做法是根本不共享锁。</strong>实时与非实时线程之间优先用<strong>无锁 SPSC 环形缓冲</strong>交换数据：实时侧只做「写指针推进」一个原子操作，最坏耗时是常数，连 PI 都不需要。日志、遥测、状态上报几乎全可以这样解耦。
+    <strong>更好的做法是根本不共享锁。</strong>实时与非实时线程之间优先用<strong>无锁 SPSC 环形缓冲</strong>（SPSC：single-producer single-consumer，一端只写、一端只读的环形队列，两端各推各的指针，全程不需要加锁）交换数据：实时侧只做「写指针推进」一个原子操作，最坏耗时是常数，连 PI 都不需要。日志、遥测、状态上报几乎全可以这样解耦。
   </div>
 
   <h3 id="s4-7">4.7 实时线程里绝对不能做的事</h3>
@@ -1300,7 +1300,7 @@ pthread_mutex_unlock(&amp;lock);</pre>
     </tbody>
   </table>
 
-  <p>表里的<strong>惰性绑定</strong>值得单独说一句（现象见 §6 陷阱 6）。三层防御建议全上：运行期 <code>LD_BIND_NOW=1</code>，链接期 <code>-Wl,-z,now -Wl,-z,relro</code> 把它固化进 ELF 而不依赖环境变量，再用 <code>readelf -d bin | grep BIND_NOW</code> 验证标记确实写进去了；关键路径可以更进一步静态链接，连动态链接器都不参与。</p>
+  <p>表里的<strong>惰性绑定</strong>（lazy binding：动态库函数第一次被调用时才去解析它的真实地址，所以「第一次」格外慢）值得单独说一句（现象见 §6 陷阱 6）。三层防御建议全上：运行期 <code>LD_BIND_NOW=1</code>，链接期 <code>-Wl,-z,now -Wl,-z,relro</code> 把它固化进 ELF 而不依赖环境变量，再用 <code>readelf -d bin | grep BIND_NOW</code> 验证标记确实写进去了；关键路径可以更进一步静态链接，连动态链接器都不参与。</p>
 
   <h3 id="s4-8">4.8 启动方式：把上面这些串起来</h3>
 
@@ -1412,7 +1412,7 @@ T: 3 ( 8815) P:80 I:1000 C:14400000 Min:      2 Act:    4 Avg:    5 Max:      64
 
   <h3 id="s5-4">5.4 rtla 的另外两把刀：timerlat 与 osnoise</h3>
 
-  <p><code>rtla timerlat top -c 2-5 -p 80</code> 把定时器延迟<strong>拆成 IRQ 段与 Thread 段</strong>（硬件中断到内核处理 vs 唤醒之后到线程真正跑起来）；<code>rtla osnoise top -c 4</code> 把「谁在偷时间」按 <code>HW</code>/<code>NMI</code>/<code>IRQ</code>/<code>Softirq</code>/<code>Thread</code> 分列成累计微秒数——<code>IRQ</code> 列最大就是中断亲和没做干净，<code>Thread</code> 列最大就是隔离没生效。串起来用有固定顺序：</p>
+  <p><code>rtla timerlat top -c 2-5 -p 80</code> 把定时器延迟<strong>拆成 IRQ 段与 Thread 段</strong>（硬件中断到内核处理 vs 唤醒之后到线程真正跑起来）；<code>rtla osnoise top -c 4</code> 把「谁在偷时间」按 <code>HW</code>/<code>NMI</code>/<code>IRQ</code>/<code>Softirq</code>/<code>Thread</code> 分列成累计微秒数（NMI：不可屏蔽中断，连关中断都挡不住的最高优先级打断）——<code>IRQ</code> 列最大就是中断亲和没做干净，<code>Thread</code> 列最大就是隔离没生效。串起来用有固定顺序：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 420" role="img" aria-label="延迟排查决策树：ftrace 时间线一片空白且在虚拟机里就用 vmstat 看 steal，裸机则用 hwlatdetect 查 SMI；ftrace 能看到事件时用 rtla timerlat 判断慢在 IRQ 段还是 Thread 段，再用 rtla osnoise 归类噪声源；直方图双峰查 turbostat，每秒一次的规律停顿查 RT 限流，重启后频繁的尖峰查 mlockall">
@@ -1472,7 +1472,7 @@ T: 3 ( 8815) P:80 I:1000 C:14400000 Min:      2 Act:    4 Avg:    5 Max:      64
 
   <h3 id="s5-5">5.5 ftrace：抓住尖峰发生那一瞬间的现场</h3>
 
-  <p>知道「有 200 µs 的尖峰」不够，要知道「那 200 µs 里 CPU 在干什么」。ftrace 的几个 latency tracer 就是为此而生，它们的共同机制是：<strong>持续测量某类延迟，只保留历史最大值那一次的完整轨迹。</strong></p>
+  <p>知道「有 200 µs 的尖峰」不够，要知道「那 200 µs 里 CPU 在干什么」。ftrace（内核自带的函数级追踪框架，不装任何外部工具就能看到内核里每个函数何时被调、耗时多少）的几个 latency tracer 就是为此而生，它们的共同机制是：<strong>持续测量某类延迟，只保留历史最大值那一次的完整轨迹。</strong></p>
 
   <table>
     <thead><tr><th>tracer</th><th>测什么</th><th>什么时候用</th></tr></thead>
@@ -1672,7 +1672,7 @@ $ sudo cat trace | head -40
     </div>
     <div class="panel green">
       <h4>原因</h4>
-      <p>内存分配在一个 NUMA 节点，线程却被调度到另一个节点的核。远端访存要走处理器互联，单次延迟高出可观比例且更易被其它流量干扰；启动时落在哪个节点是随机的，所以「每次不一样」。<code>numa_balancing</code> 还会在运行期搬页。</p>
+      <p>先解释 NUMA（Non-Uniform Memory Access，非一致访存：双路以上服务器的内存分属两个节点，CPU 访问本节点的内存快、访问隔壁节点的内存慢）。这台机器上内存分配在一个 NUMA 节点，线程却被调度到另一个节点的核。远端访存要走处理器互联，单次延迟高出可观比例且更易被其它流量干扰；启动时落在哪个节点是随机的，所以「每次不一样」。<code>numa_balancing</code> 还会在运行期把页面搬来搬去，搬动本身就是一次干扰。</p>
     </div>
   </div>
 
@@ -1706,14 +1706,14 @@ $ sudo cat trace | head -40
     </div>
     <div class="panel green">
       <h4>原因</h4>
-      <p>vCPU 只是宿主上的一个普通线程，宿主调度器可以在任意时刻把它换下去，而<strong>guest 内核对此完全无感，从它的视角看就是「时间跳了一段」</strong>。只要宿主存在任何形式的超卖或共享，guest 里的实时保证都是幻觉。</p>
+      <p>vCPU（虚拟 CPU：虚拟机以为自己在用一个核，实际它是宿主机上的一个普通线程）只是宿主上的一个普通线程，宿主调度器可以在任意时刻把它换下去，而<strong>guest（虚拟机里跑的系统）内核对此完全无感，从它的视角看就是「时间跳了一段」</strong>。只要宿主存在任何形式的超卖（把同一份物理资源承诺给比实际拥有量更多的虚拟机）或共享，guest 里的实时保证都是幻觉。</p>
     </div>
   </div>
 
   <p><strong>处方</strong>：先量化被偷走了多少时间。<code>vmstat 1</code> 最后一列 <code>st</code> 就是 steal——只要非 0，宿主就在抢你的 vCPU；<code>head -1 /proc/stat</code> 第 8 个字段是累计值。</p>
 
   <div class="box danger">
-    <strong>结论要说得干脆：通用虚拟化环境下做不了硬实时。</strong>非要跑就只能降级成「尽力而为的固实时」，且宿主侧五条要全部满足：vCPU 一对一独占绑定物理核且那些核在宿主上也隔离、宿主完全不超卖且内存用大页预分配锁定、宿主自己也是 RT 内核、关掉内存气球与页合并与动态迁移、I/O 走 SR-IOV 直通。<strong>满足之后延迟仍比裸机差一档——更诚实的判断是：真有硬实时需求就用裸机或专用 MCU，把虚拟化留给非实时部分。</strong>
+    <strong>结论要说得干脆：通用虚拟化环境下做不了硬实时。</strong>非要跑就只能降级成「尽力而为的固实时」，且宿主侧五条要全部满足：vCPU 一对一独占绑定物理核且那些核在宿主上也隔离、宿主完全不超卖且内存用大页预分配锁定、宿主自己也是 RT 内核、关掉内存气球（hypervisor 从虚拟机「借」回内存的机制）与页合并（把内容相同的内存页去重共享）与动态迁移（虚拟机在宿主之间在线搬家）、I/O 走 SR-IOV 直通（网卡虚拟出多个独立设备直接分给虚拟机，绕过宿主转发）。<strong>满足之后延迟仍比裸机差一档——更诚实的判断是：真有硬实时需求就用裸机或专用 MCU，把虚拟化留给非实时部分。</strong>
   </div>
 
   <h3 id="s6-11">速查：按现象反查陷阱</h3>
@@ -1843,7 +1843,7 @@ $ sudo cat trace | head -40
   </div>
 
   <div class="note">
-    <strong>不要试图用一个系统满足所有延迟等级。</strong>工业界的主流架构是「电流环在驱动器 MCU 上（10 kHz+）→ 关节控制在实时主控上（1 kHz，PREEMPT_RT）→ 规划与感知在应用核上（10~100 Hz，普通 Linux）」，各层用确定性总线（EtherCAT、CAN FD、TSN）连起来。参考 <a href="../robotics-comm/realtime_control_protocol.html">实时控制协议</a> 与 <a href="../robotics-comm/tsn_deep_dive.html">TSN 深入</a>。
+    <strong>不要试图用一个系统满足所有延迟等级。</strong>工业界的主流架构是「电流环在驱动器 MCU 上（10 kHz+）→ 关节控制在实时主控上（1 kHz，PREEMPT_RT）→ 规划与感知在应用核上（10~100 Hz，普通 Linux）」，各层用确定性总线（EtherCAT、CAN FD、TSN：三种按固定时序收发报文的工业总线/网络协议，数据「说什么时候到就什么时候到」）连起来。参考 <a href="../robotics-comm/realtime_control_protocol.html">实时控制协议</a> 与 <a href="../robotics-comm/tsn_deep_dive.html">TSN 深入</a>。
   </div>
 </section>
 
@@ -1899,7 +1899,7 @@ $ sudo cat trace | head -40
   <h3 id="s8-2">案例二 · 力控回路被网卡中断打断</h3>
 
   <div class="box real">
-    <strong>背景</strong>：协作机器人的力控内环，跑在已做过完整 RT 调优的平台上，平时最坏 60 µs。但上位机一开始拉取点云（千兆大流量），力控环就周期性出现 300~500 µs 超时，表现为接触工件时「顿一下」。<strong>停掉点云传输，问题立刻消失。</strong>
+    <strong>背景</strong>：协作机器人的力控内环，跑在已做过完整 RT 调优的平台上，平时最坏 60 µs。但上位机一开始拉取点云（三维视觉传感器打出的海量坐标点数据，千兆大流量且持续不断），力控环就周期性出现 300~500 µs 超时，表现为接触工件时「顿一下」。<strong>停掉点云传输，问题立刻消失。</strong>
   </div>
 
   <h4>定位过程</h4>
@@ -2005,11 +2005,11 @@ $ sudo cat trace | head -40
 
   <p>两者<strong>互补而不是替代</strong>：<strong>PREEMPT_RT 解决「内核会不会挡着我」，<code>SCHED_DEADLINE</code> 解决「多个实时任务之间怎么分配才不会互相饿死」</strong>。缺后者，没人回答得了「三个周期任务加起来这个核扛不扛得住」；缺前者，带宽算得再对，内核仍会用一段自旋锁临界区让你错过截止时间。</p>
 
-  <p>实践中仍是 <code>SCHED_FIFO</code> 占绝对多数，障碍在于 DEADLINE 要求可靠的 WCET——而对跑在带 cache、带分支预测、带 DVFS 的现代 SoC 上的代码，WCET 本身就是难题。<strong>能给出可信 WCET 的场景（固定控制律、无动态分支的信号处理）用它收益明显，否则 FIFO 加充足余量更实际。</strong></p>
+  <p>实践中仍是 <code>SCHED_FIFO</code> 占绝对多数，障碍在于 DEADLINE 要求可靠的 WCET（Worst-Case Execution Time，一段代码在最坏情况下要跑多久的估计）——而对跑在带 cache、带分支预测、带 DVFS（动态调频调压，按负载实时升降频率省电）的现代 SoC 上的代码，WCET 本身就是难题。<strong>能给出可信 WCET 的场景（固定控制律、无动态分支的信号处理）用它收益明显，否则 FIFO 加充足余量更实际。</strong></p>
 
   <h3 id="s9-3">9.3 eBPF 与实时观测</h3>
 
-  <p>eBPF 给实时系统带来的价值是<strong>长期在线的、低开销的延迟观测</strong>：一行 <code>bpftrace</code> 挂在 <code>sched_wakeup</code> 与 <code>sched_switch</code> 上，就能持续采集实时任务的运行队列等待时间直方图——看的仍然是最右边那几个桶。</p>
+  <p>eBPF（一段经内核校验器把关、在沙箱里安全运行的小程序，可以挂到内核事件上随时采集数据）给实时系统带来的价值是<strong>长期在线的、低开销的延迟观测</strong>：一行 <code>bpftrace</code> 挂在 <code>sched_wakeup</code> 与 <code>sched_switch</code>（任务被唤醒、任务被切换这两个内核事件）上，就能持续采集实时任务的运行队列等待时间直方图——看的仍然是最右边那几个桶。</p>
 
   <div class="box tip">
     <strong>但 eBPF 有一条必须守的纪律：探针本身也是代码，也会在你的隔离核上执行。</strong>复杂程序、大量 map 更新、map 的内存分配都可能引入额外延迟。<strong>挂长期探针之前先测「挂上之后最坏延迟变化了多少」</strong>，并把这个开销计入余量——观测不该成为新的噪声源，道理和「不要在实时线程里写日志」是同一个。
