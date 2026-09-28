@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>实时控制协议设计与标准化 · 帧格式与时间戳 / 序号与新鲜度 / 看门狗与失步恢复 / 版本协商与向后兼容 / 安全层 / 标准化落地流程</title>
-<meta name="description" content="实时控制协议设计与标准化：前面几篇讲的是 「网络能提供什么保证」，这篇讲 「协议本身该怎么设计，才能在保证失效时依然安全」。核心观点：实时控制协议的设计重心不在「高效传输」，而在 三件事——让接收方能判断数据是否还新鲜、让双方能就「现在该做什么」达成一致、以及在通信中断时行为可预测">
+<meta name="description" content="实时控制协议设计白话版：重点不是高效传输，而是三件事——用时间戳和序号判断指令是否还新鲜、通信中断时看门狗分级降级、恢复时重同步；另讲版本兼容协商与把内部协议推成团队标准的流程">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/realtime_control_protocol.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/realtime_control_protocol.html">
 <meta property="og:title" content="实时控制协议设计与标准化 · 帧格式与时间戳 / 序号与新鲜度 / 看门狗与失步恢复 / 版本协商与向后兼容 / 安全层 / 标准化落地流程">
-<meta property="og:description" content="实时控制协议设计与标准化：前面几篇讲的是 「网络能提供什么保证」，这篇讲 「协议本身该怎么设计，才能在保证失效时依然安全」。核心观点：实时控制协议的设计重心不在「高效传输」，而在 三件事——让接收方能判断数据是否还新鲜、让双方能就「现在该做什么」达成一致、以及在通信中断时行为可预测">
+<meta property="og:description" content="实时控制协议设计白话版：重点不是高效传输，而是三件事——用时间戳和序号判断指令是否还新鲜、通信中断时看门狗分级降级、恢复时重同步；另讲版本兼容协商与把内部协议推成团队标准的流程">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="实时控制协议设计与标准化 · 帧格式与时间戳 / 序号与新鲜度 / 看门狗与失步恢复 / 版本协商与向后兼容 / 安全层 / 标准化落地流程">
-<meta name="twitter:description" content="实时控制协议设计与标准化：前面几篇讲的是 「网络能提供什么保证」，这篇讲 「协议本身该怎么设计，才能在保证失效时依然安全」。核心观点：实时控制协议的设计重心不在「高效传输」，而在 三件事——让接收方能判断数据是否还新鲜、让双方能就「现在该做什么」达成一致、以及在通信中断时行为可预测">
+<meta name="twitter:description" content="实时控制协议设计白话版：重点不是高效传输，而是三件事——用时间戳和序号判断指令是否还新鲜、通信中断时看门狗分级降级、恢复时重同步；另讲版本兼容协商与把内部协议推成团队标准的流程">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -193,7 +193,7 @@
     <div class="t"><h2>和普通协议有什么不同</h2><p class="sub">设计重心的根本差异</p></div>
   </div>
 
-  <p>如果你熟悉 <a href="../communication/binary_protocol.html">二进制协议设计</a>里的 TLV、framing、字节序那一套，那是<strong>通用协议</strong>的基础。实时控制协议在此之上有三个<strong>方向性不同</strong>的设计取向：</p>
+  <p>如果你熟悉 <a href="../communication/binary_protocol.html">二进制协议设计</a>里的 TLV（Type-Length-Value，用「类型、长度、值」三段式组织字段）、framing（在一长串字节里切出「一条完整消息」的边界机制）、字节序（多字节数字从高位还是低位排起）那一套，那是<strong>通用协议</strong>的基础。实时控制协议在此之上有三个<strong>方向性不同</strong>的设计取向：</p>
 
   <table>
     <thead><tr><th>维度</th><th>普通协议（如 RPC / HTTP）</th><th>实时控制协议</th></tr></thead>
@@ -245,7 +245,7 @@
 <span class="cm">· 显式指定<span style="font-weight:700">字节序</span>（建议小端，与主流 CPU 一致，省掉转换）</span>
 <span class="cm">· 预留字段的语义必须写死：<span style="font-weight:700">发送方必须置 0，接收方必须忽略</span></span></pre>
 
-  <div class="def"><strong>「发送方必须置 0，接收方必须忽略」这条规则是协议能演进的前提。</strong>如果接收方对预留字段做了校验（比如「不为 0 就报错」），那么未来任何想用这个字段的新版本<strong>都会被老版本接收方拒绝</strong>，向后兼容彻底失效。反过来，如果接收方忽略未知字段，新版本就可以<strong>渐进地启用预留字段</strong>而不破坏老设备。这条规则在 IETF 的协议设计里叫「<strong>be conservative in what you send, be liberal in what you accept</strong>」，在实时协议里同样适用——但注意<strong>安全相关字段是例外</strong>，那些必须严格校验。</div>
+  <div class="def"><strong>「发送方必须置 0，接收方必须忽略」这条规则是协议能演进的前提。</strong>如果接收方对预留字段做了校验（比如「不为 0 就报错」），那么未来任何想用这个字段的新版本<strong>都会被老版本接收方拒绝</strong>，向后兼容彻底失效。反过来，如果接收方忽略未知字段，新版本就可以<strong>渐进地启用预留字段</strong>而不破坏老设备。这条规则在 IETF（互联网工程任务组，负责制定 TCP/IP 等互联网标准的组织）的协议设计里叫「<strong>be conservative in what you send, be liberal in what you accept</strong>」，在实时协议里同样适用——但注意<strong>安全相关字段是例外</strong>，那些必须严格校验。</div>
 
   <h3>2.2 关键字段的必要性</h3>
 
@@ -264,7 +264,7 @@
     </div>
     <div class="f-safe">
       <h5>crc32 —— 不要依赖下层</h5>
-      <p>以太网有 FCS、UDP 有校验和，但它们<strong>只覆盖各自的传输段</strong>。数据在协议栈内、在网关转换时、在共享内存里都可能被损坏，而下层校验对此无能为力。<strong>端到端校验是唯一可靠的</strong>——这是「端到端原则」在协议设计里的直接应用。</p>
+      <p>以太网有 FCS（帧校验序列——以太网帧尾自带的校验字段）、UDP 有校验和，但它们<strong>只覆盖各自的传输段</strong>。数据在协议栈内、在网关转换时、在共享内存里都可能被损坏，而下层校验对此无能为力。<strong>端到端校验是唯一可靠的</strong>——这是「端到端原则」在协议设计里的直接应用。</p>
     </div>
     <div class="f-evo">
       <h5>version_major / minor —— 早加比晚加便宜得多</h5>
@@ -272,11 +272,11 @@
     </div>
     <div class="f-evo">
       <h5>flags —— 带外状态的通道</h5>
-      <p>用于传递「我正在降级」「我检测到异常」这类<strong>与主数据正交的状态</strong>。有了它，接收方能知道对端的健康状况，而不必等超时才发现问题。<strong>预留足够的位</strong>——flags 是最容易不够用的字段。</p>
+      <p>用于传递「我正在降级」「我检测到异常」这类<strong>与主数据正交的状态</strong>（「正交」是说它们和位置、速度这些主数据互不相干，是随帧捎带的独立信息，所以也叫「带外」状态）。有了它，接收方能知道对端的健康状况，而不必等超时才发现问题。<strong>预留足够的位</strong>——flags 是最容易不够用的字段。</p>
     </div>
   </div>
 
-  <div class="warn"><strong>不要用 JSON、Protobuf 之类的通用序列化做硬实时控制帧。</strong>理由不是「慢」（Protobuf 其实很快），而是<strong>不确定</strong>：变长编码意味着解析时间随内容变化、可能触发动态内存分配、序列化后的大小不固定导致无法做精确的时延预算。<strong>定长 POD 结构 + 显式字节序 + 静态断言</strong>才是硬实时的正确选择——它还顺带让 <a href="ros2_dds_deep_dive.html">DDS 的 Loaned Message 零拷贝</a>成为可能。配置类、非周期的消息用 Protobuf 完全没问题，<strong>关键是把「周期控制通道」和「配置管理通道」分开设计</strong>。</div>
+  <div class="warn"><strong>不要用 JSON、Protobuf 之类的通用序列化（把对象转成字节流的通用格式库）做硬实时控制帧。</strong>理由不是「慢」（Protobuf 其实很快），而是<strong>不确定</strong>：变长编码意味着解析时间随内容变化、可能触发动态内存分配、序列化后的大小不固定导致无法做精确的时延预算。<strong>定长 POD（plain old data，纯定长、不含字符串和变长字段）结构 + 显式字节序 + 静态断言</strong>才是硬实时的正确选择——它还顺带让 <a href="ros2_dds_deep_dive.html">DDS 的 Loaned Message 零拷贝</a>成为可能。配置类、非周期的消息用 Protobuf 完全没问题，<strong>关键是把「周期控制通道」和「配置管理通道」分开设计</strong>。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -332,7 +332,7 @@ static inline bool seq_is_newer(uint32_t a, uint32_t b) {
     </tbody>
   </table>
 
-  <div class="box tip"><strong>把所有拒绝原因分开计数，是这段代码最有价值的部分。</strong><code>too_old</code> / <code>clock_skew</code> / <code>stale_seq</code> / <code>out_of_range</code> / CRC 错这五个计数器，<strong>直接对应五种完全不同的故障</strong>：网络拥塞、时钟失步、乱序或重放、上游算法出错、物理层误码。把它们暴露成监控指标后，<strong>「机器人抖了一下」这类模糊报障可以在几分钟内定位到具体环节</strong>，而不是花几小时抓包。这个投入产出比在所有可观测性措施里是最高的之一。</div>
+  <div class="box tip"><strong>把所有拒绝原因分开计数，是这段代码最有价值的部分。</strong><code>too_old</code> / <code>clock_skew</code> / <code>stale_seq</code> / <code>out_of_range</code> / CRC 错这五个计数器，<strong>直接对应五种完全不同的故障</strong>：网络拥塞、时钟失步、乱序或重放、上游算法出错、物理层误码。把它们暴露成监控指标后，<strong>「机器人抖了一下」这类模糊报障可以在几分钟内定位到具体环节</strong>，而不是花几小时抓包。这个投入产出比在所有可观测性（把系统内部状态暴露成指标和日志，让故障能从外部看出来）措施里是最高的之一。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -342,7 +342,7 @@ static inline bool seq_is_newer(uint32_t a, uint32_t b) {
     <div class="t"><h2>看门狗与分级降级</h2><p class="sub">通信断了之后的行为，才是协议设计的重点</p></div>
   </div>
 
-  <p>协议的价值一半在「正常时怎么传」，另一半在<strong>「不正常时怎么办」</strong>。而后者往往被忽略——很多自研协议把正常路径做得很精致，异常路径只有一句 <code>if (timeout) stop();</code>。</p>
+  <p>协议的价值一半在「正常时怎么传」，另一半在<strong>「不正常时怎么办」</strong>。看门狗（watchdog，接收方自己设的「闹钟」——超过约定时间没收到新指令就自动触发保护动作，不依赖发送方提醒）就是后者的核心机制。而后者往往被忽略——很多自研协议把正常路径做得很精致，异常路径只有一句 <code>if (timeout) stop();</code>。</p>
 
   <div class="demo">
     <h4>交互：看门狗状态机</h4>
@@ -410,7 +410,7 @@ void on_control_tick(uint64_t now_tai_ns) {
     <div class="t"><h2>失步与重同步</h2><p class="sub">恢复比中断更危险</p></div>
   </div>
 
-  <p>通信恢复的瞬间是<strong>最容易出事的时刻</strong>：积压的旧数据涌入、双方对当前状态的理解不一致、控制器以为机器人还在原地而实际已经移动。协议必须显式处理这个过程。</p>
+  <p>通信恢复的瞬间是<strong>最容易出事的时刻</strong>：积压的旧数据涌入、双方对当前状态的理解不一致（这就是「失步」——中断期间双方的状态认知已经错开）、控制器以为机器人还在原地而实际已经移动。协议必须显式处理这个重新对齐（即「重同步」）的过程。</p>
 
   <h3>5.1 恢复时的三个陷阱</h3>
 
@@ -508,7 +508,7 @@ void on_control_tick(uint64_t now_tai_ns) {
     <div class="t"><h2>安全层</h2><p class="sub">加密、认证与实时性的矛盾</p></div>
   </div>
 
-  <p>控制协议的安全需求和 IT 系统不同：<strong>机密性通常不是首要的</strong>（关节角度泄露危害有限），<strong>完整性和真实性才是</strong>——攻击者能篡改或伪造指令就能让机器人做出危险动作。</p>
+  <p>控制协议的安全需求和 IT 系统不同：<strong>机密性（数据不被偷看）通常不是首要的</strong>（关节角度泄露危害有限），<strong>完整性（数据没被篡改）和真实性（指令确实来自声称的发送方）才是</strong>——攻击者能篡改或伪造指令就能让机器人做出危险动作。</p>
 
   <table>
     <thead><tr><th>安全目标</th><th>重要性</th><th>手段</th><th>实时代价</th></tr></thead>
@@ -520,9 +520,9 @@ void on_control_tick(uint64_t now_tai_ns) {
     </tbody>
   </table>
 
-  <div class="def"><strong>对实时控制协议，认证（MAC）的性价比远高于加密。</strong>加一个 AES-CMAC 只需要几个微秒（有硬件加速时更少）和 8–16 字节开销，就能阻止<strong>篡改和伪造</strong>这两类最危险的攻击。而全量加密带来的机密性收益在控制场景通常有限——<strong>攻击者知道关节角度并不能造成伤害，但能改写关节角度就可以</strong>。所以资源受限时的优先级是：<strong>先做认证与防重放，再考虑加密</strong>。这和 §3 的新鲜度校验是天然协同的——MAC 覆盖时间戳和序号后，重放攻击自动被新鲜度检查挡住。</div>
+  <div class="def"><strong>对实时控制协议，认证（MAC，Message Authentication Code 消息认证码——用共享密钥给数据算出的「防伪指纹」，数据被改一个字节就对不上）的性价比远高于加密。</strong>加一个 AES-CMAC 只需要几个微秒（有硬件加速时更少）和 8–16 字节开销，就能阻止<strong>篡改和伪造</strong>这两类最危险的攻击。而全量加密带来的机密性收益在控制场景通常有限——<strong>攻击者知道关节角度并不能造成伤害，但能改写关节角度就可以</strong>。所以资源受限时的优先级是：<strong>先做认证与防重放，再考虑加密</strong>。这和 §3 的新鲜度校验是天然协同的——MAC 覆盖时间戳和序号后，重放攻击自动被新鲜度检查挡住。</div>
 
-  <div class="danger"><strong>安全层绝不能成为安全功能的唯一防线。</strong>即使协议做了完善的认证，<strong>急停、力矩限制这类安全功能仍必须走独立的硬件回路</strong>（STO、安全继电器）——理由和 <a href="robot_intra_bus.html">端内总线 §7.2</a> 一样：<strong>即使主控软件全崩、密钥泄露、总线全断，安全链路仍必须有效</strong>。软件协议层的安全措施是「防止恶意指令被执行」，硬件安全回路是「保证最后能停下来」，两者不可互相替代。</div>
+  <div class="danger"><strong>安全层绝不能成为安全功能的唯一防线。</strong>即使协议做了完善的认证，<strong>急停、力矩限制这类安全功能仍必须走独立的硬件回路</strong>（STO——Safe Torque Off 安全转矩关断，以及安全继电器这类不依赖软件的硬接线装置）——理由和 <a href="robot_intra_bus.html">端内总线 §7.2</a> 一样：<strong>即使主控软件全崩、密钥泄露、总线全断，安全链路仍必须有效</strong>。软件协议层的安全措施是「防止恶意指令被执行」，硬件安全回路是「保证最后能停下来」，两者不可互相替代。</div>
 
   <div class="box tip"><strong>密钥轮换要设计成不中断的。</strong>常见做法是<strong>双密钥窗口</strong>：新密钥下发后，接收方在一段时间内<strong>同时接受新旧两个密钥</strong>，等确认所有设备都切换完成再废弃旧密钥。如果做成「到点同时切换」，任何一台设备切换失败就会立刻失联——在生产环境是不可接受的。这和 <a href="tsn_deep_dive.html">TSN 配置的事务性下发</a>是同一类问题：<strong>分布式系统的配置变更必须能容忍部分节点滞后。</strong></div>
 </section>
@@ -591,9 +591,9 @@ void on_control_tick(uint64_t now_tai_ns) {
 附录 A  参考实现与测试套件位置
 附录 B  <span class="cm">设计决策记录（为什么这么定）</span>       ★ 避免反复讨论</pre>
 
-  <div class="def"><strong>「不适用场景」和「设计决策记录」是最容易省略也最有价值的两节。</strong>前者防止协议被误用（有人拿这个硬实时协议去传固件镜像），后者让半年后的争论有据可依——「为什么用小端？」「为什么序号是 32 位不是 64 位？」<strong>这和架构文档里的 <a href="edge_cloud_robot_arch.html">ADR</a> 是同一个道理</strong>：记录结论容易，记录推理才是真正的资产。</div>
+  <div class="def"><strong>「不适用场景」和「设计决策记录」是最容易省略也最有价值的两节。</strong>前者防止协议被误用（有人拿这个硬实时协议去传固件镜像），后者让半年后的争论有据可依——「为什么用小端？」「为什么序号是 32 位不是 64 位？」<strong>这和架构文档里的 <a href="edge_cloud_robot_arch.html">ADR</a>（Architecture Decision Record，架构决策记录）是同一个道理</strong>：记录结论容易，记录推理才是真正的资产。</div>
 
-  <div class="warn"><strong>标准化最大的阻力不是技术，是「已有实现的沉没成本」。</strong>各团队通常已经有了自己的一套，让他们改成统一标准意味着重写和回归测试。<strong>务实的推进策略</strong>：① <strong>先在新项目上用</strong>，积累成功案例再推存量；② <strong>提供适配层</strong>，让老实现能以较小改动接入，而不是要求彻底重写；③ <strong>用参考实现降低采用成本</strong>——如果用你的库比维护他们自己的更省事，采纳就是自然的；④ <strong>把一致性测试做成 CI 门禁</strong>，让偏离标准的实现无法合入。<strong>技术标准的推行本质是产品问题，不是技术问题。</strong></div>
+  <div class="warn"><strong>标准化最大的阻力不是技术，是「已有实现的沉没成本」。</strong>各团队通常已经有了自己的一套，让他们改成统一标准意味着重写和回归测试。<strong>务实的推进策略</strong>：① <strong>先在新项目上用</strong>，积累成功案例再推存量；② <strong>提供适配层</strong>，让老实现能以较小改动接入，而不是要求彻底重写；③ <strong>用参考实现降低采用成本</strong>——如果用你的库比维护他们自己的更省事，采纳就是自然的；④ <strong>把一致性测试做成 CI 门禁</strong>（CI 即持续集成——代码提交后自动跑检查的流水线，「门禁」指不通过就不许合入），让偏离标准的实现无法合入。<strong>技术标准的推行本质是产品问题，不是技术问题。</strong></div>
 </section>
 <!-- ================================================================ §9 -->
 <section class="chapter" id="s9">

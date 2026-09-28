@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>车端网络深入 · CAN / LIN / FlexRay / Automotive Ethernet / DDS — Tech Notes</title>
-<meta name="description" content="车端网络深入：CAN / CAN FD / LIN / FlexRay / Automotive Ethernet (100/1000Base-T1) / SOME-IP / DDS / TSN · 从 1986 到 2026 的车内网络演化">
+<meta name="description" content="一辆车为什么要同时跑 CAN、LIN、以太网这么多网络？本文用白话把 CAN / CAN FD / LIN / FlexRay / Automotive Ethernet / SOME-IP / DDS / TSN 讲透：每条总线为谁而生、怎么调试、怎么选型，覆盖 1986 到 2026 的车内网络演化">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/embedded-realtime/automotive_networking.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/embedded-realtime/automotive_networking.html">
 <meta property="og:title" content="车端网络深入 · CAN / LIN / FlexRay / Automotive Ethernet / DDS">
-<meta property="og:description" content="车端网络深入：CAN / CAN FD / LIN / FlexRay / Automotive Ethernet (100/1000Base-T1) / SOME-IP / DDS / TSN · 从 1986 到 2026 的车内网络演化">
+<meta property="og:description" content="一辆车为什么要同时跑 CAN、LIN、以太网这么多网络？本文用白话把 CAN / CAN FD / LIN / FlexRay / Automotive Ethernet / SOME-IP / DDS / TSN 讲透：每条总线为谁而生、怎么调试、怎么选型，覆盖 1986 到 2026 的车内网络演化">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="车端网络深入 · CAN / LIN / FlexRay / Automotive Ethernet / DDS">
-<meta name="twitter:description" content="车端网络深入：CAN / CAN FD / LIN / FlexRay / Automotive Ethernet (100/1000Base-T1) / SOME-IP / DDS / TSN · 从 1986 到 2026 的车内网络演化">
+<meta name="twitter:description" content="一辆车为什么要同时跑 CAN、LIN、以太网这么多网络？本文用白话把 CAN / CAN FD / LIN / FlexRay / Automotive Ethernet / SOME-IP / DDS / TSN 讲透：每条总线为谁而生、怎么调试、怎么选型，覆盖 1986 到 2026 的车内网络演化">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -128,13 +128,13 @@
     </div>
   </div>
 
-  <p>一辆量产乘用车里<strong>典型有 70–100 个 ECU</strong>，靠至少四五种互不兼容的网络连在一起：CAN、LIN、FlexRay、车载以太网，再加上摄像头那条私有的高速串行链路。办公室里一根网线就能连一切，为什么车里要搞这么多套？</p>
+  <p>一辆量产乘用车里<strong>典型有 70–100 个 ECU</strong>（ECU，Electronic Control Unit，电子控制单元——车上每一个带芯片、专管一件具体事情的小电脑，车窗、车门、刹车里各有一个），靠至少四五种互不兼容的网络连在一起：CAN、LIN、FlexRay、车载以太网，再加上摄像头那条私有的高速串行链路。办公室里一根网线就能连一切，为什么车里要搞这么多套？</p>
 
-  <p>答案是：<strong>车载网络的第一约束从来不是性能，而是成本与可靠性。</strong>一个功能只要 1 kbps 就能实现，就绝不会给它一条 1 Mbps 的链路——那条链路的收发器、连接器、线缆和它带来的重量，都要乘以年产几十万台。<strong>每多一根导线都要过重量、成本、装配工时、EMC 认证、失效模式分析五道关，没有一道是软件能绕开的。</strong></p>
+  <p>答案是：<strong>车载网络的第一约束从来不是性能，而是成本与可靠性。</strong>一个功能只要 1 kbps 就能实现，就绝不会给它一条 1 Mbps 的链路——那条链路的收发器、连接器、线缆和它带来的重量，都要乘以年产几十万台。<strong>每多一根导线都要过重量、成本、装配工时、EMC（电磁兼容：既不干扰别的设备、也不被别的设备干扰）认证、失效模式分析五道关，没有一道是软件能绕开的。</strong></p>
 
   <h3 id="s1-0">先算一笔线束的账</h3>
 
-  <p>整车线束是车上除动力总成/电池外最昂贵、最重的零部件之一，也是唯一一个<strong>几乎完全手工装配</strong>的大件：<strong>总长 1.5–5 km、重 20–60 kg、数千个接点</strong>。摊到具体决策上：</p>
+  <p>整车线束（把全车几千根电线捆扎成的那一大束电缆）是车上除动力总成/电池外最昂贵、最重的零部件之一，也是唯一一个<strong>几乎完全手工装配</strong>的大件：<strong>总长 1.5–5 km、重 20–60 kg、数千个接点</strong>。摊到具体决策上：</p>
 
   <table>
     <thead><tr><th>决策</th><th>单车增量</th><th>×50 万台/年</th><th>工程后果</th></tr></thead>
@@ -150,9 +150,9 @@
 
   <p>所以「为什么车里有这么多协议」的准确回答是：<strong>因为不同子系统在成本、带宽、确定性、线束重量、EMC/环境、容错与功能安全这六个维度上的诉求彼此冲突，而每一种协议都是这个六维空间里的一个局部最优点。</strong>没有全局最优点，于是它们同时存在。</p>
 
-  <p>其中三个维度是车上特有的、也最容易被从互联网转来的人低估：<strong>确定性</strong>要的是「最坏情况有界」而不是「平均很快」（制动/转向的控制周期常在 1–10 ms，抖动预算只有周期的百分之几）；<strong>EMC 与环境</strong>意味着发动机舱 −40 ℃~+125 ℃、点火与电机开关噪声、严格的辐射发射限值；<strong>功能安全</strong>由 ISO 26262 的 ASIL 等级决定要不要冗余、要不要独立监控（线控制动/转向常按 ASIL D，车身舒适功能常在 QM~ASIL A）。</p>
+  <p>其中三个维度是车上特有的、也最容易被从互联网转来的人低估：<strong>确定性</strong>要的是「最坏情况有界」而不是「平均很快」（制动/转向的控制周期常在 1–10 ms，抖动预算只有周期的百分之几）；<strong>EMC 与环境</strong>意味着发动机舱 −40 ℃~+125 ℃、点火与电机开关噪声、严格的辐射发射限值；<strong>功能安全</strong>由 ISO 26262（汽车功能安全标准）的 ASIL 等级决定要不要冗余、要不要独立监控——ASIL 从 A 到 D 共四级，D 最严，好比及格线分四档、出了事后果越重的功能及格线划得越高（线控制动/转向常按 ASIL D，车身舒适功能常在 QM~ASIL A，QM 的意思是「不涉及安全，常规质量管理即可」）。</p>
 
-  <div class="box star">被问到「车里为什么不统一用以太网」时，不要只答「历史原因」。要答出三层：<strong>① 成本——末端一个车窗开关配一颗以太网 PHY 在 BOM 上不成立；② 物理——CAN 的差分总线可以多点挂接，以太网是点对点，末端每多一个节点就要多一个交换端口；③ 生态——CAN 的诊断、标定、DBC 工具链沉淀了三十年，替换成本远不止硬件。</strong></div>
+  <div class="box star">被问到「车里为什么不统一用以太网」时，不要只答「历史原因」。要答出三层：<strong>① 成本——末端一个车窗开关配一颗以太网 PHY（物理层芯片，负责把数据变成线上的电信号）在 BOM（单车物料成本清单）上不成立；② 物理——CAN 的差分总线可以多点挂接，以太网是点对点，末端每多一个节点就要多一个交换端口；③ 生态——CAN 的诊断、标定、DBC 工具链沉淀了三十年，替换成本远不止硬件。</strong></div>
 
   <div class="fig">
     <svg viewBox="0 0 840 300" style="min-width:760px;height:auto" role="img" aria-label="车内电子电气架构四代演进：分布式约一百个独立 ECU 用多条 CAN 与 LIN 相连；域集中用五到八个域控制器、域内 CAN FD 域间百兆以太网；中央计算加区域控制器用千兆以太网与 TSN 骨干、末端仍是 CAN FD 与 LIN；软件定义架构用一个超级中央计算加区域代理、万兆以太网与完整服务化通信">
@@ -238,7 +238,7 @@
 
   <h3 id="s1-03">整车网络拓扑长什么样</h3>
 
-  <p>下图是新平台常见的<strong>区域（Zonal）架构</strong>。</p>
+  <p>下图是新平台常见的<strong>区域（Zonal）架构</strong>——不再按功能把整车划成动力域、底盘域、座舱域，而是按物理位置划分，每个区域放一个控制器，附近的设备就近接线，好比把原来集中办公的各个部门改成按楼层就近办公。</p>
 
   <div class="diag" style="overflow-x:auto">
     <svg viewBox="0 0 860 430" width="860" height="430" role="img" aria-label="区域架构整车网络拓扑图：中央计算单元通过千兆以太网骨干连接前、左、右、后四个区域控制器，各区域控制器下挂 CAN FD、LIN 与摄像头串行链路">

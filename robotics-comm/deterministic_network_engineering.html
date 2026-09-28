@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>确定性网络保障体系 · 时延预算分解 / 抖动来源分类 / 端内端间端边端云四类场景 / PDV 与尾部分位测量 / 需求转网络指标</title>
-<meta name="description" content="确定性网络保障体系：TSN 和 DetNet 是 手段，这篇讲的是 方法：怎么把一句「关节控制要 1 ms 周期」拆成每一段的可验证指标，怎么定位抖动到底出在哪一环，以及端内、端间、端边、端云这四类场景各自的预算和可用手段">
+<meta name="description" content="TSN 和 DetNet 是手段，这篇讲方法：怎么把「关节控制要 1 ms 周期」拆成每段可验证的时延指标，怎么按指纹定位抖动来源，端内端间端边端云四类场景各留多少预算，以及如何用 PDV 分位数做验收测量">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/deterministic_network_engineering.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/deterministic_network_engineering.html">
 <meta property="og:title" content="确定性网络保障体系 · 时延预算分解 / 抖动来源分类 / 端内端间端边端云四类场景 / PDV 与尾部分位测量 / 需求转网络指标">
-<meta property="og:description" content="确定性网络保障体系：TSN 和 DetNet 是 手段，这篇讲的是 方法：怎么把一句「关节控制要 1 ms 周期」拆成每一段的可验证指标，怎么定位抖动到底出在哪一环，以及端内、端间、端边、端云这四类场景各自的预算和可用手段">
+<meta property="og:description" content="TSN 和 DetNet 是手段，这篇讲方法：怎么把「关节控制要 1 ms 周期」拆成每段可验证的时延指标，怎么按指纹定位抖动来源，端内端间端边端云四类场景各留多少预算，以及如何用 PDV 分位数做验收测量">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="确定性网络保障体系 · 时延预算分解 / 抖动来源分类 / 端内端间端边端云四类场景 / PDV 与尾部分位测量 / 需求转网络指标">
-<meta name="twitter:description" content="确定性网络保障体系：TSN 和 DetNet 是 手段，这篇讲的是 方法：怎么把一句「关节控制要 1 ms 周期」拆成每一段的可验证指标，怎么定位抖动到底出在哪一环，以及端内、端间、端边、端云这四类场景各自的预算和可用手段">
+<meta name="twitter:description" content="TSN 和 DetNet 是手段，这篇讲方法：怎么把「关节控制要 1 ms 周期」拆成每段可验证的时延指标，怎么按指纹定位抖动来源，端内端间端边端云四类场景各留多少预算，以及如何用 PDV 分位数做验收测量">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -188,7 +188,7 @@
   <header class="hero">
     <div class="badge">Robotics Comm · 确定性保障体系</div>
     <h1>确定性网络保障体系</h1>
-    <p class="sub"><a href="tsn_deep_dive.html">TSN</a> 和 <a href="detnet_guide.html">DetNet</a> 是<strong>手段</strong>，这篇讲的是<strong>方法</strong>：怎么把一句「关节控制要 1 ms 周期」拆成每一段的可验证指标，怎么定位抖动到底出在哪一环，以及端内、端间、端边、端云这四类场景各自的预算和可用手段。核心观点只有一句——<strong>确定性不是某个技术给的，是预算分解 + 逐段验证 + 尾部测量三件事一起做出来的</strong>。</p>
+    <p class="sub"><a href="tsn_deep_dive.html">TSN</a>（管以太网交换机这一层的准时）和 <a href="detnet_guide.html">DetNet</a>（管 IP 路由这一层的准时）是<strong>手段</strong>，这篇讲的是<strong>方法</strong>：怎么把一句「关节控制要 1 ms 周期」拆成每一段的可验证指标，怎么定位抖动（时延忽大忽小的波动幅度）到底出在哪一环，以及端内、端间、端边、端云这四类场景各自的预算和可用手段。核心观点只有一句——<strong>确定性不是某个技术给的，是预算分解 + 逐段验证 + 尾部测量（盯最坏的那万分之一，而不是平均值）三件事一起做出来的</strong>。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">工程方法论</span>
@@ -275,14 +275,14 @@
     <figcaption>闭环六段分解：网络往返通常只占总预算的 2%–20%，端侧的序列化与计算抖动往往才是真正的瓶颈。</figcaption>
   </figure>
 
-  <div class="box tip"><strong>这张图解释了为什么很多 TSN 项目「配好了但没效果」。</strong>团队花几个月把网络抖动从 50 µs 压到 2 µs，而端侧的计算线程因为一次页错误抖动了 500 µs——总抖动几乎没变。<strong>正确的顺序永远是先测量分布、找到最大项、再动手</strong>。网络段的目标不是「越快越好」，而是「<strong>做到不是瓶颈就够了</strong>」，剩下的工程预算应该花在更大的那一项上。</div>
+  <div class="box tip"><strong>这张图解释了为什么很多 TSN 项目「配好了但没效果」。</strong>团队花几个月把网络抖动从 50 µs 压到 2 µs，而端侧的计算线程因为一次页错误（进程要访问的数据被挪出内存、必须停下去重新读回的停顿）抖动了 500 µs——总抖动几乎没变。<strong>正确的顺序永远是先测量分布、找到最大项、再动手</strong>。网络段的目标不是「越快越好」，而是「<strong>做到不是瓶颈就够了</strong>」，剩下的工程预算应该花在更大的那一项上。</div>
 
   <h3>1.2 预算分配的三条原则</h3>
 
   <ul>
     <li><strong>按抖动分配，不按均值分配。</strong>确定性关心的是最坏情况，所以每段该分到多少，取决于它<strong>能被压到多稳</strong>，而不是它平均多快。一段均值 10 µs、抖动 ±90 µs 的链路，比均值 50 µs、抖动 ±2 µs 的链路<strong>糟糕得多</strong>。</li>
     <li><strong>余量留在最不可控的那一段。</strong>硬件传输时间是常量，几乎不需要余量；无线空口和操作系统调度是概率性的，必须留厚余量。把余量均摊到每一段是浪费。</li>
-    <li><strong>预算之和要留 20%–30% 的总余量。</strong>不是为了「保险」，而是因为<strong>你一定漏算了某些东西</strong>（中断合并、缓存未命中、GC、固件的隐藏延迟）。上线后这 30% 会被吃掉一部分，这是正常的。</li>
+    <li><strong>预算之和要留 20%–30% 的总余量。</strong>不是为了「保险」，而是因为<strong>你一定漏算了某些东西</strong>（中断合并——网卡为省 CPU 把多个中断攒成一次上报，包就得排队等——、缓存未命中、GC、固件的隐藏延迟）。上线后这 30% 会被吃掉一部分，这是正常的。</li>
   </ul>
 
   <div class="demo">
@@ -344,7 +344,7 @@
     </tbody>
   </table>
 
-  <div class="def"><strong>第 ⑥ 类是最反直觉也最容易漏的</strong>。「时延与包速率反相关」意味着<strong>系统空闲时反而更慢</strong>——因为中断合并在等凑够一批，Nagle 在等凑够一个 MSS，DDS 在等批量窗口。测试时用高速率打流一切正常，上线后实际流量稀疏，时延反而暴涨。<strong>排查口诀：如果「压力测试没问题、真实流量有问题」，先怀疑第 ⑥ 类。</strong>典型元凶是 <code>ethtool -C</code> 的 <code>rx-usecs</code>、Nagle 算法、以及中间件的 <code>batch_size</code> / <code>flush_period</code> 参数。</div>
+  <div class="def"><strong>第 ⑥ 类是最反直觉也最容易漏的</strong>。「时延与包速率反相关」意味着<strong>系统空闲时反而更慢</strong>——因为中断合并在等凑够一批，Nagle 在等凑够一个 MSS（TCP 一次能发出去的最大数据段大小），DDS 在等批量窗口。测试时用高速率打流一切正常，上线后实际流量稀疏，时延反而暴涨。<strong>排查口诀：如果「压力测试没问题、真实流量有问题」，先怀疑第 ⑥ 类。</strong>典型元凶是 <code>ethtool -C</code> 的 <code>rx-usecs</code>、Nagle 算法、以及中间件的 <code>batch_size</code> / <code>flush_period</code> 参数。</div>
 
   <h3>2.1 用指纹做二分定位</h3>
 
@@ -368,7 +368,7 @@
 <span class="cm">Q4：两端时钟同源吗？</span>
   不同源 → <span class="cm">★ 你测的「单向时延」是无意义的，先解决时钟再谈抖动</span></pre>
 
-  <div class="box tip"><strong>Q4 是最容易被跳过却最致命的一步。</strong>没有共同时间基准时，「发送时刻」和「接收时刻」来自两个自由漂移的时钟，算出来的单向时延会<strong>随时间缓慢线性变化</strong>（甚至出现负值）。很多团队看到这个曲线以为网络在恶化，其实是时钟在漂。<strong>在没有 gPTP/PTP 的环境里，只能测 RTT 然后除以二</strong>（且要接受上下行不对称带来的误差）；要测真正的单向时延，两端必须同源。</div>
+  <div class="box tip"><strong>Q4 是最容易被跳过却最致命的一步。</strong>没有共同时间基准时，「发送时刻」和「接收时刻」来自两个自由漂移的时钟，算出来的单向时延会<strong>随时间缓慢线性变化</strong>（甚至出现负值）。很多团队看到这个曲线以为网络在恶化，其实是时钟在漂。<strong>在没有 gPTP/PTP 的环境里，只能测 RTT（往返时延：一个包发过去再回来）然后除以二</strong>（且要接受上下行不对称带来的误差）；要测真正的单向时延，两端必须同源。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -382,7 +382,7 @@
   <div class="scenes">
     <div class="sc-in">
       <h5>典型预算：50 µs ~ 500 µs 端到端，抖动 &lt; 10 µs</h5>
-      <p>伺服闭环通常 1 kHz ~ 8 kHz（1 ms ~ 125 µs 周期），网络往返只能占其中 10%–20%。力控和碰撞检测这类回路更紧，可能要求 4 kHz 以上。</p>
+      <p>伺服闭环（电机转到哪、转多快由控制器实时纠偏的闭环回路）通常 1 kHz ~ 8 kHz（1 ms ~ 125 µs 周期），网络往返只能占其中 10%–20%。力控和碰撞检测这类回路更紧，可能要求 4 kHz 以上。</p>
     </div>
   </div>
 
@@ -400,7 +400,7 @@
     </tbody>
   </table>
 
-  <div class="def"><strong>EtherCAT 的「飞读飞写」（processing on the fly）</strong>值得单独理解，因为它解释了为什么工业伺服普遍不用标准以太网。主站发出<strong>一个大帧</strong>，这个帧依次穿过所有从站；<strong>每个从站在帧经过自己时，直接在硬件里就地读走属于自己的那几个字节、写入自己要上报的数据</strong>，帧不停顿、不重组、不排队。于是 N 个从站的通信只需<strong>一个帧时</strong>，而不是 N 个帧时——这是它能做到 62.5 µs 周期的根本原因。代价是拓扑必须是串联的，且主站需要精确控制发帧时刻。</div>
+  <div class="def"><strong>EtherCAT 的「飞读飞写」（processing on the fly）</strong>值得单独理解，因为它解释了为什么工业伺服普遍不用标准以太网。主站发出<strong>一个大帧</strong>，这个帧依次穿过所有从站（挂在总线下的每个设备节点）；<strong>每个从站在帧经过自己时，直接在硬件里就地读走属于自己的那几个字节、写入自己要上报的数据</strong>，帧不停顿、不重组、不排队。于是 N 个从站的通信只需<strong>一个帧时</strong>，而不是 N 个帧时——这是它能做到 62.5 µs 周期的根本原因。代价是拓扑必须是串联的，且主站需要精确控制发帧时刻。</div>
 
   <div class="analogy">EtherCAT 像<strong>一列不停站的火车沿途扔包裹取包裹</strong>：火车匀速经过每个小站，站员在火车经过的瞬间把自己的包裹挂上、把给自己的包裹摘下，火车<strong>一次都不用停</strong>。而标准以太网像<strong>快递车逐站停靠</strong>：到一站、停车、卸货、装货、再出发，站数越多总时间越长。这个差别在 20 个关节的机器人上就是 62.5 µs 和 1 ms 的差别。</div>
 
@@ -432,7 +432,7 @@
     </div>
   </div>
 
-  <div class="box tip"><strong>端内场景有一个独特优势：你可以完全绕开网络。</strong>如果两个模组在同一颗 SoC 上，用<strong>共享内存 + 无锁环形缓冲</strong>就能做到亚微秒级，比任何网络方案都快好几个数量级（实现细节见 <a href="../communication/high_performance.html">Ring Buffer / Zero Copy / Lock-Free</a>）。所以架构设计时的第一个问题应该是「<strong>这两个模组能不能合到一颗芯片上</strong>」——能合就不要跨网络。很多所谓的确定性通信问题，本质上是<strong>模组划分不合理</strong>造成的自找麻烦。</div>
+  <div class="box tip"><strong>端内场景有一个独特优势：你可以完全绕开网络。</strong>如果两个模组在同一颗 SoC（把 CPU、内存和通信外设集成在一块的主控芯片）上，用<strong>共享内存 + 无锁环形缓冲</strong>就能做到亚微秒级，比任何网络方案都快好几个数量级（实现细节见 <a href="../communication/high_performance.html">Ring Buffer / Zero Copy / Lock-Free</a>）。所以架构设计时的第一个问题应该是「<strong>这两个模组能不能合到一颗芯片上</strong>」——能合就不要跨网络。很多所谓的确定性通信问题，本质上是<strong>模组划分不合理</strong>造成的自找麻烦。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -457,11 +457,11 @@
 
   <ul>
     <li><strong>时延可以补偿，时钟差不能。</strong>如果知道指令传输要 8 ms，可以提前 8 ms 发出（带上「在 T 时刻执行」的时间戳）。但如果两台的「T 时刻」本身理解不一致，补偿无从下手。</li>
-    <li><strong>协同精度 ≈ 时间同步精度 × 运动速度。</strong>两台 AGV 以 2 m/s 协同搬运，时钟差 10 ms 就意味着<strong>位置错开 2 cm</strong>；要控制在 2 mm 以内，时钟差必须 &lt; 1 ms。</li>
+    <li><strong>协同精度 ≈ 时间同步精度 × 运动速度。</strong>两台 AGV（自动导引搬运车）以 2 m/s 协同搬运，时钟差 10 ms 就意味着<strong>位置错开 2 cm</strong>；要控制在 2 mm 以内，时钟差必须 &lt; 1 ms。</li>
     <li><strong>「基于时间戳执行」是端间协同的标准范式</strong>：不发「现在动」，而发「在绝对时刻 T 动」。这样只要 T 在传输时延之外，网络抖动就<strong>完全不影响动作精度</strong>——抖动被时间戳吸收了。</li>
   </ul>
 
-  <div class="def"><strong>「时间戳执行」把时延问题转化成了时间同步问题</strong>，这是确定性工程里最重要的一招。原本你需要「低时延 + 低抖动」的网络，现在只需要「时延有上界 + 时钟同步准」——<strong>而后者容易得多</strong>。代价是引入了固定的执行延迟（必须等到 T 时刻），所以不适合需要即时反应的闭环（比如碰撞急停），但非常适合<strong>可预先规划的协同动作</strong>。同样的思路在音视频同步、分布式数据库的 TrueTime、以及 TSN 的门控里都出现过。</div>
+  <div class="def"><strong>「时间戳执行」把时延问题转化成了时间同步问题</strong>，这是确定性工程里最重要的一招。原本你需要「低时延 + 低抖动」的网络，现在只需要「时延有上界 + 时钟同步准」——<strong>而后者容易得多</strong>。代价是引入了固定的执行延迟（必须等到 T 时刻），所以不适合需要即时反应的闭环（比如碰撞急停），但非常适合<strong>可预先规划的协同动作</strong>。同样的思路在音视频同步、分布式数据库的 TrueTime（Google 让全球数据中心的节点都对齐到同一个时间的机制）、以及 TSN 的门控里都出现过。</div>
 
   <h3>4.2 无线方案对比</h3>
 
@@ -475,9 +475,9 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>UWB 在机器人协同里的定位常被误解。</strong>它不是「另一种 Wi-Fi」——带宽只有几百 kbps 到几 Mbps，承载不了正经数据。它的价值在两处：① <strong>厘米级相对定位</strong>（ToF/TDoA/AoA 测距），比视觉/激光在遮挡环境下更稳；② <strong>纳秒级授时</strong>，可以作为无线场景下的时间同步源。所以典型架构是<strong>「UWB 管定位和授时，Wi-Fi/5G 管数据」</strong>——两者并存而非替代。这个组合恰好解决了 4.1 节的核心问题：有了 UWB 的精确时间，「时间戳执行」范式就能在无线场景落地。</div>
+  <div class="box tip"><strong>UWB 在机器人协同里的定位常被误解。</strong>它不是「另一种 Wi-Fi」——带宽只有几百 kbps 到几 Mbps，承载不了正经数据。它的价值在两处：① <strong>厘米级相对定位</strong>（靠 ToF/TDoA/AoA 这三种测距定位法——飞行时间、到达时间差、信号到达角——算出位置），比视觉/激光在遮挡环境下更稳；② <strong>纳秒级授时</strong>，可以作为无线场景下的时间同步源。所以典型架构是<strong>「UWB 管定位和授时，Wi-Fi/5G 管数据」</strong>——两者并存而非替代。这个组合恰好解决了 4.1 节的核心问题：有了 UWB 的精确时间，「时间戳执行」范式就能在无线场景落地。</div>
 
-  <div class="danger"><strong>漫游切换是端间协同最大的隐患。</strong>Wi-Fi 的 AP 切换（roaming）在没有优化时会造成<strong>几十到几百毫秒的完全中断</strong>——对协同动作是灾难。三个对策：① 开启 <strong>802.11r 快速漫游</strong>（FT）把切换降到 &lt; 50 ms；② <strong>双频/双网卡同时连接</strong>两个 AP，用 <a href="detnet_guide.html">FRER 式的复制</a>或 MPTCP 让切换对上层透明；③ <strong>架构上容忍中断</strong>——协同逻辑设计成「失联 200 ms 内按上次规划继续、超时则减速停止」。第三条最重要：<strong>不要指望无线永不中断，要让中断变成无害</strong>。</div>
+  <div class="danger"><strong>漫游切换是端间协同最大的隐患。</strong>Wi-Fi 的 AP 切换（roaming）在没有优化时会造成<strong>几十到几百毫秒的完全中断</strong>——对协同动作是灾难。三个对策：① 开启 <strong>802.11r 快速漫游</strong>（FT）把切换降到 &lt; 50 ms；② <strong>双频/双网卡同时连接</strong>两个 AP（Wi-Fi 热点），用 <a href="detnet_guide.html">FRER 式的复制</a>（FRER 是 TSN 的帧复制消除机制：同一个包抄两份走两条路，收到后去重）或 MPTCP（多路径 TCP：两张网卡同时传一条连接）让切换对上层透明；③ <strong>架构上容忍中断</strong>——协同逻辑设计成「失联 200 ms 内按上次规划继续、超时则减速停止」。第三条最重要：<strong>不要指望无线永不中断，要让中断变成无害</strong>。</div>
 </section>
 
 <!-- ================================================================ §5 -->
@@ -487,7 +487,7 @@
     <div class="t"><h2>端边：机器人与边缘节点</h2><p class="sub">5–20 ms，MEC 与切片的用武之地</p></div>
   </div>
 
-  <p>端边是<strong>机器人与厂区/楼内边缘计算节点</strong>之间的通信：把视觉推理、SLAM 建图、多机路径规划这些算力密集任务卸载到边缘。这一段的价值不在于「更快」，而在于<strong>让机器人本体可以做得更轻、更省电、更便宜</strong>。</p>
+  <p>端边是<strong>机器人与厂区/楼内边缘计算节点</strong>之间的通信：把视觉推理、SLAM 建图（SLAM 是「边走边同时完成定位和绘制地图」的技术）、多机路径规划这些算力密集任务卸载到边缘。这一段的价值不在于「更快」，而在于<strong>让机器人本体可以做得更轻、更省电、更便宜</strong>。</p>
 
   <div class="scenes">
     <div class="sc-edge">
@@ -522,13 +522,13 @@
 
   <h3>5.2 5G 切片与 MEC 怎么用</h3>
 
-  <p>站内 <a href="../communication/core_network_qos_slicing.html">QoS、网络切片与边缘</a>讲了切片和 MEC 的原理，这里补机器人场景的落地要点：</p>
+  <p>站内 <a href="../communication/core_network_qos_slicing.html">QoS、网络切片与边缘</a>讲了切片（在一张物理网络上切出几条互不干扰的虚拟专网）和 MEC（Multi-access Edge Computing，多接入边缘计算：把算力从远端云搬到离设备几百米内的机房）的原理，这里补机器人场景的落地要点：</p>
 
   <ul>
-    <li><strong>UPF 下沉是端边低时延的前提。</strong>如果用户面网关（UPF）在几十公里外的核心机房，那么「机器人到边缘服务器」这条本该只有几十米的路径，实际要绕一个大圈——<strong>时延从 5 ms 变成 30 ms</strong>。必须把 UPF 部署在厂区本地（本地 UPF 或 ULCL 分流），让流量在本地闭环。</li>
+    <li><strong>UPF 下沉是端边低时延的前提。</strong>如果用户面网关（UPF）在几十公里外的核心机房，那么「机器人到边缘服务器」这条本该只有几十米的路径，实际要绕一个大圈——<strong>时延从 5 ms 变成 30 ms</strong>。必须把 UPF 部署在厂区本地（本地 UPF 或 ULCL 分流——5G 在本地插入分流锚点、让流量就地分拣到就近服务器的机制），让流量在本地闭环。</li>
     <li><strong>切片提供的是隔离而不是加速。</strong>一个 URLLC 切片不会让你的包传得更快（物理层速度不变），它保证的是<strong>你的流量不与其他业务竞争</strong>——所以抖动变小、最坏情况变好。这个区分很重要：如果你的问题是「平均时延太高」，切片帮不上；如果是「偶发抖动大」，切片正对症。</li>
-    <li><strong>5QI 的选择决定调度行为。</strong>URLLC 场景常用 5QI 82/83/84/85（延迟关键 GBR），它们的 PDB（Packet Delay Budget）是 10–30 ms 且支持免调度传输。<strong>选错 5QI 会让所有努力白费</strong>——用默认的 5QI 9（非 GBR、PDB 300 ms）配置 URLLC 业务是常见错误。</li>
-    <li><strong>专网还是公网切片</strong>：专网（独立组网或共享 RAN）可控性最好、可以自己配 5QI 和调度策略；公网切片依赖运营商的 SLA 和配置能力，机器人场景的定制需求往往超出运营商标准产品的范围。</li>
+    <li><strong>5QI 的选择决定调度行为。</strong>5QI 是 5G 给每类流量分配的 QoS 等级编号，每个编号绑定一套时延预算、优先级和调度方式。URLLC 场景常用 5QI 82/83/84/85（延迟关键 GBR——GBR 指 Guaranteed Bit Rate，网络承诺保底带宽的流类型），它们的 PDB（Packet Delay Budget）是 10–30 ms 且支持免调度传输。<strong>选错 5QI 会让所有努力白费</strong>——用默认的 5QI 9（非 GBR、PDB 300 ms）配置 URLLC 业务是常见错误。</li>
+    <li><strong>专网还是公网切片</strong>：专网（独立组网或共享 RAN——RAN 是基站侧的无线接入网，「共享」指物理基站多家合用但逻辑隔离）可控性最好、可以自己配 5QI 和调度策略；公网切片依赖运营商的 SLA 和配置能力，机器人场景的定制需求往往超出运营商标准产品的范围。</li>
   </ul>
 
   <div class="warn"><strong>端边这一段最容易出的架构错误：把硬实时闭环放到边缘。</strong>「让边缘服务器直接控制关节」听起来很有吸引力（算力强、易升级），但 <a href="detnet_guide.html">5G-TSN bridge</a> 那节说过——空口抖动是毫秒级且不可消除，<strong>伺服闭环放上去就是不稳定的</strong>。正确的分层是：<strong>关节伺服在本体（µs 级 TSN）、轨迹规划在边缘（ms 级 5G）、任务调度在云端（秒级）</strong>。判断标准是「这个回路断掉 100 ms 会怎样」——如果答案是「机械损坏或人员危险」，那它<strong>必须在本体内闭环</strong>。</div>
@@ -564,7 +564,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>QUIC 在端云这一段有个杀手级特性：连接迁移。</strong>机器人从 Wi-Fi 切到 5G、或者 5G 切换基站导致 IP 变化时，TCP 连接会<strong>直接断掉</strong>（因为 TCP 用四元组标识连接），要重新建连 + 重新 TLS 握手，代价几百毫秒。QUIC 用 <strong>Connection ID</strong> 标识连接，<strong>IP 变了连接照旧</strong>——数据流不中断。对经常在网络间切换的移动机器人，这个特性比「少一个 RTT 的握手」有价值得多。细节见 <a href="../communication/http_protocol.html">HTTP/3 与 QUIC</a>。</div>
+  <div class="box tip"><strong>QUIC 在端云这一段有个杀手级特性：连接迁移。</strong>机器人从 Wi-Fi 切到 5G、或者 5G 切换基站导致 IP 变化时，TCP 连接会<strong>直接断掉</strong>（因为 TCP 用四元组——双方的 IP 加双方的端口——标识连接，任何一边变了这条连接就认不出来了），要重新建连 + 重新 TLS 握手，代价几百毫秒。QUIC 用 <strong>Connection ID</strong> 标识连接，<strong>IP 变了连接照旧</strong>——数据流不中断。对经常在网络间切换的移动机器人，这个特性比「少一个 RTT 的握手」有价值得多。细节见 <a href="../communication/http_protocol.html">HTTP/3 与 QUIC</a>。</div>
 
   <h3>6.2 回传数据的带宽经济学</h3>
 
@@ -596,7 +596,7 @@ IMU + 关节编码器 1 kHz        ≈ 0.5 Mbps
     <div class="t"><h2>测量方法论：别看平均值</h2><p class="sub">确定性系统里，均值几乎没有信息量</p></div>
   </div>
 
-  <p>这一节是整篇最实用的部分。<strong>确定性网络项目最常见的失败方式，就是用错误的指标验收。</strong>「平均时延 80 µs，很好」——然后上线后每小时停机一次，因为 P99.99 是 3 ms。</p>
+  <p>这一节是整篇最实用的部分。<strong>确定性网络项目最常见的失败方式，就是用错误的指标验收。</strong>「平均时延 80 µs，很好」——然后上线后每小时停机一次，因为 P99.99 是 3 ms（P99.99 是分位数指标：10000 个包里最慢的那一个的水平，P99 就是最差 1% 的水平——确定性工程看的从来是这些尾巴上的数字）。</p>
 
   <div class="analogy">用平均值衡量确定性，像<strong>用「平均每天堵车 5 分钟」来决定几点出门赶飞机</strong>。真正决定你误不误机的是「<strong>最糟的那天堵多久</strong>」。而且大多数日子确实只堵 5 分钟，所以平均值会让你产生虚假的安全感——直到某一天堵了 40 分钟。<strong>确定性工程关心的永远是分布的尾巴，不是分布的中心。</strong></div>
 
@@ -625,7 +625,7 @@ IMU + 关节编码器 1 kHz        ≈ 0.5 Mbps
     </tbody>
   </table>
 
-  <div class="box tip"><strong>周期控制回路应该看 IPDV，而不是 PDV。</strong>因为控制器关心的是「<strong>每一帧是否等间隔到达</strong>」——如果所有包都恒定晚 5 ms，PDV 是 0（都相对最小值偏 0），控制回路完全不受影响（只是相位偏移，可以补偿）。但如果包时延在 1 ms 和 6 ms 之间来回跳，IPDV 就是 ±5 ms，<strong>控制器会看到忽快忽慢的输入，直接影响稳定性</strong>。所以验收周期控制流时，要求「IPDV 的 P99.9 &lt; X」比要求 PDV 更贴合真实需求。</div>
+  <div class="box tip"><strong>周期控制回路应该看 IPDV，而不是 PDV。</strong>因为控制器关心的是「<strong>每一帧是否等间隔到达</strong>」——如果所有包都恒定晚 5 ms，PDV 是 0（都相对最小值偏 0），控制回路完全不受影响（只是相位偏移——所有包整体晚了一段固定时间，可以补偿）。但如果包时延在 1 ms 和 6 ms 之间来回跳，IPDV 就是 ±5 ms，<strong>控制器会看到忽快忽慢的输入，直接影响稳定性</strong>。所以验收周期控制流时，要求「IPDV 的 P99.9 &lt; X」比要求 PDV 更贴合真实需求。</div>
 
   <h3>7.3 怎么测</h3>
 
@@ -648,12 +648,12 @@ IMU + 关节编码器 1 kHz        ≈ 0.5 Mbps
   <ol>
     <li><strong>空载基线</strong>——只有目标流，测 P99.99 与 Max，和理论上界比对。差距过大说明模型或配置有问题。</li>
     <li><strong>满载干扰</strong>——用 <code>iperf3</code> 把背景流量打到线速，目标流的分布<strong>必须几乎不变</strong>。这一条不过，说明隔离机制（门控/切片/优先级）根本没生效。</li>
-    <li><strong>违规注入</strong>——故意让一个节点超速发送，确认入口策略（Qci / 5G 的 UE-AMBR）拦住它，且目标流不受影响。</li>
-    <li><strong>故障切换</strong>——拔链路、断 AP、关一个 GM，测中断时长和恢复后的时延跳变。<strong>FRER 场景应观测到零丢包</strong>。</li>
+    <li><strong>违规注入</strong>——故意让一个节点超速发送，确认入口策略（Qci——TSN 标准里在交换机入口逐流检查、拦下违规流的机制；或 5G 的 UE-AMBR——运营商给一台终端限定的总速率上限）拦住它，且目标流不受影响。</li>
+    <li><strong>故障切换</strong>——拔链路、断 AP、关一个 GM（Grandmaster，时间同步网络里大家共同对齐的主时钟源），测中断时长和恢复后的时延跳变。<strong>FRER 场景应观测到零丢包</strong>。</li>
     <li><strong>72 小时长稳</strong>——专门抓<strong>相位漂移、时钟跳变、内存泄漏、计数器溢出</strong>这类只在长时间后暴露的问题。短测跑不出来。</li>
   </ol>
 
-  <div class="box tip"><strong>第 2 条和第 5 条最能暴露问题，也最常被跳过。</strong>满载干扰测试之所以关键，是因为<strong>空载下什么方案都好看</strong>——普通交换机在空载时抖动也只有几微秒。只有加上满载背景流量，TSN 门控和普通 FIFO 的差别才显现出来。而 72 小时长稳能抓出的典型问题是「GCL 周期与应用周期不是整数倍导致的缓慢相位漂移」，这类问题在 5 分钟的测试里<strong>百分之百发现不了</strong>。</div>
+  <div class="box tip"><strong>第 2 条和第 5 条最能暴露问题，也最常被跳过。</strong>满载干扰测试之所以关键，是因为<strong>空载下什么方案都好看</strong>——普通交换机在空载时抖动也只有几微秒。只有加上满载背景流量，TSN 门控和普通 FIFO 的差别才显现出来。而 72 小时长稳能抓出的典型问题是「GCL（Gate Control List，TSN 门控里那张规定『每个时间窗放行谁』的开关时刻表）周期与应用周期不是整数倍导致的缓慢相位漂移」，这类问题在 5 分钟的测试里<strong>百分之百发现不了</strong>。</div>
 </section>
 
 <!-- ================================================================ §8 -->
@@ -717,7 +717,7 @@ void on_control_tick(uint64_t now_tai_ns) {
     report_metric("link_state", state);   <span class="cm">// ★ 降级必须可观测</span>
 }</pre>
 
-  <div class="warn"><strong>三个容易做错的细节</strong>：① <strong>新鲜度阈值不要设成一个周期</strong>——正常抖动就会触发误判，通常设成 2–3 个周期；② <strong>降级要有滞回（hysteresis）</strong>，否则在临界网络质量下会在 HEALTHY 和 DEGRADED 之间高频振荡，比稳定降级更糟；③ <strong>恢复要渐进而非瞬时</strong>——从 LINK_LOST 恢复时不能一步跳回全速，要按斜坡加速，否则机械冲击很大。这三条在实验室不明显，在现场是反复出问题的地方。</div>
+  <div class="warn"><strong>三个容易做错的细节</strong>：① <strong>新鲜度阈值不要设成一个周期</strong>——正常抖动就会触发误判，通常设成 2–3 个周期；② <strong>降级要有滞回（hysteresis）</strong>——进入降级和退出降级用两道不同的门槛，避免在临界点上来回横跳——否则在临界网络质量下会在 HEALTHY 和 DEGRADED 之间高频振荡，比稳定降级更糟；③ <strong>恢复要渐进而非瞬时</strong>——从 LINK_LOST 恢复时不能一步跳回全速，要按斜坡加速，否则机械冲击很大。这三条在实验室不明显，在现场是反复出问题的地方。</div>
 </section>
 
 <!-- ================================================================ §9 -->

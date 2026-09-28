@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TSN 深入 · 802.1AS 时间同步 / Qbv 门控与 GCL 设计 / Qav CBS / Qbu 帧抢占 / Qci 过滤 / CB FRER 冗余 / Qcc 配置模型 / taprio 落地</title>
-<meta name="description" content="TSN 深入：机器人关节控制要求「每 1 ms 一帧，抖动不超过 10 µs」，而标准以太网交换机 连「这一帧最坏什么时候到」都答不出来。TSN 不是某个单一协议，而是 IEEE 802.1 工作组用十几个标准拼出来的一套改造方案：先建立共同时间，再用门控、整形、抢占、过滤、冗余逐层削掉不确定性">
+<meta name="description" content="TSN（时间敏感网络）深入：机器人每 1 ms 一帧、抖动要小于 10 µs，普通以太网却答不出「这帧最坏何时到」。讲透 802.1AS 对时、Qbv 门控、Qav 整形、帧抢占、FRER 冗余与 taprio 落地">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/tsn_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/tsn_deep_dive.html">
 <meta property="og:title" content="TSN 深入 · 802.1AS 时间同步 / Qbv 门控与 GCL 设计 / Qav CBS / Qbu 帧抢占 / Qci 过滤 / CB FRER 冗余 / Qcc 配置模型 / taprio 落地">
-<meta property="og:description" content="TSN 深入：机器人关节控制要求「每 1 ms 一帧，抖动不超过 10 µs」，而标准以太网交换机 连「这一帧最坏什么时候到」都答不出来。TSN 不是某个单一协议，而是 IEEE 802.1 工作组用十几个标准拼出来的一套改造方案：先建立共同时间，再用门控、整形、抢占、过滤、冗余逐层削掉不确定性">
+<meta property="og:description" content="TSN（时间敏感网络）深入：机器人每 1 ms 一帧、抖动要小于 10 µs，普通以太网却答不出「这帧最坏何时到」。讲透 802.1AS 对时、Qbv 门控、Qav 整形、帧抢占、FRER 冗余与 taprio 落地">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TSN 深入 · 802.1AS 时间同步 / Qbv 门控与 GCL 设计 / Qav CBS / Qbu 帧抢占 / Qci 过滤 / CB FRER 冗余 / Qcc 配置模型 / taprio 落地">
-<meta name="twitter:description" content="TSN 深入：机器人关节控制要求「每 1 ms 一帧，抖动不超过 10 µs」，而标准以太网交换机 连「这一帧最坏什么时候到」都答不出来。TSN 不是某个单一协议，而是 IEEE 802.1 工作组用十几个标准拼出来的一套改造方案：先建立共同时间，再用门控、整形、抢占、过滤、冗余逐层削掉不确定性">
+<meta name="twitter:description" content="TSN（时间敏感网络）深入：机器人每 1 ms 一帧、抖动要小于 10 µs，普通以太网却答不出「这帧最坏何时到」。讲透 802.1AS 对时、Qbv 门控、Qav 整形、帧抢占、FRER 冗余与 taprio 落地">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -174,7 +174,7 @@
   <header class="hero">
     <div class="badge">Robotics Comm · TSN · IEEE 802.1</div>
     <h1>TSN 深入：让以太网变得可预测</h1>
-    <p class="sub">机器人关节控制要求「每 1 ms 一帧，抖动不超过 10 µs」，而标准以太网交换机<strong>连「这一帧最坏什么时候到」都答不出来</strong>。TSN 不是某个单一协议，而是 IEEE 802.1 工作组用十几个标准拼出来的一套改造方案：先建立共同时间，再用门控、整形、抢占、过滤、冗余逐层削掉不确定性。这篇把每个标准解决什么问题、代价是什么、以及在 Linux 上怎么真正跑起来讲透。</p>
+    <p class="sub">机器人关节控制要求「每 1 ms 一帧，抖动不超过 10 µs」（抖动 jitter，即每次到达时刻上下波动的幅度——「周期准不准」看的就是它），而标准以太网交换机<strong>连「这一帧最坏什么时候到」都答不出来</strong>。TSN 不是某个单一协议，而是 IEEE 802.1 工作组用十几个标准拼出来的一套改造方案：先建立共同时间，再用门控、整形、抢占、过滤、冗余逐层削掉不确定性。这篇把每个标准解决什么问题、代价是什么、以及在 Linux 上怎么真正跑起来讲透。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">确定性网络主线</span>
@@ -214,7 +214,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>最容易被忽略的是最后一行。</strong>很多团队买了 TSN 交换机、配好 GCL，实测抖动却还有几百微秒——因为瓶颈根本不在网络，而在<strong>发送端的应用没能在正确的时刻把帧交给网卡</strong>。TSN 保证的是「帧一旦进了网络，最坏什么时候出来」，它<strong>管不了帧什么时候进网络</strong>。端到端确定性 = 实时操作系统 + TSN 网络，缺一不可，这也是为什么 <code>etf</code>（Earliest TxTime First）这个 qdisc 和 <code>SO_TXTIME</code> 这个 socket 选项在 §9 会单独讲。</div>
+  <div class="box tip"><strong>最容易被忽略的是最后一行。</strong>很多团队买了 TSN 交换机、配好 GCL（门控列表——交换机上「哪个队列在哪个时间窗允许发送」的那张时刻表，§3 详述），实测抖动却还有几百微秒——因为瓶颈根本不在网络，而在<strong>发送端的应用没能在正确的时刻把帧交给网卡</strong>。TSN 保证的是「帧一旦进了网络，最坏什么时候出来」，它<strong>管不了帧什么时候进网络</strong>。端到端确定性 = 实时操作系统 + TSN 网络，缺一不可，这也是为什么 <code>etf</code>（Earliest TxTime First，让应用给每个帧标注「应在第几纳秒发出」的排队规则）这个 qdisc（Linux 内核里决定帧以什么顺序、什么时刻从网卡发出的调度层）和 <code>SO_TXTIME</code> 这个 socket 选项（应用给帧盖时间戳用的接口）在 §9 会单独讲。</div>
 
   <h3>1.1 排队抖动的可视化</h3>
 
@@ -260,7 +260,7 @@
 
   <div class="def"><strong>帧时（frame time）</strong>：发送一个帧完整占用线路的时间。计算时<strong>必须算上物理层开销</strong>——7 B 前导码 + 1 B SFD + 12 B 帧间隙（IFG）= 20 B。所以 1522 B 的 VLAN 最大帧在 1 Gbps 上占 <code>(1522 + 20) × 8 / 1e9 = 12.34 µs</code>，在 100 Mbps 上是 123.4 µs，在 10 Mbps（车载 10BASE-T1S）上是 1.23 ms。<strong>这个数字是 TSN 里所有时延预算的基本单位</strong>，记住它。</div>
 
-  <div class="warn"><strong>「用高优先级队列就够了」是最常见的误解。</strong>802.1p 的 8 个优先级只保证「下一个被选中发送的是高优先级帧」，但<strong>无法打断已经在发的低优先级帧</strong>。所以严格优先级队列的最坏时延仍然是「一个最大帧时 × 跳数」——1 Gbps 五跳就是 61.7 µs 的抖动，对 1 ms 控制周期已经是 6%，对 250 µs 周期则直接崩掉。TSN 的价值不在于「更好的优先级」，而在于<strong>把最坏时延从「取决于背景流量」变成「取决于配置」</strong>。</div>
+  <div class="warn"><strong>「用高优先级队列就够了」是最常见的误解。</strong>802.1p（以太网帧头里用 3 个比特给帧标 0~7 优先级的老机制）的 8 个优先级只保证「下一个被选中发送的是高优先级帧」，但<strong>无法打断已经在发的低优先级帧</strong>。所以严格优先级队列的最坏时延仍然是「一个最大帧时 × 跳数」——1 Gbps 五跳就是 61.7 µs 的抖动，对 1 ms 控制周期已经是 6%，对 250 µs 周期则直接崩掉。TSN 的价值不在于「更好的优先级」，而在于<strong>把最坏时延从「取决于背景流量」变成「取决于配置」</strong>。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -276,7 +276,7 @@
 
   <h3>2.1 与 IEEE 1588 / 电信 PTP 的关系</h3>
 
-  <p>802.1AS 是 IEEE 1588 的一个 <strong>profile</strong>（剖面），不是另一套协议。站内 <a href="../communication/ptp_synce.html">PTP / SyncE</a> 讲的是电信前传场景的 1588，两者机制同源但<strong>工程约束完全不同</strong>，混着用会踩坑：</p>
+  <p>802.1AS 是 IEEE 1588 的一个 <strong>profile</strong>（剖面——同一套协议针对某个行业的「定制版」，砍掉用不到的选项、收紧精度要求），不是另一套协议。站内 <a href="../communication/ptp_synce.html">PTP / SyncE</a> 讲的是电信前传场景的 1588，两者机制同源但<strong>工程约束完全不同</strong>，混着用会踩坑：</p>
 
   <table>
     <thead><tr><th>维度</th><th>802.1AS（gPTP）</th><th>电信 PTP（G.8275.1 等）</th></tr></thead>
@@ -343,13 +343,13 @@
   <p>gPTP 能做到几十纳秒，靠的不是协议聪明，而是<strong>硬件时间戳</strong>。理解误差来源才知道选型时该看什么：</p>
 
   <ul>
-    <li><strong>时间戳打点位置</strong>。软件时间戳在协议栈里打，误差被中断延迟和调度抖动污染，量级几十微秒；<strong>硬件时间戳在 MAC/PHY 打</strong>（最好在 PHY 的 SFD 检测点），误差降到纳秒级。选网卡必须确认支持 <code>SOF_TIMESTAMPING_TX_HARDWARE</code> / <code>RX_HARDWARE</code>。</li>
+    <li><strong>时间戳打点位置</strong>。软件时间戳在协议栈里打，误差被中断延迟和调度抖动污染，量级几十微秒；<strong>硬件时间戳在 MAC/PHY 打</strong>（MAC 是网卡里负责帧收发的一层，PHY 是把比特变成线路上电信号的物理层芯片；最好在 PHY 的 SFD——帧起始定界符——被识别的那一刻打点），误差降到纳秒级。选网卡必须确认支持 <code>SOF_TIMESTAMPING_TX_HARDWARE</code> / <code>RX_HARDWARE</code>。</li>
     <li><strong>链路不对称</strong>。Pdelay 假设去程和回程延迟相同，取平均。光纤收发用<strong>不同波长</strong>（如 BiDi 单纤双向）时这个假设不成立，会引入固定偏差，需要手工配 <code>asymmetry</code> 补偿。</li>
-    <li><strong>频率漂移</strong>。同步只在 Sync 报文到达的瞬间校准，两次之间靠本地晶振外推。晶振 ±50 ppm、Sync 间隔 125 ms 时，最坏漂移 6.25 µs——所以 <strong>gPTP 默认 8 次/秒的 Sync 频率不是随便定的</strong>，而是和精度目标绑定的。要更高精度就得提高频率或用更好的振荡器（TCXO/OCXO）。</li>
+    <li><strong>频率漂移</strong>。同步只在 Sync 报文到达的瞬间校准，两次之间靠本地晶振外推。晶振 ±50 ppm（parts per million，百万分之一——±50 ppm 意味着每秒最多走偏 50 微秒）、Sync 间隔 125 ms 时，最坏漂移 6.25 µs——所以 <strong>gPTP 默认 8 次/秒的 Sync 频率不是随便定的</strong>，而是和精度目标绑定的。要更高精度就得提高频率或用更好的振荡器（TCXO/OCXO，温补/恒温晶振，比普通晶振稳一个量级以上）。</li>
     <li><strong>级联误差累积</strong>。每跳都有小误差，802.1AS 规定 7 跳内累积 &lt; 1 µs。拓扑深度是硬约束——<strong>机器人本体的网络设计要控制交换机层数</strong>，别为了省线做成长链。</li>
   </ul>
 
-  <div class="danger"><strong>时间同步是确定性网络的单点故障。</strong>GM 掉线、时钟跳变、多域配置冲突都会导致<strong>全网门控错位</strong>——比没有 TSN 更糟，因为 TT 流被关在门外，而 BE 流以为自己有带宽。生产系统必须做三件事：① 部署<strong>冗余 GM</strong> 并验证 BMCA 切换时间；② 端节点监控 <code>offsetFromMaster</code> 并在超阈值时<strong>主动降级</strong>（切到不依赖时间的策略，如严格优先级）而不是继续假装同步；③ 时钟跳变时<strong>不要让 GCL 硬跟随</strong>，要用平滑调整（syntonization）避免窗口瞬间错乱。</div>
+  <div class="danger"><strong>时间同步是确定性网络的单点故障。</strong>GM（Grandmaster 主时钟的缩写）掉线、时钟跳变、多域配置冲突都会导致<strong>全网门控错位</strong>——比没有 TSN 更糟，因为 TT 流（time-triggered，按时刻表发送、走门控窗口的硬实时控制流量）被关在门外，而 BE 流（Best Effort，尽力而为、不给任何时延保证的普通流量）以为自己有带宽。生产系统必须做三件事：① 部署<strong>冗余 GM</strong> 并验证 BMCA（Best Master Clock Algorithm，全网选举「跟谁对表」的算法）切换时间；② 端节点监控 <code>offsetFromMaster</code>（本地时钟与主时钟的偏差值）并在超阈值时<strong>主动降级</strong>（切到不依赖时间的策略，如严格优先级）而不是继续假装同步；③ 时钟跳变时<strong>不要让 GCL 硬跟随</strong>，要用平滑调整（syntonization，只慢慢调频率、不猛跳时刻）避免窗口瞬间错乱。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -426,9 +426,9 @@ PCP 0 → TC0  日志 / 固件升级（Best Effort）</pre>
     </tbody>
   </table>
 
-  <div class="note"><strong>CQF（802.1Qch，Cyclic Queuing and Forwarding）值得单独记住</strong>，因为它把「算 GCL」这个 NP-hard 的规划问题<strong>降级成了填表</strong>：每跳固定延迟一个周期，端到端时延 = 跳数 × 周期，抖动 = 一个周期，不需要知道任何链路细节。代价是时延被放大（5 跳 × 100 µs 周期 = 500 µs）。DetNet 把这套思路搬到了 L3，见 <a href="detnet_guide.html">DetNet 与跨域确定性</a>。<strong>选型口诀：需要极低时延且拓扑稳定 → 逐跳错相；需要可维护性和可证明的界 → CQF。</strong></div>
+  <div class="note"><strong>CQF（802.1Qch，Cyclic Queuing and Forwarding，循环排队转发）值得单独记住</strong>，因为它把「算 GCL」这个 NP-hard（没有快捷解法、规模一大就算不动的一类计算难题）的规划问题<strong>降级成了填表</strong>：每跳固定延迟一个周期，端到端时延 = 跳数 × 周期，抖动 = 一个周期，不需要知道任何链路细节。代价是时延被放大（5 跳 × 100 µs 周期 = 500 µs）。DetNet（在 IP 路由器层面做确定性转发的标准，相当于 L3 版的 TSN）把这套思路搬到了 L3，见 <a href="detnet_guide.html">DetNet 与跨域确定性</a>。<strong>选型口诀：需要极低时延且拓扑稳定 → 逐跳错相；需要可维护性和可证明的界 → CQF。</strong></div>
 
-  <div class="danger"><strong>GCL 规划是 NP-hard 的，不要手算超过三跳。</strong>给定一组流（周期、帧长、路径、时延要求），求一组无冲突的门控窗口，等价于带约束的调度问题。三跳以上、十条流以上就必须用工具（SMT 求解器如 Z3、商业 TSN 配置工具、或 CNC 内置的规划器）。手工配置的典型失败模式是<strong>「实验室能跑，加一条流就全崩」</strong>——因为人算只能保证已知流不冲突，无法保证还有余量。工程上留 <strong>30% 以上的窗口余量</strong>，并把 GCL 纳入配置管理和回归测试。</div>
+  <div class="danger"><strong>GCL 规划是 NP-hard 的，不要手算超过三跳。</strong>给定一组流（周期、帧长、路径、时延要求），求一组无冲突的门控窗口，等价于带约束的调度问题。三跳以上、十条流以上就必须用工具（SMT 求解器如 Z3——SMT 是一类「给定一堆约束条件、自动求出可行解」的数学求解器，还有商业 TSN 配置工具、或 CNC 内置的规划器）。手工配置的典型失败模式是<strong>「实验室能跑，加一条流就全崩」</strong>——因为人算只能保证已知流不冲突，无法保证还有余量。工程上留 <strong>30% 以上的窗口余量</strong>，并把 GCL 纳入配置管理和回归测试。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -438,7 +438,7 @@ PCP 0 → TC0  日志 / 固件升级（Best Effort）</pre>
     <div class="t"><h2>Qav CBS：信用整形</h2><p class="sub">给周期性流量限速，防止它饿死别人</p></div>
   </div>
 
-  <p>802.1Qav 的 <strong>CBS（Credit-Based Shaper，信用整形器）</strong>比 Qbv 早十年，来自 AVB（音视频桥接）时代。它解决的不是「准时」，而是<strong>「限流」</strong>：让一条高优先级流量既能低时延通过，又<strong>不能无限抢占带宽</strong>。</p>
+  <p>802.1Qav 的 <strong>CBS（Credit-Based Shaper，信用整形器）</strong>比 Qbv 早十年，来自 AVB（Audio Video Bridging，音视频桥接——TSN 的前身，当年为车载音响和专业音视频做带宽预留的一套标准）时代。它解决的不是「准时」，而是<strong>「限流」</strong>：让一条高优先级流量既能低时延通过，又<strong>不能无限抢占带宽</strong>。</p>
 
   <div class="analogy">CBS 像<strong>信用卡额度</strong>：不发送时额度以固定速率（idleSlope）恢复，发送时以另一速率（sendSlope）消耗。<strong>额度为负就不许再发</strong>，必须等回正。这样一条流的长期平均带宽被牢牢限在 idleSlope，但短时间的小突发可以靠攒下的额度快速通过——<strong>既限了速，又没有牺牲小包的时延</strong>。</div>
 
@@ -474,9 +474,9 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     <div class="s-cfg"><h5>TC0 · 严格优先级 / BE</h5><p><strong>尽力而为</strong>。固件升级、日志回传、SSH 调试。用剩下的带宽，在 TT 窗口和 CBS 额度之外传输，无任何保证。</p></div>
   </div>
 
-  <div class="box tip"><strong>为什么不全用 Qbv？</strong>因为门控要求<strong>你事先知道流量的精确时刻</strong>。相机流是 30 fps 的大帧，一帧图像切成几十个以太网帧突发送出，且编码后大小抖动很大（I 帧比 P 帧大十倍）——给它排 GCL 窗口要么按最坏情况预留（浪费巨大），要么按平均预留（I 帧时溢出）。<strong>CBS 恰好适合「速率可控但时刻不可控」的流量</strong>。这条判断标准比记参数重要：<strong>时刻可预测 → Qbv；只有速率可预测 → Qav。</strong></div>
+  <div class="box tip"><strong>为什么不全用 Qbv？</strong>因为门控要求<strong>你事先知道流量的精确时刻</strong>。相机流是 30 fps 的大帧，一帧图像切成几十个以太网帧突发送出，且编码后大小抖动很大（I 帧比 P 帧大十倍——I 帧是完整画面，P 帧只存与前一帧的差异）——给它排 GCL 窗口要么按最坏情况预留（浪费巨大），要么按平均预留（I 帧时溢出）。<strong>CBS 恰好适合「速率可控但时刻不可控」的流量</strong>。这条判断标准比记参数重要：<strong>时刻可预测 → Qbv；只有速率可预测 → Qav。</strong></div>
 
-  <div class="note"><strong>ATS（802.1Qcr，异步流量整形）是 CBS 的进化版。</strong>CBS 有个结构缺陷：整形是<strong>按队列</strong>做的，同一队列里多条流会互相影响，多跳后突发会累积放大（burst cascading）。ATS 改成<strong>按流</strong>（per-stream）用令牌桶整形，并且在每一跳<strong>重新整形</strong>，把突发压回原始形状，因此多跳后时延界不会随跳数恶化。代价是需要维护每流状态，硬件成本高，2026 年支持的芯片还不多。<strong>面试提到 ATS 能说清「它解决 CBS 的突发累积问题」就够加分。</strong></div>
+  <div class="note"><strong>ATS（802.1Qcr，异步流量整形）是 CBS 的进化版。</strong>CBS 有个结构缺陷：整形是<strong>按队列</strong>做的，同一队列里多条流会互相影响，多跳后突发会累积放大（burst cascading）。ATS 改成<strong>按流</strong>（per-stream，每条流单独记账）用令牌桶整形——令牌桶是经典控速算法：按速率给每条流发「令牌」，手里没令牌的帧就只能等着——并且在每一跳<strong>重新整形</strong>，把突发压回原始形状，因此多跳后时延界不会随跳数恶化。代价是需要维护每流状态，硬件成本高，2026 年支持的芯片还不多。<strong>面试提到 ATS 能说清「它解决 CBS 的突发累积问题」就够加分。</strong></div>
 </section>
 <!-- ================================================================ §5 -->
 <section class="chapter" id="s5">
@@ -485,7 +485,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     <div class="t"><h2>Qbu + 802.3br：帧抢占</h2><p class="sub">把「不可打断」的单位从 1522 B 砍到 128 B</p></div>
   </div>
 
-  <p>帧抢占（Frame Preemption）是<strong>两个标准的合作</strong>，这一点常被问到：<strong>802.1Qbu</strong> 定义桥接层的行为（哪些队列可抢占、怎么决策），<strong>IEEE 802.3br</strong> 定义 MAC 层的实际切割与重组机制（帧格式、CRC、片段编号）。缺一个都跑不起来。</p>
+  <p>帧抢占（Frame Preemption）是<strong>两个标准的合作</strong>，这一点常被问到：<strong>802.1Qbu</strong> 定义桥接层的行为（哪些队列可抢占、怎么决策），<strong>IEEE 802.3br</strong> 定义 MAC 层的实际切割与重组机制（帧格式、CRC——帧尾用来检测传输差错的校验码、片段编号）。缺一个都跑不起来。</p>
 
   <div class="analogy">帧抢占像<strong>医院走廊让路</strong>：普通推车走到一半，救护担架来了，推车<strong>就地靠边停下</strong>，等担架过去再继续推——而不是等推车走完整条走廊。关键在于「就地停下」这个动作本身要花时间（不能停在半路挡道），所以标准规定<strong>剩下的部分至少还要有 64 字节</strong>，否则不如一口气走完。</div>
 
@@ -549,7 +549,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
 
   <div class="box tip"><strong>抢占对低速链路是「能不能用」的分水岭。</strong>1 Gbps 上 12 µs 的抖动对 1 ms 周期只是 1.2%，不开抢占也能凑合。但车内 10BASE-T1S 或工业 100 Mbps 现场总线上，一个大帧就把整个控制周期吃掉了——<strong>此时抢占不是优化而是前提</strong>。反过来，在 10 Gbps 骨干上单帧只占 1.2 µs，抢占的收益微乎其微，还不如把这份硬件预算花在更深的缓冲和更好的整形上。<strong>速率越低，抢占越关键</strong>，这是选型时的第一判断。</div>
 
-  <div class="warn"><strong>抢占是逐跳能力，必须两端都支持。</strong>它靠 LLDP 的 Additional Ethernet Capabilities TLV 协商；一端支持一端不支持就退化成不抢占，<strong>而且不会报错</strong>——你只会看到抖动莫名其妙偏大。上线前必须逐链路验证协商结果（<code>ethtool --show-mm</code> 在支持的驱动上可以查 MAC Merge 状态）。另一个坑：<strong>抢占增加了每帧的处理开销</strong>（切割、重组、额外 CRC 校验），在极高 pps 场景下会降低有效吞吐，需要实测而不是照抄规格书。</div>
+  <div class="warn"><strong>抢占是逐跳能力，必须两端都支持。</strong>它靠 LLDP（Link Layer Discovery Protocol，直连设备之间互报「我有什么能力」的发现协议）里的 Additional Ethernet Capabilities TLV 字段协商；一端支持一端不支持就退化成不抢占，<strong>而且不会报错</strong>——你只会看到抖动莫名其妙偏大。上线前必须逐链路验证协商结果（<code>ethtool --show-mm</code> 在支持的驱动上可以查 MAC Merge 状态）。另一个坑：<strong>抢占增加了每帧的处理开销</strong>（切割、重组、额外 CRC 校验），在极高 pps 场景下会降低有效吞吐，需要实测而不是照抄规格书。</div>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -609,7 +609,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     </div>
   </div>
 
-  <div class="box tip"><strong>Qci 的计数器是最好的可观测性入口。</strong>每个 Stream Filter / Gate / Meter 都维护「匹配帧数、丢弃帧数、封禁次数」。把这些计数器接进监控（NETCONF/YANG 或 SNMP 拉取，见 <a href="../communication/netconf_yang.html">NETCONF / YANG</a>），你就得到了一张<strong>「谁在犯规」的实时地图</strong>——这比在端侧抓包排查快一个数量级。生产系统里应该<strong>先上 Qci 的监控，再上它的封禁动作</strong>：先观察一段时间确认阈值合理，否则一个配置过严的 CIR 会在流量高峰把正常业务封掉。</div>
+  <div class="box tip"><strong>Qci 的计数器是最好的可观测性入口。</strong>每个 Stream Filter / Gate / Meter 都维护「匹配帧数、丢弃帧数、封禁次数」。把这些计数器接进监控（用 NETCONF/YANG——交换机行业标准的远程配置协议和它的数据模型语言——或 SNMP 拉取，见 <a href="../communication/netconf_yang.html">NETCONF / YANG</a>），你就得到了一张<strong>「谁在犯规」的实时地图</strong>——这比在端侧抓包排查快一个数量级。生产系统里应该<strong>先上 Qci 的监控，再上它的封禁动作</strong>：先观察一段时间确认阈值合理，否则一个配置过严的 CIR 会在流量高峰把正常业务封掉。</div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -619,7 +619,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     <div class="t"><h2>802.1CB FRER：零丢包冗余</h2><p class="sub">不靠重传实现高可靠</p></div>
   </div>
 
-  <p>可靠性的传统做法是<strong>检测 + 重传</strong>（TCP 那一套）。但重传意味着<strong>至少一个 RTT 的额外延迟</strong>，对硬实时控制来说等于失败——一帧关节指令晚到 2 ms，不如干脆没到（可以走安全停机逻辑）。</p>
+  <p>可靠性的传统做法是<strong>检测 + 重传</strong>（TCP 那一套）。但重传意味着<strong>至少一个 RTT（往返一趟的时延）的额外延迟</strong>，对硬实时控制来说等于失败——一帧关节指令晚到 2 ms，不如干脆没到（可以走安全停机逻辑）。</p>
 
   <p><strong>802.1CB（Frame Replication and Elimination for Reliability，FRER）</strong>换了思路：<strong>提前把每一帧复制成多份，走不同的物理路径，接收端保留第一个到达的、丢弃重复的</strong>。这样单条路径断掉时，<strong>时延零增加、丢包零发生</strong>，因为另一份本来就在路上。</p>
 
@@ -662,12 +662,12 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
       <path class="ln-r" d="M320 140 L 296 176"/>
       <text class="tr" x="308" y="208" text-anchor="middle">路径 B 断开 → 路径 A 的副本照常送达，时延零增加</text>
     </svg>
-    <figcaption>FRER 在 Talker 侧复制并打 R-TAG 序号，两份副本走最大不相交路径，Listener 侧按序号窗口消除重复。</figcaption>
+    <figcaption>FRER 在 Talker（发送端）侧复制并打 R-TAG 序号（给每份副本盖同一个序号戳，接收端靠它认出「这是同一帧」），两份副本走最大不相交路径，Listener（接收端）侧按序号窗口消除重复。</figcaption>
   </figure>
 
   <h3>7.1 R-TAG 与消除算法</h3>
 
-  <p>复制出来的帧要能被识别为「同一帧的副本」，靠的是插在 VLAN 标签之后的 <strong>R-TAG</strong>（EtherType <code>0xF1C1</code>，6 字节：2 B 保留 + 2 B 序号 + 2 B 保留）。接收端的消除算法有两种：</p>
+  <p>复制出来的帧要能被识别为「同一帧的副本」，靠的是插在 VLAN（Virtual LAN，虚拟局域网——用标签把一台物理交换机划成多个互不相通的虚拟网络）标签之后的 <strong>R-TAG</strong>（一种自定义标签头，EtherType——帧头里标识「载荷是什么协议」的字段——取 <code>0xF1C1</code>，6 字节：2 B 保留 + 2 B 序号 + 2 B 保留）。接收端的消除算法有两种：</p>
 
   <table>
     <thead><tr><th>算法</th><th>做法</th><th>优点</th><th>风险</th></tr></thead>
@@ -677,7 +677,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     </tbody>
   </table>
 
-  <div class="warn"><strong>FRER 最大的工程陷阱是「路径不够独立」。</strong>配了两条路径，但它们共用了同一台核心交换机、同一个电源模块、同一根线槽——<strong>单点故障照样一起挂，冗余变成纯粹的带宽浪费</strong>。设计时必须做<strong>共因失效分析</strong>：物理路由分离（不同线槽）、供电分离（不同 PSU）、时钟源分离（如果可能）。这和存储做多副本要跨机架、跨可用区是同一个道理。另一个易错点：<strong>路径时延差必须小于恢复窗口</strong>，否则慢路径的帧全被当成重复丢掉，冗余失效而你毫无察觉——所以要监控 <code>frerCpsSeqRcvyDiscardedPackets</code> 这类计数器的异常增长。</div>
+  <div class="warn"><strong>FRER 最大的工程陷阱是「路径不够独立」。</strong>配了两条路径，但它们共用了同一台核心交换机、同一个电源模块、同一根线槽——<strong>单点故障照样一起挂，冗余变成纯粹的带宽浪费</strong>。设计时必须做<strong>共因失效分析</strong>（排查两条路径是否共享同一个「一挂全挂」的部件）：物理路由分离（不同线槽）、供电分离（不同 PSU）、时钟源分离（如果可能）。这和存储做多副本要跨机架、跨可用区是同一个道理。另一个易错点：<strong>路径时延差必须小于恢复窗口</strong>，否则慢路径的帧全被当成重复丢掉，冗余失效而你毫无察觉——所以要监控 <code>frerCpsSeqRcvyDiscardedPackets</code> 这类计数器的异常增长。</div>
 
   <div class="box tip"><strong>FRER 也可以「部分复制」。</strong>不必端到端全程双份：常见做法是只在<strong>最脆弱的那一段</strong>（比如经过旋转关节的滑环、或者一段无线链路）复制，两端各放一对复制/消除功能。这样带宽翻倍的代价只付在一小段上。判断依据是故障树——把复制加在<strong>失效概率最高</strong>的环节，而不是均匀撒开。</div>
 </section>
@@ -748,7 +748,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
     <figcaption>完全集中式模型：CUC 表达业务需求，CNC 求解并通过 NETCONF/YANG 下发；配置必须事务化以避免半生效状态。</figcaption>
   </figure>
 
-  <div class="danger"><strong>配置的原子性是生产事故的高发区。</strong>全网 GCL 是一个整体——如果 Bridge 1 已经切到新时刻表而 Bridge 2 还是旧的，中间这段时间<strong>窗口错位，TT 流大面积超时</strong>。所以 CNC 必须用 NETCONF 的 <code>candidate</code> 数据库 + <code>confirmed-commit</code>：先全部下发到候选配置、验证无误、再统一 commit，失败自动回滚。另外 Qbv 本身支持<strong>「预约生效时刻」</strong>（<code>admin-base-time</code> 设一个未来时刻，配置到点自动切换），这是比「尽快下发」更安全的做法——所有交换机在同一个 gPTP 时刻同时切换。</div>
+  <div class="danger"><strong>配置的原子性是生产事故的高发区。</strong>全网 GCL 是一个整体——如果 Bridge 1 已经切到新时刻表而 Bridge 2 还是旧的，中间这段时间<strong>窗口错位，TT 流大面积超时</strong>。所以 CNC 必须用 NETCONF 的 <code>candidate</code> 数据库（一份「草稿配置」，改完不立即生效）+ <code>confirmed-commit</code>（两段式提交：验证无误才统一 commit，超时未确认自动回滚）：先全部下发到候选配置、验证无误、再统一 commit，失败自动回滚。另外 Qbv 本身支持<strong>「预约生效时刻」</strong>（<code>admin-base-time</code> 设一个未来时刻，配置到点自动切换），这是比「尽快下发」更安全的做法——所有交换机在同一个 gPTP 时刻同时切换。</div>
 </section>
 
 <!-- ================================================================ §9 -->
@@ -761,7 +761,7 @@ D = maxFrameTime(本队列) + hiCredit/|sendSlope| + maxFrameTime(低优先级�
   <p>Linux 从 4.19 起把 TSN 的发送侧机制做进了 qdisc 体系。三个关键 qdisc 各管一段，<strong>组合使用才完整</strong>：</p>
 
   <div class="stds">
-    <div><h5>mqprio</h5><p>把 <strong>socket priority 映射到硬件队列</strong>，并设置 802.1p PCP。是最底层的分流机制，Qbv/CBS 都建立在正确的队列映射之上。</p></div>
+    <div><h5>mqprio</h5><p>把 <strong>socket priority（应用给每个帧标的优先级号）映射到硬件队列</strong>，并设置 802.1p PCP（Priority Code Point，帧头里 3 位优先级字段，0~7 八档）。是最底层的分流机制，Qbv/CBS 都建立在正确的队列映射之上。</p></div>
     <div class="s-rel"><h5>taprio</h5><p><strong>Qbv 的实现</strong>。配置 GCL（<code>sched-entry</code>）、周期、base-time。可以纯软件跑，也可以 <code>offload 1</code> 交给网卡硬件（精度差两个数量级）。</p></div>
     <div class="s-sync"><h5>etf</h5><p><strong>Earliest TxTime First</strong>。让应用用 <code>SO_TXTIME</code> 指定「这帧在哪个纳秒发出」，qdisc 按时刻排序并在正确时间交给网卡。解决 §1 提到的「端侧什么时候把帧送进网络」。</p></div>
     <div class="s-cfg"><h5>cbs</h5><p><strong>Qav 的实现</strong>。配置 idleslope / sendslope / hicredit / locredit，同样支持硬件卸载。</p></div>
@@ -805,7 +805,7 @@ tc qdisc replace dev eth0 parent 100:2 etf \
 <span class="cm"># delta = 提前多久把帧交给网卡（补偿驱动与 DMA 时间）</span>
 <span class="cm"># clockid 必须是 CLOCK_TAI —— gPTP 用 TAI，不是 UTC，两者差闰秒</span></pre>
 
-  <div class="warn"><strong>CLOCK_TAI 与闰秒是排查一整天的经典坑。</strong>gPTP / 802.1AS 的时间基准是 <strong>TAI</strong>，而系统默认的 <code>CLOCK_REALTIME</code> 是 UTC，2026 年两者相差 <strong>37 秒</strong>。如果应用用 <code>CLOCK_REALTIME</code> 算 txtime 而 etf 用 <code>CLOCK_TAI</code>，帧的发送时刻会偏 37 秒——表现是<strong>所有帧都被 etf 丢弃</strong>（因为「时刻已过期」），且 <code>tc -s qdisc</code> 里能看到 drop 计数暴涨。正确做法：用 <code>clock_gettime(CLOCK_TAI, ...)</code>，并确认 <code>phc2sys</code> 正确设置了内核的 TAI offset（<code>adjtimex</code> 的 <code>tai</code> 字段）。</div>
+  <div class="warn"><strong>CLOCK_TAI 与闰秒是排查一整天的经典坑。</strong>gPTP / 802.1AS 的时间基准是 <strong>TAI</strong>（国际原子时——不含闰秒、永远均匀流逝的时间基准），而系统默认的 <code>CLOCK_REALTIME</code> 是 UTC（会不定期加减闰秒来对齐地球自转），2026 年两者相差 <strong>37 秒</strong>。如果应用用 <code>CLOCK_REALTIME</code> 算 txtime 而 etf 用 <code>CLOCK_TAI</code>，帧的发送时刻会偏 37 秒——表现是<strong>所有帧都被 etf 丢弃</strong>（因为「时刻已过期」），且 <code>tc -s qdisc</code> 里能看到 drop 计数暴涨。正确做法：用 <code>clock_gettime(CLOCK_TAI, ...)</code>，并确认 <code>phc2sys</code>（把网卡硬件时钟与系统时钟对齐的同步工具）正确设置了内核的 TAI offset（<code>adjtimex</code> 的 <code>tai</code> 字段）。</div>
 
   <h3>9.2 应用侧：SO_TXTIME</h3>
 
@@ -844,7 +844,7 @@ for (;;) {
     build_and_send(fd, next);       <span class="cm">// 用绝对时刻，不用 sleep(相对)</span>
 }</pre>
 
-  <div class="box tip"><strong>三个必做的工程动作</strong>，缺一个就白配 TSN：① 发送线程用 <code>SCHED_FIFO</code> 高优先级并 <code>mlockall()</code> 锁内存，配合 <code>isolcpus</code> 独占核心（细节见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>）；② 用 <code>TIMER_ABSTIME</code> 的绝对时刻唤醒，<strong>绝不用相对 sleep</strong>——相对睡眠会把每次的调度误差累积起来，几小时后相位跑偏一整个周期；③ 打开 <code>SOF_TXTIME_REPORT_ERRORS</code> 并<strong>真的去读 error queue</strong>，否则迟到的帧被静默丢弃，你在应用层完全看不到。</div>
+  <div class="box tip"><strong>三个必做的工程动作</strong>，缺一个就白配 TSN：① 发送线程用 <code>SCHED_FIFO</code>（Linux 实时调度策略，优先级压过所有普通线程）高优先级并 <code>mlockall()</code> 锁内存（禁止内存被换出到磁盘，避免缺页带来毫秒级卡顿），配合 <code>isolcpus</code>（内核启动参数，把指定 CPU 核心从系统调度里摘出来专用）独占核心（细节见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>）；② 用 <code>TIMER_ABSTIME</code> 的绝对时刻唤醒，<strong>绝不用相对 sleep</strong>——相对睡眠会把每次的调度误差累积起来，几小时后相位跑偏一整个周期；③ 打开 <code>SOF_TXTIME_REPORT_ERRORS</code> 并<strong>真的去读 error queue</strong>，否则迟到的帧被静默丢弃，你在应用层完全看不到。</div>
 
   <h3>9.3 硬件卸载与网卡选型</h3>
 
@@ -859,7 +859,7 @@ for (;;) {
     </tbody>
   </table>
 
-  <div class="note"><strong>软件模式和硬件卸载的差距有两个数量级。</strong>纯软件 taprio 靠内核 hrtimer 在窗口边界切换门状态，受中断延迟影响，实测抖动通常 <strong>5–50 µs</strong>；硬件卸载由网卡按自己的 PHC 精确执行，抖动可到 <strong>几十到几百纳秒</strong>。所以：<strong>软件模式适合验证配置逻辑，不适合作为最终方案</strong>。选型时用 <code>tc qdisc add ... flags 0x2</code> 试一下，驱动不支持会直接报 <code>Operation not supported</code>，这是最快的判断方法。</div>
+  <div class="note"><strong>软件模式和硬件卸载的差距有两个数量级。</strong>纯软件 taprio 靠内核 hrtimer（高精度定时器）在窗口边界切换门状态，受中断延迟影响，实测抖动通常 <strong>5–50 µs</strong>；硬件卸载由网卡按自己的 PHC（PTP Hardware Clock，被 gPTP 校准过的网卡硬件时钟）精确执行，抖动可到 <strong>几十到几百纳秒</strong>。所以：<strong>软件模式适合验证配置逻辑，不适合作为最终方案</strong>。选型时用 <code>tc qdisc add ... flags 0x2</code> 试一下，驱动不支持会直接报 <code>Operation not supported</code>，这是最快的判断方法。</div>
 </section>
 
 <!-- ================================================================ §10 -->
@@ -891,7 +891,7 @@ W ≤ (窗口内本流之前的帧的总帧时) + (guard band 残留)
 <span class="cm">★ 排队等待的上界（CQF）：</span>
 W = 恰好一个周期（不多不少）→ 端到端 = 跳数 × 周期，抖动 = 一个周期</pre>
 
-  <div class="def"><strong>Network Calculus</strong> 是给这类界做严格证明的数学工具：用 <strong>到达曲线（arrival curve）</strong>描述「任意时间窗口内一条流最多来多少数据」，用 <strong>服务曲线（service curve）</strong>描述「网元最少提供多少服务」，两者的<strong>最大水平间距就是时延上界</strong>，最大垂直间距是缓冲区需求。工业界的 TSN 规划工具（以及 AFDX、ARINC 664 的认证）都基于它。<strong>面试里不需要会推导，但要知道「时延界是算出来并可证明的，不是测出来的」</strong>——这是确定性网络和普通 QoS 调优的根本分界。</div>
+  <div class="def"><strong>Network Calculus</strong> 是给这类界做严格证明的数学工具：用 <strong>到达曲线（arrival curve）</strong>描述「任意时间窗口内一条流最多来多少数据」，用 <strong>服务曲线（service curve）</strong>描述「网元最少提供多少服务」，两者的<strong>最大水平间距就是时延上界</strong>，最大垂直间距是缓冲区需求。工业界的 TSN 规划工具（以及 AFDX、ARINC 664——航空电子用的确定性网络标准——的适航认证）都基于它。<strong>面试里不需要会推导，但要知道「时延界是算出来并可证明的，不是测出来的」</strong>——这是确定性网络和普通 QoS（Quality of Service，按优先级调度流量的传统手段）调优的根本分界。</div>
 
   <h3>10.2 十个现场陷阱</h3>
 
@@ -911,7 +911,7 @@ W = 恰好一个周期（不多不少）→ 端到端 = 跳数 × 周期，抖�
     </tbody>
   </table>
 
-  <div class="box tip"><strong>验收 TSN 部署的最小测试集</strong>：① <strong>空载基线</strong>——只有 TT 流，测端到端时延分布，确认 P99.99 在预算内；② <strong>满载干扰</strong>——用 <code>iperf3</code> 把 BE 流量打到线速，TT 流的时延分布<strong>必须几乎不变</strong>（这一条不过就说明门控没生效）；③ <strong>违规注入</strong>——故意让一个节点超速发送，确认 Qci 拦住它且 TT 不受影响；④ <strong>断链切换</strong>——拔掉 FRER 的一条路径，确认零丢包且时延无跳变；⑤ <strong>长稳</strong>——跑 72 小时以上，专门抓相位漂移和时钟跳变引起的周期性异常。<strong>第 2 条和第 5 条是最能暴露配置错误的</strong>。</div>
+  <div class="box tip"><strong>验收 TSN 部署的最小测试集</strong>：① <strong>空载基线</strong>——只有 TT 流，测端到端时延分布，确认 P99.99（把所有帧按快慢排序，99.99% 都比它快的那一分位——专门反映最倒霉的万分之一情况）在预算内；② <strong>满载干扰</strong>——用 <code>iperf3</code> 把 BE 流量打到线速，TT 流的时延分布<strong>必须几乎不变</strong>（这一条不过就说明门控没生效）；③ <strong>违规注入</strong>——故意让一个节点超速发送，确认 Qci 拦住它且 TT 不受影响；④ <strong>断链切换</strong>——拔掉 FRER 的一条路径，确认零丢包且时延无跳变；⑤ <strong>长稳</strong>——跑 72 小时以上，专门抓相位漂移和时钟跳变引起的周期性异常。<strong>第 2 条和第 5 条是最能暴露配置错误的</strong>。</div>
 </section>
 <!-- ================================================================ §11 -->
 <section class="chapter" id="s11">

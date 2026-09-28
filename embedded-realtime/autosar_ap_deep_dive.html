@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUTOSAR Adaptive Platform 深入 · ARA / SOME-IP / 域控时代 — Tech Notes</title>
-<meta name="description" content="AUTOSAR Adaptive Platform 深入：ARA::Com / SOME-IP / Persistency / UCM · 中央计算时代的车端 C++ 标准 · vsomeip / Apollo Cyber 实战">
+<meta name="description" content="白话讲透 AUTOSAR Adaptive Platform：CP 与 AP 边界、ARA::Com 通信、SOME-IP、EM/SM、UCM 车端 OTA、Persistency 与功能安全，写给被术语劝退的工程师，顺着读就能懂">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/embedded-realtime/autosar_ap_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/embedded-realtime/autosar_ap_deep_dive.html">
 <meta property="og:title" content="AUTOSAR Adaptive Platform 深入 · ARA / SOME-IP / 域控时代">
-<meta property="og:description" content="AUTOSAR Adaptive Platform 深入：ARA::Com / SOME-IP / Persistency / UCM · 中央计算时代的车端 C++ 标准 · vsomeip / Apollo Cyber 实战">
+<meta property="og:description" content="白话讲透 AUTOSAR Adaptive Platform：CP 与 AP 边界、ARA::Com 通信、SOME-IP、EM/SM、UCM 车端 OTA、Persistency 与功能安全，写给被术语劝退的工程师，顺着读就能懂">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AUTOSAR Adaptive Platform 深入 · ARA / SOME-IP / 域控时代">
-<meta name="twitter:description" content="AUTOSAR Adaptive Platform 深入：ARA::Com / SOME-IP / Persistency / UCM · 中央计算时代的车端 C++ 标准 · vsomeip / Apollo Cyber 实战">
+<meta name="twitter:description" content="白话讲透 AUTOSAR Adaptive Platform：CP 与 AP 边界、ARA::Com 通信、SOME-IP、EM/SM、UCM 车端 OTA、Persistency 与功能安全，写给被术语劝退的工程师，顺着读就能懂">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -84,7 +84,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="embedded_realtime_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 105 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 115 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -127,7 +127,7 @@
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★★☆</span>
         <span class="pill cyan">车载平台</span>
-        <span class="pill green">阅读时长 ~105 min</span>
+        <span class="pill green">阅读时长 ~115 min</span>
         <span class="pill amber">前置 C++ · 嵌入式</span>
       </div>
     </header>
@@ -146,13 +146,13 @@
     </div>
   </div>
 
-  <p>AUTOSAR Classic Platform（CP）演进了二十年，今天仍是绝大多数量产 ECU 的软件基础，它没有过时也不会被 AP 替代。真正发生的事情是：<strong>车上出现了一类 CP 从设计原则上就无法承载的软件</strong>——多传感器融合、神经网络推理、高精定位、整车 OTA、车云协同。它们要的是「GB 级内存 + 多核 GHz SoC + 文件系统 + TCP/IP + 可独立替换的二进制」，而 CP 的全部设计前提恰恰是它们的反面。</p>
+  <p>AUTOSAR（Automotive Open System Architecture，汽车行业统一的软件标准体系）分成两套平台：Classic Platform（CP，面向传统小控制器的经典平台）和 Adaptive Platform（AP，为高性能计算而生的新平台）。CP 演进了二十年，今天仍是绝大多数量产 ECU（Electronic Control Unit，车上一个个独立的「电子控制盒子」，比如刹车控制器、车窗控制器）的软件基础，它没有过时也不会被 AP 替代。真正发生的事情是：<strong>车上出现了一类 CP 从设计原则上就无法承载的软件</strong>——多传感器融合、神经网络推理、高精定位、整车 OTA（Over-the-Air，像手机系统更新那样通过网络远程升级整车软件）、车云协同。它们要的是「GB 级内存 + 多核 GHz SoC（System on Chip，把 CPU、内存控制器等集成到一块芯片上的主控芯片）+ 文件系统 + TCP/IP + 可独立替换的二进制」，而 CP 的全部设计前提恰恰是它们的反面。</p>
 
   <div class="def"><strong>E/E 架构（Electrical / Electronic Architecture）</strong>：整车上有多少个电子控制单元、各自负责什么功能、彼此用什么网络连接、软件如何分布的总体设计。它同时决定了线束怎么走、算力放在哪、以及「改一个功能要动几个盒子、找几家供应商」。</div>
 
   <h3 id="s1-1">新一代 EE 架构 (Electrical/Electronic)</h3>
 
-  <p>三代拓扑的演进动因常被讲成「软件要集中」，其实真正的推力是<strong>线束</strong>：分布式时代每个盒子都要供电、接地、接总线、接传感器，线束因此展开长度可达数公里、重量数十公斤，而且<strong>纯手工装配、几乎无法自动化</strong>，属于「产量翻倍、成本不降」的部件。<strong>中央计算 + 区域控制器是为了砍线束而做的架构重构，软件集中只是顺带的结果</strong>——但正是这个顺带结果创造了 AP 的生存空间。</p>
+  <p>三代拓扑（拓扑指 ECU 之间怎么连线：是星型、总线还是分层结构）的演进动因常被讲成「软件要集中」，其实真正的推力是<strong>线束</strong>——线束好比整车的血管加神经，是所有供电线、信号线捆在一起的那一大捆电缆：分布式时代每个盒子都要供电、接地、接总线、接传感器，线束因此展开长度可达数公里、重量数十公斤，而且<strong>纯手工装配、几乎无法自动化</strong>，属于「产量翻倍、成本不降」的部件。<strong>中央计算 + 区域控制器是为了砍线束而做的架构重构，软件集中只是顺带的结果</strong>——但正是这个顺带结果创造了 AP 的生存空间。</p>
 
   <div class="diag" style="overflow-x:auto">
     <svg viewBox="0 0 820 250" width="820" height="250" role="img" aria-label="E/E 架构三代拓扑对比：分布式是数十个独立 ECU 星型连线，域控制器是若干域控加网关，中央计算加区域控制器是一个中央单元加四个按位置划分的区域节点用以太网骨干连接">
@@ -253,11 +253,11 @@
     </tbody>
   </table>
 
-  <div class="box tip">CP 的「静态」不是历史包袱，而是<strong>安全论证的前提</strong>。ISO 26262 要求你能论证最坏情况——最坏执行时间、最坏栈深度、最坏响应时间。一旦引入动态分配和动态调度，这些量都不再有闭式上界，整条论证链就要换一套（外部监控 + 冗余 + 降级）成本高得多的做法。AP 后面遇到的大部分安全难题，根源都在这里。</div>
+  <div class="box tip">CP 的「静态」不是历史包袱，而是<strong>安全论证的前提</strong>。ISO 26262（汽车功能安全标准，核心要求是「你得向审查方证明这套软件出事时不会伤人」）要求你能论证最坏情况——最坏执行时间、最坏栈深度、最坏响应时间。一旦引入动态分配和动态调度，这些量都不再有闭式上界（即能用一个公式算死的上限值），整条论证链就要换一套（外部监控 + 冗余 + 降级）成本高得多的做法。AP 后面遇到的大部分安全难题，根源都在这里。</div>
 
   <h3 id="s1-3">AP 的目标</h3>
 
-  <p>AP 不是「更大的 CP」，它换了一套完全不同的假设：算力充裕、内存以 GB 计、底下有一个符合 POSIX 的操作系统，应用可以在运行期发现彼此、可以被单独替换。这套假设的分野可以浓缩成一句话：<strong>CP 把一切决定在编译期烧死，AP 把一部分决定推迟到运行期。</strong></p>
+  <p>AP 不是「更大的 CP」，它换了一套完全不同的假设：算力充裕、内存以 GB 计、底下有一个符合 POSIX（一套操作系统接口标准——应用照这套接口写代码，就能在 Linux、QNX 这类系统上直接跑，相当于给应用和系统之间定了统一的插座规格）的操作系统，应用可以在运行期发现彼此、可以被单独替换。这套假设的分野可以浓缩成一句话：<strong>CP 把一切决定在编译期烧死（写完代码、编译成镜像时就全部定死），AP 把一部分决定推迟到运行期（车跑起来之后再动态决定）。</strong></p>
 
   <div class="fig">
     <svg viewBox="0 0 820 300" role="img" aria-label="Classic Platform 与 Adaptive Platform 的定位差异：CP 在编译期把任务集、通信矩阵、内存布局全部固定成单一镜像并整块刷写，AP 在运行期做服务发现、动态绑定与按软件包更新，两者分别对应确定性与可迭代性" style="min-width:700px;height:auto">
@@ -341,7 +341,7 @@
     </tbody>
   </table>
 
-  <div class="box danger"><strong>不要把 AP 理解成 CP 的替代品。</strong>两者分工不同、长期共存于同一台车，甚至同一颗 SoC 上（AP 跑 Cortex-A 核，CP 跑同一封装里的 Cortex-R 安全岛）：制动和气囊不会搬到 POSIX 上来，感知融合也塞不回 MCU。完整答法见 <a href="#s11-1">§11.1 第 1 题</a>。</div>
+  <div class="box danger"><strong>不要把 AP 理解成 CP 的替代品。</strong>两者分工不同、长期共存于同一台车，甚至同一颗 SoC 上（AP 跑 Cortex-A 核——手机和电脑同款的高性能应用处理器核；CP 跑同一封装里的 Cortex-R 安全岛——一块专门做可靠实时控制的小核）：制动和气囊不会搬到 POSIX 上来，感知融合也塞不回 MCU。完整答法见 <a href="#s11-1">§11.1 第 1 题</a>。</div>
 
 </section>
 
@@ -374,12 +374,12 @@
 
   <h3 id="s2-2">Foundation 与 Services：两类功能簇</h3>
 
-  <p>ARA 里的功能簇不是平铺的一堆模块，而分成两类，区别在于<strong>它们以什么形式被使用</strong>：</p>
+  <p>ARA（AUTOSAR Runtime for Adaptive applications，AP 提供给应用的 C++ 运行时库——可以把它理解成「应用唯一被允许调用的平台接口总集」）里的功能簇（Functional Cluster，按功能划分的标准模块，每个对应一个 <code>ara::</code> 开头的命名空间）不是平铺的一堆模块，而分成两类，区别在于<strong>它们以什么形式被使用</strong>：</p>
 
   <div class="grid-2">
     <div class="panel accent">
       <h4>Adaptive Platform Foundation</h4>
-      <p>「基础运行能力」，以 <strong>C++ API（库调用）</strong>的形式被应用直接链接：调用是本进程内的函数调用（内部可能再走 IPC），没有它们应用根本跑不起来。</p>
+      <p>「基础运行能力」，以 <strong>C++ API（库调用）</strong>的形式被应用直接链接：调用是本进程内的函数调用（内部可能再走 IPC——进程间通信，两个独立进程之间传数据的机制），没有它们应用根本跑不起来。</p>
     </div>
     <div class="panel purple">
       <h4>Adaptive Platform Services</h4>
@@ -550,12 +550,12 @@
 
   <h3 id="s2-4">关键事实：一个 AP 应用就是一个 POSIX 进程</h3>
 
-  <p>这句话看着平淡，但它是 AP 与 CP 差别的<strong>全部根源</strong>。CP 里所有 SWC 最终链接成一个镜像、跑在同一个地址空间；AP 里每个应用是一个独立的可执行文件，由 EM 用 <code>fork</code>/<code>exec</code> 一类的机制拉起来，各有自己的地址空间、自己的线程、自己的文件描述符。四个直接后果：</p>
+  <p>这句话看着平淡，但它是 AP 与 CP 差别的<strong>全部根源</strong>。CP 里所有 SWC（Software Component，CP 里的软件组件，最终都链接进同一个镜像）最终链接成一个镜像、跑在同一个地址空间；AP 里每个应用是一个独立的可执行文件，由 EM（Execution Management，执行管理——按清单把进程拉起、停下的平台模块）用 <code>fork</code>/<code>exec</code>（操作系统创建新进程的系统调用，好比先复制一份进程、再让它「变身」成新程序）一类的机制拉起来，各有自己的地址空间、自己的线程、自己的文件描述符。四个直接后果：</p>
 
   <div class="grid-2">
     <div class="panel green">
       <h4>① 故障隔离</h4>
-      <p>MMU 保证段错误只死自己。代价是「死了别人不知道」，于是必须有 PHM 监督、SM 决策。</p>
+      <p>MMU（内存管理单元，硬件级的地址隔离设施）保证段错误只死自己。代价是「死了别人不知道」，于是必须有 PHM（Platform Health Management，平台健康管理——专门盯进程死活、有没有超时的监督模块）监督、SM（State Management，状态管理）决策。</p>
     </div>
     <div class="panel green">
       <h4>② 可独立更新</h4>
@@ -575,11 +575,11 @@
 
   <h3 id="s2-5">对 OS 的要求：PSE51</h3>
 
-  <p>AP 不规定用哪个操作系统，但规定了操作系统必须提供的<strong>最小 POSIX 能力集：PSE51</strong>（IEEE Std 1003.13 定义的最小实时系统 profile）。PSE51 大致覆盖线程、互斥量与条件变量、信号、实时调度策略（<code>SCHED_FIFO</code>/<code>SCHED_RR</code>）、高精度时钟与定时器、共享内存与内存锁定，但<strong>不包含</strong>完整的文件系统与进程管理语义。</p>
+  <p>AP 不规定用哪个操作系统，但规定了操作系统必须提供的<strong>最小 POSIX 能力集：PSE51</strong>（IEEE Std 1003.13 定义的最小实时系统 profile——profile 在这里可以理解为一张「至少必须具备这些能力」的清单）。PSE51 大致覆盖线程、互斥量与条件变量、信号、实时调度策略（<code>SCHED_FIFO</code>/<code>SCHED_RR</code>）、高精度时钟与定时器、共享内存与内存锁定，但<strong>不包含</strong>完整的文件系统与进程管理语义。</p>
 
   <div class="box tip">「AP 要求 PSE51」这句话经常被误读成「AP 只能用 PSE51 那点东西」。实际含义是反过来的：<strong>PSE51 是平台必须至少提供的下界，应用代码应尽量收敛在这个子集内以保证可移植性</strong>；而平台自身（EM 要创建进程、Persistency 要读写文件、ara::com 要用 socket）显然用到了 PSE51 之外的能力。所以真实的车规 OS 选择是 Linux 或 QNX 这种远超 PSE51 的系统，PSE51 约束的是「你写应用时能假设什么」。</div>
 
-  <p>选 Linux 还是 QNX 是一次典型取舍：Linux 生态无可比拟，但要靠 <a href="preempt_rt_deep_dive.html">PREEMPT_RT</a> 加绑核隔离才压得住抖动，安全认证材料要另外采购或自建；QNX 微内核隔离更彻底、已有成熟认证包，但生态窄、授权贵。常见组合是座舱用 Linux/Android、安全相关的 AP 分区用 QNX，跑在同一颗 SoC 的不同 hypervisor 分区里。</p>
+  <p>选 Linux 还是 QNX 是一次典型取舍：Linux 生态无可比拟，但要靠 <a href="preempt_rt_deep_dive.html">PREEMPT_RT</a>（给 Linux 内核打上的一套实时化补丁，把调度延迟压到可控范围）加绑核隔离才压得住抖动，安全认证材料要另外采购或自建；QNX 微内核隔离更彻底、已有成熟认证包，但生态窄、授权贵。常见组合是座舱用 Linux/Android、安全相关的 AP 分区用 QNX，跑在同一颗 SoC 的不同 hypervisor（虚拟机监控器——把一颗物理芯片切成几台互相隔离的虚拟机的软件层）分区里。</p>
 
   <div class="box star">被问「AP 和 CP 最本质的区别」，不要答「一个 C++ 一个 C」「一个动态一个静态」——那是现象。答<strong>「软件单元的边界从链接期的符号边界变成了运行期的进程边界」</strong>，再顺着推出上面四条加服务发现。展开见 <a href="#s11-1">§11.1 第 2 题</a>。</div>
 </section>
@@ -596,7 +596,7 @@
     </div>
   </div>
 
-  <p><code>ara::com</code>（Communication Management）是 AP 里最重、也最容易写出隐蔽问题的功能簇。它要回答的问题是：<strong>N 个互不认识、可能不在同一台机器上、还可能随时上线下线的进程，怎么高效可靠地交换数据。</strong></p>
+  <p><code>ara::com</code>（Communication Management，通信管理）是 AP 里最重、也最容易写出隐蔽问题的功能簇。它要回答的问题是：<strong>N 个互不认识、可能不在同一台机器上、还可能随时上线下线的进程，怎么高效可靠地交换数据。</strong>好比一个人员流动频繁的公司：你找某个人办事，不需要记住他的工位和电话，喊一声名字、系统负责帮你接通——ara::com 就是那个「负责接通」的角色。</p>
 
   <div class="def"><strong>服务（Service）</strong>：一组对外能力的契约，由三类元素构成——<strong>Event</strong>（提供方主动推送的数据）、<strong>Method</strong>（消费方发起的远程调用）、<strong>Field</strong>（一个带读写与变更通知的状态量）。一个服务可以有多个<strong>实例（Instance）</strong>：同一个「车门服务」接口，四个车门就是四个实例，用 Instance ID 区分。</div>
 
@@ -714,11 +714,11 @@
     </svg>
   </div>
 
-  <p>Field 的三件套<strong>可以按需裁剪</strong>：只有 Notifier 的 Field 近似 Event，只有 Getter/Setter 的近似两个 Method。要注意 Setter 允许消费方<strong>写</strong>提供方状态，是权限敏感点，IAM 里通常要单独授权——不要图省事把所有可配置项都做成带 Setter 的 Field。</p>
+  <p>Field 的三件套<strong>可以按需裁剪</strong>：只有 Notifier 的 Field 近似 Event，只有 Getter/Setter 的近似两个 Method。要注意 Setter 允许消费方<strong>写</strong>提供方状态，是权限敏感点，IAM（Identity and Access Management，身份与访问管理——平台里管「哪个应用有权动什么」的机制）里通常要单独授权——不要图省事把所有可配置项都做成带 Setter 的 Field。</p>
 
   <h3 id="s3-2">Service Interface 定义（arxml）</h3>
 
-  <p>AP 的通信接口不在 C++ 头文件里定义，而是在 ARXML 里建模、由工具生成两侧代码。这层间接解决的是跨供应商问题：接口定义成了一份<strong>与语言和实现无关的交付物</strong>，还能拿来生成测试桩与网络配置。</p>
+  <p>AP 的通信接口不在 C++ 头文件里定义，而是在 ARXML（AUTOSAR 定义的 XML 配置文件格式，相当于接口和部署的「设计图纸」）里建模、由工具生成两侧代码。这层间接解决的是跨供应商问题：接口定义成了一份<strong>与语言和实现无关的交付物</strong>，还能拿来生成测试桩与网络配置。</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 300" role="img" aria-label="Proxy 与 Skeleton 生成物和用户代码的关系：一份 ARXML 接口定义经代码生成器产出数据类型、错误域、Skeleton 与 Proxy，提供方继承 Skeleton 实现方法回调，消费方用 Proxy 订阅事件与发起调用，用户不需要编写序列化与网络代码" style="min-width:720px;height:auto">
@@ -948,7 +948,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s3-3">Service Discovery</h3>
 
-  <p>服务发现是 AP「动态」二字的落点，也是启动阶段最容易出问题的一环。它的时序值得单独看清：</p>
+  <p>服务发现（Service Discovery——进程上线后主动告诉网络「我在这儿、我能提供什么服务」，别的进程据此找到它，好比蓝牙配对：设备先广播自己，你选中了才连上）是 AP「动态」二字的落点，也是启动阶段最容易出问题的一环。它的时序值得单独看清：</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 400" role="img" aria-label="服务发现时序：提供方调用 OfferService 后绑定层周期发送组播 Offer 报文，消费方通过持续查找收到后构造 Proxy 并发起事件组订阅，提供方回确认后开始推送通知；主动下线是毫秒级通知，而进程崩溃只能等 Offer 的存活时间超时" style="min-width:760px;height:auto">
@@ -1008,7 +1008,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s3-4">Async 编程模型</h3>
 
-  <p><code>ara::core::Future</code> 与 <code>std::future</code> 形似但有两个关键差别，用错会直接踩坑：</p>
+  <p><code>ara::core::Future</code> 与 <code>std::future</code> 形似但有两个关键差别，用错会直接踩坑。Future 的意思是「取结果凭证」：你发起一个耗时操作，它立刻返回一张凭据，之后凭这张凭据拿结果，不用干等着：</p>
 
   <table>
     <thead><tr><th>方面</th><th><code>std::future</code></th><th><code>ara::core::Future</code></th></tr></thead>
@@ -1023,7 +1023,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s3-5">绑定层：同一套 API，三种落地方式</h3>
 
-  <p>应用代码里看不到 SOME-IP，也看不到共享内存——它只看到 <code>CurrentSpeed.Send()</code>。中间那层叫<strong>绑定（binding）</strong>，负责把服务接口映射到具体的传输机制。映射关系写在部署清单里，<strong>改绑定不需要改一行应用代码，也不需要重新编译</strong>，这是 ara::com 抽象最实用的一处收益。</p>
+  <p>应用代码里看不到 SOME-IP，也看不到共享内存——它只看到 <code>CurrentSpeed.Send()</code>。中间那层叫<strong>绑定（binding）</strong>，负责把服务接口映射到具体的传输机制，好比同一个插座规格，背后接的是市电还是发电机，由配置说了算。映射关系写在部署清单里，<strong>改绑定不需要改一行应用代码，也不需要重新编译</strong>，这是 ara::com 抽象最实用的一处收益。</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 290" role="img" aria-label="绑定层示意：同一份应用代码调用 ara::com 接口，由部署清单决定映射到 SOME-IP 跨 ECU 传输、DDS、同机零拷贝共享内存，或把 CAN 信号包装成服务，四条路径的开销差几个数量级" style="min-width:720px;height:auto">
@@ -1116,7 +1116,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
     </div>
   </div>
 
-  <p>ARA::Com 底层通信走 <strong>SOME-IP</strong>（Scalable service-Oriented MiddlewarE over IP）—— 主流车端 RPC + Pub/Sub 协议。</p>
+  <p>ARA::Com 底层通信走 <strong>SOME-IP</strong>（Scalable service-Oriented MiddlewarE over IP，一个专为车设计的通信协议：在 IP 网络上跑「服务调用 + 订阅推送」，相当于把互联网那套请求/响应搬进车里再大幅精简）—— 主流车端 RPC + Pub/Sub 协议（RPC：远程过程调用，调用另一台机器上的函数，写法上像调用本地函数；Pub/Sub：发布订阅，一方广播、多方收听）。</p>
 
   <h3 id="s4-1">位置</h3>
 
@@ -1178,7 +1178,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s4-2">SOME-IP Header</h3>
 
-  <p>报文头固定 16 字节，字段少、无可选项、无文本——这是它相对 HTTP/gRPC 的核心优势：<strong>解析成本是常数，且可以在硬件或极简协议栈里实现</strong>。车内一条 100 Mbit/s 的链路上跑几十个周期性事件，头部开销必须是这个量级才划算。</p>
+  <p>报文头固定 16 字节，字段少、无可选项、无文本——这是它相对 HTTP/gRPC（互联网常用的通用协议，头部带大量可读文本、解析成本高）的核心优势：<strong>解析成本是常数，且可以在硬件或极简协议栈里实现</strong>。车内一条 100 Mbit/s 的链路上跑几十个周期性事件，头部开销必须是这个量级才划算。</p>
 
   <div class="diag" style="overflow-x:auto">
     <svg viewBox="0 0 780 210" width="780" height="210" role="img" aria-label="SOME-IP 报文头 16 字节布局：Message ID 由 Service ID 与 Method ID 组成，Length 四字节，Request ID 由 Client ID 与 Session ID 组成，最后四个单字节字段是协议版本、接口版本、消息类型、返回码">
@@ -1257,7 +1257,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s4-3">Service Discovery（SOME-IP-SD）</h3>
 
-  <p>SD 本身就是一条 SOME-IP 报文（用一组保留的 Service ID / Method ID、消息类型为通知），跑在组播 UDP 上，<strong>端口常见默认是 30490</strong>，组播地址由整车网络设计指定（开源实现 vsomeip 的示例配置里常见 <code>224.244.224.245</code>）。它的载荷结构是「一个标志字节 + 保留位 + 条目数组 + 选项数组」：</p>
+  <p>SD 本身就是一条 SOME-IP 报文（用一组保留的 Service ID / Method ID、消息类型为通知），跑在组播 UDP 上（组播即 multicast：发一份报文，加入这个组的所有节点都能收到，介于「点对点」与「全车广播」之间），<strong>端口常见默认是 30490</strong>，组播地址由整车网络设计指定（开源实现 vsomeip 的示例配置里常见 <code>224.244.224.245</code>）。它的载荷结构是「一个标志字节 + 保留位 + 条目数组 + 选项数组」：</p>
 
   <table>
     <thead><tr><th>SD 载荷部分</th><th>内容</th><th>作用</th></tr></thead>
@@ -1297,7 +1297,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s4-4">序列化</h3>
 
-  <p>SOME-IP 的序列化格式设计目标是「小、快、可静态分析」，代价是<strong>完全不自描述</strong>：载荷里没有字段名、没有类型标签（除非显式用 TLV），收发双方必须共享同一份接口定义。规则本身很简单：</p>
+  <p>SOME-IP 的序列化（serialization——把内存里的结构化数据按约定格式拍平成一串字节，才能放到网上传输）格式设计目标是「小、快、可静态分析」，代价是<strong>完全不自描述</strong>：载荷里没有字段名、没有类型标签（除非显式用 TLV——Type-Length-Value，每个字段自带类型和长度标签，这样即使格式变了，双方也能对得上号），收发双方必须共享同一份接口定义。规则本身很简单：</p>
 
   <ul>
     <li><strong>默认大端</strong>，基本类型按声明顺序排布；<strong>结构体按成员顺序展开、默认不插填充</strong>，所以线上布局和 C++ 内存布局<strong>不一样</strong>（后者有对齐洞）。</li>
@@ -1309,17 +1309,17 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
 
   <h3 id="s4-5">TP 分段与开源实现 vsomeip</h3>
 
-  <p><strong>SOME-IP-TP</strong> 解决的问题是：UDP 数据报有大小上限，而 IP 分片在车载网络上是不受欢迎的（一片丢失整包重传，且部分交换机与防火墙策略会丢弃分片）。于是 SOME-IP 自己做分段：消息类型里置一个 TP 标志位，在 SOME-IP 头之后插入一个分段头（携带本段在原始消息中的偏移，以及「后面还有更多段」的标志），接收侧重组。</p>
+  <p><strong>SOME-IP-TP</strong>（Transport Protocol，协议自带的分段传输机制）解决的问题是：UDP 数据报有大小上限，而 IP 分片（报文太大时被网络层自动拆成小片传输）在车载网络上是不受欢迎的（一片丢失整包重传，且部分交换机与防火墙策略会丢弃分片）。于是 SOME-IP 自己做分段：消息类型里置一个 TP 标志位，在 SOME-IP 头之后插入一个分段头（携带本段在原始消息中的偏移，以及「后面还有更多段」的标志），接收侧重组。</p>
 
   <p>两点要记住：<strong>重组是有状态的</strong>，接收侧要为每个正在重组的消息保留缓冲与超时（异常对端只发第一段就能耗尽这块资源，所以排查大消息偶发丢失时先看重组缓冲上限与超时配置）；更要紧的是<strong>大数据量不该靠 TP 硬扛</strong>——6 MB 一帧的图像切成上百个 UDP 段，任意一段丢失就整帧作废，正确做法是换传输。</p>
 
   <p><strong>vsomeip</strong>（COVESA 维护的开源 C++ 实现）能在普通 Linux 上跑通完整的服务发现与收发，是免授权实验环境的现实入口。两个要点：它有一个<strong>路由管理进程</strong>（同机第一个启动的应用成为 routing manager，持有真正的 socket 并在本机转发，所以「本机两进程通信」并不真的走网卡）；它<strong>不做序列化</strong>，回调里拿到的是原始字节，字节序与布局全靠自己手拼——这一条正好标出 <code>ara::com</code> 的价值所在。</p>
 
-  <p><strong>订阅一直建立不起来时按这个顺序查</strong>：两端 multicast / port 是否一致 → 组播路由存不存在（<code>ip route get</code>）→ 交换机或网卡的 IGMP snooping 是否把组播滤掉了 → 事件组号与 reliability 两端是否匹配（不匹配会收到 Nack）。</p>
+  <p><strong>订阅一直建立不起来时按这个顺序查</strong>：两端 multicast / port 是否一致 → 组播路由存不存在（<code>ip route get</code>）→ 交换机或网卡的 IGMP snooping（交换机上「监听谁真的订了组播、只把组播转发给这些端口」的功能，配置不当会误滤组播）是否把组播滤掉了 → 事件组号与 reliability 两端是否匹配（不匹配会收到 Nack）。</p>
 
   <h4>与 DDS 的对比</h4>
 
-  <p>AP 允许把 <code>ara::com</code> 绑到 DDS 上，机器人与部分智驾栈也大量使用 DDS（ROS 2 的默认中间件）。它们不是替代关系，而是<strong>「配置能力」与「资源占用」的不同取点</strong>：</p>
+  <p>AP 允许把 <code>ara::com</code> 绑到 DDS（Data Distribution Service，一套配置能力更强、也更重的通信中间件标准，机器人和航空航天领域用得多）上，机器人与部分智驾栈也大量使用 DDS（ROS 2——机器人操作系统第 2 版——的默认中间件就是它）。它们不是替代关系，而是<strong>「配置能力」与「资源占用」的不同取点</strong>：</p>
 
   <table>
     <thead><tr><th>维度</th><th>SOME-IP</th><th>DDS</th></tr></thead>
@@ -1360,7 +1360,7 @@ std::unique_ptr&lt;ProxyType&gt; g_proxy;
     </tbody>
   </table>
 
-  <div class="box tip">注意<strong>「文件系统有日志」不解决这个问题</strong>。ext4 的日志保证的是文件系统<strong>元数据</strong>一致（不出现坏目录项、孤儿 inode），不保证你的应用数据<strong>语义</strong>完整——「配置里 5 个字段有 3 个新值、2 个旧值」对文件系统来说完全合法。应用级一致性只能由应用级机制保证。</div>
+  <div class="box tip">注意<strong>「文件系统有日志」不解决这个问题</strong>。ext4（Linux 上最常用的文件系统）的日志保证的是文件系统<strong>元数据</strong>一致（不出现坏目录项、孤儿 inode），不保证你的应用数据<strong>语义</strong>完整——「配置里 5 个字段有 3 个新值、2 个旧值」对文件系统来说完全合法。应用级一致性只能由应用级机制保证。</div>
 
   <h4>两种存储模型</h4>
 
@@ -1443,7 +1443,7 @@ kvs-&gt;SyncToStorage();</pre>
 
   <h3 id="s5-2">ara::crypto</h3>
 
-  <p>密码学 API 的价值不在于「提供了 AES 和 ECDSA」——OpenSSL 也提供。它在于把<strong>密钥的生命周期从应用代码里拿走</strong>。ara::crypto 的接口大致分三块：</p>
+  <p>密码学 API 的价值不在于「提供了 AES（对称加密算法——加密和解密用同一把钥匙）和 ECDSA（一种椭圆曲线数字签名算法，用来证明数据没被篡改、确实出自谁）」——OpenSSL（互联网世界最常用的开源密码学库）也提供。它在于把<strong>密钥的生命周期从应用代码里拿走</strong>。ara::crypto 的接口大致分三块：</p>
 
   <table>
     <thead><tr><th>组成</th><th>负责</th><th>为什么要分开</th></tr></thead>
@@ -1462,7 +1462,7 @@ kvs-&gt;SyncToStorage();</pre>
 
   <h3 id="s5-3">ara::iam (Identity and Access Management)</h3>
 
-  <p>IAM 回答的是：<strong>这个应用有没有权做这件事。</strong>它的模型是<strong>基于能力（capability）的授权</strong>，而且这些能力<strong>在部署清单里声明、在集成阶段固定</strong>，不是运行期动态申请的。</p>
+  <p>IAM 回答的是：<strong>这个应用有没有权做这件事。</strong>它的模型是<strong>基于能力（capability）的授权</strong>——能力就是一条写明「你能做哪些事」的清单条目，而且这些能力<strong>在部署清单里声明、在集成阶段固定</strong>，不是运行期动态申请的。</p>
 
   <div class="analogy"><strong>类比：门禁卡而不是保安认脸。</strong>Linux 的权限模型像小区保安认脸——他知道「这是 3 号楼的住户」（uid），于是允许进 3 号楼。IAM 像写死了权限的门禁卡：卡上刻着「可进 A 区机房、可开 7 号柜、不可进配电间」，读卡器只认卡上的授权项，不管持卡人是谁、也不管他今天想干什么。刻卡（写清单）发生在装修阶段（集成期），运行期只做校验，不做发卡。</div>
 
@@ -1480,7 +1480,7 @@ kvs-&gt;SyncToStorage();</pre>
 
   <p>写清单的唯一纪律是<strong>只声明真正需要的——多声明一个方法就是多开一个攻击面</strong>。</p>
 
-  <p>OS 层要配齐的五项在目标板上都能一条命令确认：每个 AA 一个<strong>独立 uid</strong>（<code>ps -eo pid,user,comm</code>，不要全部跑 root）；<strong>capability 全清零</strong>（<code>/proc/PID/status</code> 里 <code>CapEff</code> 应为全 0，出现 <code>cap_net_raw</code>、<code>cap_sys_admin</code> 要追问为什么）；<strong>seccomp 已启用</strong>（同一文件里 <code>Seccomp: 2</code>）；<strong>挂载可见范围最小化</strong>（用 mount namespace 让应用只看到自己的持久化区）；<strong>根文件系统只读</strong>（<code>findmnt -no OPTIONS /</code> 给出 <code>ro</code>，OTA 时才由 UCM 临时读写挂载或写另一个分区）。</p>
+  <p>OS 层要配齐的五项在目标板上都能一条命令确认：每个 AA 一个<strong>独立 uid</strong>（Linux 的用户编号，不同 uid 的进程天然有权限边界；<code>ps -eo pid,user,comm</code>，不要全部跑 root）；<strong>capability 全清零</strong>（<code>/proc/PID/status</code> 里 <code>CapEff</code> 应为全 0，出现 <code>cap_net_raw</code>、<code>cap_sys_admin</code> 要追问为什么）；<strong>seccomp 已启用</strong>（限制进程只能发起哪些系统调用的内核保险开关；同一文件里 <code>Seccomp: 2</code>）；<strong>挂载可见范围最小化</strong>（用 mount namespace——让每个进程看到不同的磁盘目录视图——把应用限制在只看到自己的持久化区）；<strong>根文件系统只读</strong>（<code>findmnt -no OPTIONS /</code> 给出 <code>ro</code>，OTA 时才由 UCM 临时读写挂载或写另一个分区）。</p>
 
   <div class="box star">「IAM 和 Linux 权限有什么区别」的加分点不在上面那张表，而在成本视角：IAM 的能力是清单里<strong>静态声明</strong>的，好处是可审计、集成期就能查出「谁想访问什么」，坏处是<strong>没法运行期动态授权</strong>——诊断仪临时解锁这类场景要靠挑战-应答式的安全访问机制，不是改 IAM 配置。</div>
 </section>
@@ -1514,7 +1514,7 @@ kvs-&gt;SyncToStorage();</pre>
 
   <h3 id="s6-1">EM：启动顺序、依赖与资源</h3>
 
-  <p>EM 要解决的第一个问题是<strong>启动顺序</strong>。这在 CP 里不是问题（一个镜像，初始化函数按生成顺序调用），在 AP 里是核心难题：感知融合要等相机驱动服务就绪，规划要等感知就绪，而通信绑定层守护进程要比所有用 <code>ara::com</code> 的应用先起来。关键机制是<strong>应用主动汇报，而不是 EM 去猜</strong>——EM 拉起一个进程后并不认为它已可用，要等它汇报「已进入运行」才去启动依赖它的下一批。</p>
+  <p>EM 要解决的第一个问题是<strong>启动顺序</strong>。这在 CP 里不是问题（一个镜像，初始化函数按生成顺序调用），在 AP 里是核心难题：感知融合要等相机驱动服务就绪，规划要等感知就绪，而通信绑定层的守护进程（daemon——开机就在后台常驻、为其他进程提供基础服务的进程）要比所有用 <code>ara::com</code> 的应用先起来。关键机制是<strong>应用主动汇报，而不是 EM 去猜</strong>——EM 拉起一个进程后并不认为它已可用，要等它汇报「已进入运行」才去启动依赖它的下一批。</p>
 
   <div class="note">规范在演进中精简过进程状态集：早期定义 Idle / Starting / Running / Terminating 四态，较新版本里<strong>应用侧需要显式汇报的主要是「已进入运行」这一个</strong>，终止则由平台发出的信号触发。下面按四态模型解释语义（更能说明设计意图），具体 API 以你所用版本为准。</div>
 
@@ -1603,7 +1603,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>资源分配：清单里的声明如何落到 Linux 机制上</h4>
 
-  <p>Execution Manifest 除了启动依赖，还声明这个进程要多少资源、跑在哪些核上、用什么调度策略。EM 负责把这些声明翻译成底层机制——在 Linux 上就是 cgroup、CPU 亲和与调度策略：</p>
+  <p>Execution Manifest 除了启动依赖，还声明这个进程要多少资源、跑在哪些核上、用什么调度策略。EM 负责把这些声明翻译成底层机制——在 Linux 上就是 cgroup（Linux 的资源管控机制，把进程分组并限制每组的 CPU、内存用量）、CPU 亲和（affinity——把进程钉在指定的核上跑）与调度策略：</p>
 
   <table>
     <thead><tr><th>清单里的声明</th><th>Linux 上的落地</th><th>为什么需要它</th></tr></thead>
@@ -1766,7 +1766,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <p>关键在第三步：<strong>同一个故障在不同车辆状态下的正确处理完全不同</strong>。车速 0、驻车时重启融合进程是可接受的；车速 100 km/h、正在用车道保持时，同一个动作必须换成「立刻退出车道保持、提示驾驶员接管、保持基础功能」，重启只能等到下次驻车。这个判断只有 SM 有足够上下文来做——这就是它必须和 EM 分开的理由。</p>
 
-  <div class="box danger"><strong>「自动重启」在车上是一个需要论证的设计决策，不是默认值。</strong>见过的真实现场：一个感知应用低概率内存泄漏、被 cgroup 触发 OOM 杀掉，而 EM 配的是「进程退出即无条件重启」，于是高速行驶中出现「辅助驾驶突然退出、约 4 秒后自行恢复」——功能层面看似自愈，驾驶员经历的却是一次没有预告、也没有任何降级提示的中断。修法不是把重启做得更快，而是把决策权交回 SM。论证要回答三个问题：<strong>谁有权决定重启</strong>（必须是掌握车辆状态的 SM，不是发现故障的 PHM，也不是执行者 EM）、<strong>重启期间功能由谁兜底</strong>（独立通道的降级实现，通常在 CP/MCU 侧，或明确交还驾驶员）、<strong>重启后回到可用要多久</strong>（标定、滤波收敛、与其他 ECU 重新握手，这段不可用窗口必须被量化）。</div>
+  <div class="box danger"><strong>「自动重启」在车上是一个需要论证的设计决策，不是默认值。</strong>见过的真实现场：一个感知应用低概率内存泄漏、被 cgroup 触发 OOM（Out of Memory——进程内存超出限额时，内核直接把它杀掉的机制）杀掉，而 EM 配的是「进程退出即无条件重启」，于是高速行驶中出现「辅助驾驶突然退出、约 4 秒后自行恢复」——功能层面看似自愈，驾驶员经历的却是一次没有预告、也没有任何降级提示的中断。修法不是把重启做得更快，而是把决策权交回 SM。论证要回答三个问题：<strong>谁有权决定重启</strong>（必须是掌握车辆状态的 SM，不是发现故障的 PHM，也不是执行者 EM）、<strong>重启期间功能由谁兜底</strong>（独立通道的降级实现，通常在 CP/MCU 侧，或明确交还驾驶员）、<strong>重启后回到可用要多久</strong>（标定、滤波收敛、与其他 ECU 重新握手，这段不可用窗口必须被量化）。</div>
 </section>
 
 <!-- ================================================================
@@ -1781,7 +1781,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </div>
   </div>
 
-  <p><code>ara::ucm</code>（Update and Configuration Management）是 AP 相对 CP 最有存在感的能力之一。CP 的升级模型是「把整块 Flash 重刷一遍」，UCM 的模型是「按软件包粒度替换，并且全程可回滚」。</p>
+  <p><code>ara::ucm</code>（Update and Configuration Management，更新与配置管理——车端负责安装新软件、出问题能退回旧版的「升级总管」）是 AP 相对 CP 最有存在感的能力之一。CP 的升级模型是「把整块 Flash 重刷一遍」，UCM 的模型是「按软件包粒度替换，并且全程可回滚」。</p>
 
   <p>但比 API 更重要的是搞清楚<strong>它在防什么</strong>。车端 OTA 的失败不是「用户体验受损」，而是「一台在保修期内的车变成需要拖走的砖」，一次批量失败等于数万台车的召回。所以 UCM 的每一个状态、每一次校验，都是为了让「任意时刻断电」都有一个确定的、可恢复的结局。</p>
 
@@ -1889,7 +1889,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>A/B 分区与回滚</h4>
 
-  <p>A/B（也叫双槽位、seamless update）的思路很简单：<strong>永远不在正在运行的那份上动手</strong>。两套完整的系统分区交替使用，升级写非活动的那套，切换只需改一个引导标记。</p>
+  <p>A/B（也叫双槽位、seamless update）的思路很简单：<strong>永远不在正在运行的那份上动手</strong>。两套完整的系统分区交替使用，升级写非活动的那套，切换只需改一个引导标记（一块极小的记录区，告诉启动程序「这次该从哪个分区启动」）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 330" role="img" aria-label="A/B 双槽位布局：一个很小的独立引导标记区记录当前活动槽位与每个槽位的可试启动次数和确认标志，两个槽位各自持有完整的内核、根文件系统与应用二进制，而持久化数据区两个槽位共用、不做 A/B" style="min-width:760px;height:auto">
@@ -1944,7 +1944,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>UCM Master 与多 ECU 协调</h4>
 
-  <p>一次整车升级往往涉及多个 ECU：中央计算单元上的 AP、几个 zonal 上的 CP、可能还有 Tier1 的独立控制器。它们的升级机制完全不同（AP 走 UCM，CP 走诊断协议刷写），但<strong>必须作为一个整体成功或失败</strong>——新版本的感知输出格式可能只有新版本的规划才能解析。这个协调角色就是 <strong>UCM Master</strong>：它自己也是一个服务，向后端呈现「整车软件版本」这一个概念，向内把整车升级分解为对各 ECU 的操作。</p>
+  <p>一次整车升级往往涉及多个 ECU：中央计算单元上的 AP、几个 zonal 上的 CP、可能还有 Tier1（一级供应商——直接向主机厂交付零部件与控制器的公司）的独立控制器。它们的升级机制完全不同（AP 走 UCM，CP 走诊断协议刷写），但<strong>必须作为一个整体成功或失败</strong>——新版本的感知输出格式可能只有新版本的规划才能解析。这个协调角色就是 <strong>UCM Master</strong>：它自己也是一个服务，向后端呈现「整车软件版本」这一个概念，向内把整车升级分解为对各 ECU 的操作。</p>
 
   <div class="pipeline">
     <div class="pipeline-stage s1">整车升级活动<span class="ext">后端下发一份「目标整车版本」</span></div>
@@ -2020,11 +2020,11 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
     </tbody>
   </table>
 
-  <div class="box tip"><strong>没有商业授权也能把 AP 的核心概念练透。</strong>用 <code>vsomeip + CommonAPI</code> 在两台 Linux（或两个容器）之间跑通「IDL 定义接口 → 生成代码 → 服务发现 → 事件订阅 → 方法调用」，抓包对照 §4.2 的头部字段；再用 <code>iceoryx</code> 做一遍同机大数据传递，对比两者的延迟与 CPU 占用。这套练习覆盖了 <code>ara::com</code> 面试问题的绝大部分。</div>
+  <div class="box tip"><strong>没有商业授权也能把 AP 的核心概念练透。</strong>用 <code>vsomeip + CommonAPI</code> 在两台 Linux（或两个容器）之间跑通「IDL（Interface Definition Language，接口定义语言——用与编程语言无关的格式写接口，再生成各语言的代码）定义接口 → 生成代码 → 服务发现 → 事件订阅 → 方法调用」，抓包对照 §4.2 的头部字段；再用 <code>iceoryx</code> 做一遍同机大数据传递，对比两者的延迟与 CPU 占用。这套练习覆盖了 <code>ara::com</code> 面试问题的绝大部分。</div>
 
   <h4>零拷贝为什么在 AP 里是刚需</h4>
 
-  <p>做一次量级估算就明白了：一路 800 万像素相机 YUV420 约 12 MB/帧、30 fps ≈ 360 MB/s，而中央计算单元上通常有 6–12 路这样的输入、各自还要分发给两三个消费者。走「序列化 → 内核缓冲 → 反序列化」的话，光内存带宽就要付出数倍读写——<strong>不是「慢一点」，是根本装不下</strong>。零拷贝的做法是发布方直接在共享内存池里<strong>就地构造</strong>数据，发布时只传偏移，订阅方拿到同一块物理内存的只读视图，数据全链路只存在一份。</p>
+  <p>做一次量级估算就明白了：一路 800 万像素相机 YUV420（一种常见的图像像素格式，压掉了人眼不敏感的色度信息）约 12 MB/帧、30 fps ≈ 360 MB/s，而中央计算单元上通常有 6–12 路这样的输入、各自还要分发给两三个消费者。走「序列化 → 内核缓冲 → 反序列化」的话，光内存带宽就要付出数倍读写——<strong>不是「慢一点」，是根本装不下</strong>。零拷贝（zero-copy——数据不从一块内存搬到另一块，大家共用同一份）的做法是发布方直接在共享内存池里<strong>就地构造</strong>数据，发布时只传偏移，订阅方拿到同一块物理内存的只读视图，数据全链路只存在一份。</p>
 
   <p>代价有三条要在设计阶段就认下来：<strong>故障隔离变差</strong>——共享内存是跨进程故障传播的唯一通道，一个写坏的发布方能污染所有订阅方看到的数据；<strong>内存池要实测调参</strong>——池设小了在峰值丢数据、设大了白占几百兆；<strong>数据类型受严格限制</strong>——不能放指针（两个进程映射地址不同），也不能放 <code>std::vector</code>/<code>std::string</code>，必须用定长或基于相对偏移的容器。而且它<strong>不跨 ECU</strong>。</p>
 
@@ -2079,7 +2079,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
   }]
 }</pre>
 
-  <p>交叉编译有两处硬约束：<strong><code>CMAKE_SYSROOT</code> 必须指向目标板的根文件系统镜像</strong>，否则会链到开发机的 glibc 上、编译通过而上板即报符号找不到；<strong>编译选项要与 AP 栈完全一致</strong>，理由见下一节的 ABI。部署时也别只推二进制——清单不跟着更新，EM 用的还是旧配置。</p>
+  <p>交叉编译（在开发用的 x86 电脑上编译出车端 ARM 芯片能运行的程序）有两处硬约束：<strong><code>CMAKE_SYSROOT</code> 必须指向目标板的根文件系统镜像</strong>，否则会链到开发机的 glibc（Linux 的 C 标准库）上、编译通过而上板即报符号找不到；<strong>编译选项要与 AP 栈完全一致</strong>，理由见下一节的 ABI（Application Binary Interface——二进制层面的调用约定，编译产物若按不同约定生成，互相调用就会崩）。部署时也别只推二进制——清单不跟着更新，EM 用的还是旧配置。</p>
 
   <div class="box danger"><strong>排障顺序错了会浪费很多时间</strong>：先确认进程被拉起且状态是 kRunning（EM 的问题吗）→ 再看服务发现是否成功（<code>ara::com</code> 或网络配置的问题吗）→ 最后才怀疑业务逻辑。另外<strong>断点会把实时性彻底破坏</strong>：你停在断点上的那几秒，PHM 的存活监督会超时、SM 可能据此判定故障并把进程停掉。调试期间要么临时放宽 PHM 配置，要么改用非侵入手段（结构化日志、打点、<code>perf</code>）。</div>
 
@@ -2117,7 +2117,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>异常与 RTTI：现实情况比「一律禁用」复杂</h4>
 
-  <p>常见说法是「车载 C++ 一律禁用异常和 RTTI」，更准确的描述有三条。<strong>禁用的动机是可论证性而不是性能</strong>：异常的传播路径难以静态分析，最坏执行时间给不出上界。<strong><code>ara::core::Result</code> 正是为此存在。</strong>但<strong>完全禁用往往做不到</strong>——标准库分配失败会抛、移植进来的第三方库常依赖异常，所以务实做法是<strong>分层</strong>：安全相关组件严格禁用并做静态分析，其余组件允许使用但<strong>不得让异常越过组件边界</strong>，边界上一律转成 <code>Result</code>。</p>
+  <p>常见说法是「车载 C++ 一律禁用异常和 RTTI（Run-Time Type Information，运行时类型信息——<code>dynamic_cast</code> 这类「运行期识别对象真实类型」的能力依赖它）」，更准确的描述有三条。<strong>禁用的动机是可论证性而不是性能</strong>：异常的传播路径难以静态分析，最坏执行时间给不出上界。<strong><code>ara::core::Result</code> 正是为此存在。</strong>但<strong>完全禁用往往做不到</strong>——标准库分配失败会抛、移植进来的第三方库常依赖异常，所以务实做法是<strong>分层</strong>：安全相关组件严格禁用并做静态分析，其余组件允许使用但<strong>不得让异常越过组件边界</strong>，边界上一律转成 <code>Result</code>。</p>
 
   <div class="box star">被问「为什么 AP 用 <code>Result</code> 而不是异常」，标准答案是「安全论证要求最坏执行时间可界定」。加分的两条：<strong>它同时解决了 ABI 问题</strong>（跨预编译库传播异常本身就很脆弱），<strong>以及它让错误处理成为类型系统的一部分</strong>——「不检查 <code>HasValue()</code> 就拿 <code>Value()</code>」能被静态分析查出来，而「忘记 catch」查不出来。</div>
 
@@ -2149,7 +2149,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h3 id="s9-1">ISO 26262 + AP</h3>
 
-  <p>先把话说清楚：<strong>AP 规范是面向「可用于安全相关系统」设计的，但这不等于「在 AP 上做高 ASIL 很容易」。</strong>恰恰相反，AP 的每一个让开发变舒服的特性，都让安全论证变难。这是本章的核心矛盾。</p>
+  <p>先把话说清楚：<strong>AP 规范是面向「可用于安全相关系统」设计的，但这不等于「在 AP 上做高 ASIL 很容易」。</strong>ASIL（Automotive Safety Integrity Level，汽车安全完整性等级）从 QM（Quality Management——没有安全等级要求，出了问题算质量问题、不算安全事故）到 A、B、C、D，D 是最高级；等级越高，你要拿出的「不会出危险」的证据就越多。恰恰相反，AP 的每一个让开发变舒服的特性，都让安全论证变难。这是本章的核心矛盾。</p>
 
   <table>
     <thead><tr><th>AP 的特性</th><th>它给安全论证带来的困难</th><th>为什么 CP 没这个问题</th></tr></thead>
@@ -2189,7 +2189,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h3 id="s9-2">E2E Protection：它到底解决什么问题</h3>
 
-  <p>E2E 保护常被误解成「加个 CRC 防止传输出错」。底层以太网本来就有 CRC，而它保护的只是<strong>单段链路的电气传输</strong>；E2E 的目标是在<strong>发送方的应用逻辑与接收方的应用逻辑之间</strong>建立信任，覆盖中间整条通路——序列化代码、中间件、协议栈、驱动、交换机、网关转发、反序列化。<strong>这些环节里任何一个的软件缺陷，底层 CRC 都发现不了</strong>，因为数据是在 CRC 计算之后、或校验之后才被搞坏的。</p>
+  <p>E2E（End-to-End，端到端）保护常被误解成「加个 CRC 防止传输出错」。CRC（循环冗余校验——给数据算一个「指纹」，接收方重算一遍对不上，就说明数据在传输中坏了）底层以太网本来就有，而它保护的只是<strong>单段链路的电气传输</strong>；E2E 的目标是在<strong>发送方的应用逻辑与接收方的应用逻辑之间</strong>建立信任，覆盖中间整条通路——序列化代码、中间件、协议栈、驱动、交换机、网关转发、反序列化。<strong>这些环节里任何一个的软件缺陷，底层 CRC 都发现不了</strong>，因为数据是在 CRC 计算之后、或校验之后才被搞坏的。</p>
 
   <div class="def"><strong>E2E 保护</strong>：由<strong>发送方的应用层</strong>在数据上附加保护信息（校验码 + 序列计数器 + 数据标识），由<strong>接收方的应用层</strong>校验。保护范围是「应用到应用」，中间所有环节都在被保护的区间内——这就是 End-to-End 的含义。</div>
 
@@ -2214,7 +2214,7 @@ std::atomic&lt;<span class="kw">bool</span>&gt; g_terminate{<span class="kw">fal
 
   <h4>Secure Onboard Communication（SecOC）</h4>
 
-  <p>E2E 防的是<strong>随机故障</strong>，SecOC 防的是<strong>主动攻击</strong>。两者机制相似（都在载荷上附加校验信息）但目标不同，因此不能互相替代：CRC 是公开算法，攻击者可以伪造一份 CRC 正确的报文；SecOC 用带密钥的消息认证码（MAC），没有密钥就伪造不出来。</p>
+  <p>E2E 防的是<strong>随机故障</strong>，SecOC（Secure Onboard Communication，AUTOSAR 定义的防攻击通信机制）防的是<strong>主动攻击</strong>。两者机制相似（都在载荷上附加校验信息）但目标不同，因此不能互相替代：CRC 是公开算法，攻击者可以伪造一份 CRC 正确的报文；SecOC 用带密钥的消息认证码（MAC，Message Authentication Code——用只有通信双方知道的密钥算出来的「防伪印章」，没有密钥就算不出来），没有密钥就伪造不出来。</p>
 
   <table>
     <thead><tr><th></th><th>E2E 保护</th><th>SecOC</th></tr></thead>

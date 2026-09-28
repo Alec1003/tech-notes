@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DetNet 与跨域确定性 · RFC 8655 三平面 / MPLS 与 IPv6 数据平面 / PREOF / CQF 与 ATS / TSN 与 5G URLLC 拼接</title>
-<meta name="description" content="DetNet 与跨域确定性：TSN 在一个二层域内能把抖动压到微秒级，但机器人的数据要跨过路由器、跨过运营商网络、跨过无线空口才能到云端调度中心—— TSN 一旦出了广播域就失效了。IETF 的 DetNet 把同一套思路搬到 IP/MPLS 层，而 3GPP 的 URLLC 负责空口那一段">
+<meta name="description" content="TSN 只能保证一个局域网内的确定性，机器人数据一出路由器就失效。这篇用白话讲 DetNet（RFC 8655）如何在 IP/MPLS 网络做到有界时延：MPLS 与 IPv6 两条数据平面、PREOF 冗余、CQF 排队，以及与 5G URLLC 拼成端到端链路">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/detnet_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/detnet_guide.html">
 <meta property="og:title" content="DetNet 与跨域确定性 · RFC 8655 三平面 / MPLS 与 IPv6 数据平面 / PREOF / CQF 与 ATS / TSN 与 5G URLLC 拼接">
-<meta property="og:description" content="DetNet 与跨域确定性：TSN 在一个二层域内能把抖动压到微秒级，但机器人的数据要跨过路由器、跨过运营商网络、跨过无线空口才能到云端调度中心—— TSN 一旦出了广播域就失效了。IETF 的 DetNet 把同一套思路搬到 IP/MPLS 层，而 3GPP 的 URLLC 负责空口那一段">
+<meta property="og:description" content="TSN 只能保证一个局域网内的确定性，机器人数据一出路由器就失效。这篇用白话讲 DetNet（RFC 8655）如何在 IP/MPLS 网络做到有界时延：MPLS 与 IPv6 两条数据平面、PREOF 冗余、CQF 排队，以及与 5G URLLC 拼成端到端链路">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="DetNet 与跨域确定性 · RFC 8655 三平面 / MPLS 与 IPv6 数据平面 / PREOF / CQF 与 ATS / TSN 与 5G URLLC 拼接">
-<meta name="twitter:description" content="DetNet 与跨域确定性：TSN 在一个二层域内能把抖动压到微秒级，但机器人的数据要跨过路由器、跨过运营商网络、跨过无线空口才能到云端调度中心—— TSN 一旦出了广播域就失效了。IETF 的 DetNet 把同一套思路搬到 IP/MPLS 层，而 3GPP 的 URLLC 负责空口那一段">
+<meta name="twitter:description" content="TSN 只能保证一个局域网内的确定性，机器人数据一出路由器就失效。这篇用白话讲 DetNet（RFC 8655）如何在 IP/MPLS 网络做到有界时延：MPLS 与 IPv6 两条数据平面、PREOF 冗余、CQF 排队，以及与 5G URLLC 拼成端到端链路">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -147,7 +147,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="robotics_comm_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 40 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -183,11 +183,11 @@
   <header class="hero">
     <div class="badge">Robotics Comm · DetNet · IETF</div>
     <h1>DetNet 与跨域确定性</h1>
-    <p class="sub">TSN 在一个二层域内能把抖动压到微秒级，但机器人的数据要跨过路由器、跨过运营商网络、跨过无线空口才能到云端调度中心——<strong>TSN 一旦出了广播域就失效了</strong>。IETF 的 DetNet 把同一套思路搬到 IP/MPLS 层，而 3GPP 的 URLLC 负责空口那一段。这篇讲清三者各自的能力边界，以及怎么把它们拼成一条端到端可证明的时延链。</p>
+    <p class="sub">TSN（Time-Sensitive Networking，时间敏感网络：在以太网交换机上为关键数据预留固定时间窗的一套标准）在一个二层域内能把抖动（时延忽大忽小的波动幅度）压到微秒级，但机器人的数据要跨过路由器、跨过运营商网络、跨过无线空口（终端和基站之间的无线信道）才能到云端调度中心——<strong>TSN 一旦出了广播域（也就是跨过路由器）就失效了</strong>。IETF 的 DetNet（Deterministic Networking，确定性网络）把同一套思路搬到 IP/MPLS 层，而 3GPP 的 URLLC（5G 里专为保证「又快又稳」而设的超可靠低时延通信）负责空口那一段。这篇讲清三者各自的能力边界，以及怎么把它们拼成一条端到端可证明的时延链。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">前沿技术跟踪</span>
-      <span class="pill green">阅读时长 ~35 min</span>
+      <span class="pill green">阅读时长 ~40 min</span>
       <span class="pill amber">前置 TSN · IP 路由</span>
     </div>
     <div class="meta">
@@ -206,7 +206,7 @@
     <div class="t"><h2>TSN 的边界在哪</h2><p class="sub">为什么二层方案不够用</p></div>
   </div>
 
-  <p><a href="tsn_deep_dive.html">TSN</a> 的所有机制都建立在三个隐含前提上，而这三个前提<strong>在跨网段时全部失效</strong>：</p>
+  <p><a href="tsn_deep_dive.html">TSN</a> 的所有机制都建立在三个隐含前提上，而这三个前提<strong>在跨网段（中间隔着路由器、要靠 IP 层转发了）时全部失效</strong>：</p>
 
   <table>
     <thead><tr><th>TSN 的前提</th><th>为什么跨网段失效</th><th>DetNet 的应对</th></tr></thead>
@@ -219,7 +219,7 @@
 
   <div class="analogy">TSN 像<strong>一栋楼里的内部电梯调度</strong>：楼管知道每层的人流，可以精确安排「8:00:00 到 8:00:12 这台电梯只送 3 楼的人」。但人一出楼门上了城市道路，楼管就管不着了——<strong>城市交通有自己的信号灯系统和路径规划</strong>。DetNet 就是城市级的那套方案：它不重新发明「保证准时」这个目标，而是用适合城市道路的手段（专用车道 = MPLS 标签、限行时段 = 循环排队、双路线 = PREOF）达到同样效果。</div>
 
-  <div class="def"><strong>DetNet（Deterministic Networking）</strong>是 IETF 的工作组和标准族，核心架构文档是 <strong>RFC 8655</strong>（2019）。目标写得很直白：在 <strong>L2 以上的 IP/MPLS 网络</strong>中，为特定流提供<strong>有界时延、有界抖动、有界（近零）丢包</strong>，且<strong>不影响非 DetNet 流量的正常转发</strong>。注意它明确只覆盖<strong>「单一管理域」</strong>——跨运营商的端到端 DetNet 至今仍是未解决的开放问题，这一点在面试里提出来很有分量。</div>
+  <div class="def"><strong>DetNet（Deterministic Networking）</strong>是 IETF 的工作组和标准族，核心架构文档是 <strong>RFC 8655</strong>（2019）。目标写得很直白：在 <strong>L2（以太网交换机那一层）以上的 IP/MPLS 网络</strong>中，为特定流提供<strong>有界时延、有界抖动、有界（近零）丢包</strong>，且<strong>不影响非 DetNet 流量的正常转发</strong>。注意它明确只覆盖<strong>「单一管理域」</strong>（一家运营商或一家企业自己管到底的网络范围，出了这个范围协议就管不着了）——跨运营商的端到端 DetNet 至今仍是未解决的开放问题，这一点在面试里提出来很有分量。</div>
 
   <h3>1.1 三个「有界」的精确含义</h3>
 
@@ -234,7 +234,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>「近零丢包」这个措辞是刻意的。</strong>DetNet 不承诺绝对零丢包——物理层的比特错误、硬件故障、软件 bug 都无法被协议消除。它承诺的是<strong>「拥塞导致的丢包为零」</strong>：只要流量符合预留的到达曲线，缓冲区数学上不会溢出。剩下的随机丢包靠 PREOF 的多路径冗余降到可忽略。<strong>这个区分很重要</strong>：如果你的应用要求真正的零丢包，网络层只能帮到「概率极低」，剩下的必须由应用层的安全逻辑兜底（超时检测 + 安全停机）。</div>
+  <div class="box tip"><strong>「近零丢包」这个措辞是刻意的。</strong>DetNet 不承诺绝对零丢包——物理层的比特错误、硬件故障、软件 bug 都无法被协议消除。它承诺的是<strong>「拥塞导致的丢包为零」</strong>：只要流量符合预留的到达曲线（描述这条流最多多快发包的数学轮廓，比如每毫秒最多几个包、单包最大多少字节），缓冲区数学上不会溢出。剩下的随机丢包靠 PREOF（Packet Replication, Elimination and Ordering，复制/消除/排序三件套——把同一个包抄几份走不同路，收到后去掉重复的）的多路径冗余降到可忽略。<strong>这个区分很重要</strong>：如果你的应用要求真正的零丢包，网络层只能帮到「概率极低」，剩下的必须由应用层的安全逻辑兜底（超时检测 + 安全停机）。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -244,7 +244,7 @@
     <div class="t"><h2>RFC 8655 架构：三平面两子层</h2><p class="sub">DetNet 的分层模型</p></div>
   </div>
 
-  <p>RFC 8655 把 DetNet 拆成<strong>三个平面</strong>（数据 / 控制 / 管理），并把数据平面进一步分成<strong>两个子层</strong>。这个分层不是学术洁癖——它决定了「哪些功能必须在哪些设备上实现」，是选型和排障时的地图。</p>
+  <p>RFC 8655 把 DetNet 拆成<strong>三个平面</strong>（plane，按职责切成的三块：数据平面是真正搬运数据包的转发逻辑，控制平面负责算路径和下发配置，管理平面负责监控与运维），并把数据平面进一步分成<strong>两个子层</strong>。这个分层不是学术洁癖——它决定了「哪些功能必须在哪些设备上实现」，是选型和排障时的地图。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 720 300" role="img" aria-label="DetNet 三平面与数据平面两个子层">
@@ -319,7 +319,7 @@
     </tbody>
   </table>
 
-  <div class="note"><strong>DetNet 刻意复用了 TSN 的排队机制，只替换了「流怎么标识」和「路径怎么定」。</strong>这个设计决定意味着：<strong>芯片厂商的投入可以共享</strong>——一颗支持 CQF 的交换芯片，配上 L2 转发就是 TSN 交换机，配上 MPLS/IPv6 转发就是 DetNet 路由器。所以不要把 TSN 和 DetNet 当成竞争技术去比较优劣，<strong>它们是同一套排队理论在不同转发平面上的两次落地</strong>。面试里这么答，比逐条对比参数更能体现理解深度。</div>
+  <div class="note"><strong>DetNet 刻意复用了 TSN 的排队机制，只替换了「流怎么标识」和「路径怎么定」。</strong>这个设计决定意味着：<strong>芯片厂商的投入可以共享</strong>——一颗支持 CQF（让每个转发节点恰好延迟一个固定周期、从而抖动能精确算出来的排队机制，§5 详解）的交换芯片，配上 L2 转发就是 TSN 交换机，配上 MPLS/IPv6 转发就是 DetNet 路由器。所以不要把 TSN 和 DetNet 当成竞争技术去比较优劣，<strong>它们是同一套排队理论在不同转发平面上的两次落地</strong>。面试里这么答，比逐条对比参数更能体现理解深度。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -332,7 +332,7 @@
 
   <h3>3.1 DetNet over MPLS（RFC 8964）</h3>
 
-  <p>用 MPLS 标签栈天然表达「显式路径 + 流标识」，这是运营商网络的既有能力，改造成本最低。</p>
+  <p>用 MPLS（Multiprotocol Label Switching，多协议标签交换——给每个包贴一层短标签，路由器看标签就直接转发、不用逐跳查路由表，是运营商骨干网的基础技术）标签栈天然表达「显式路径」（数据包走哪条路由是提前指定好的，而不是路由协议现场自己挑）和「流标识」（网络靠什么认出『这是哪一条流』——同一源头到同一目的地的一串包）。这是运营商网络的既有能力，改造成本最低。</p>
 
 <pre><span class="cm">── DetNet over MPLS 封装栈（自外向内）──────────</span>
 ┌──────────────────────┐
@@ -370,7 +370,7 @@
     </tbody>
   </table>
 
-  <div class="warn"><strong>IPv6 方案的致命弱点是「流标识依赖可见的五元组」。</strong>机器人到云端的链路上，只要中间有 NAT、有 IPsec 隧道、或者应用用了 QUIC（端口在加密层内），<strong>路由器就认不出这是哪条 DetNet 流</strong>，所有保证瞬间失效。实践上的对策：① 在<strong>进入 DetNet 域的边缘</strong>做一次流分类，然后在域内改用 <strong>MPLS 标签或 SRv6 SID</strong> 承载身份；② 如果必须端到端 IP，那就<strong>把 DetNet 流量放在隧道外层</strong>，用外层的 IPv6 头和 Flow Label 做标识。这也是为什么运营商级部署几乎都走 MPLS/SRv6 路线。</div>
+  <div class="warn"><strong>IPv6 方案的致命弱点是「流标识依赖可见的五元组」。</strong>五元组就是 IP 头里用来认流的那五个字段：源地址、目的地址、协议号、源端口、目的端口。机器人到云端的链路上，只要中间有 NAT（把内网私有地址转换成公网地址的设备，转换之后原始的地址端口信息就被改写了）、有 IPsec 隧道（把整个 IP 包加密后再套一层新头的 VPN 技术）、或者应用用了 QUIC（一种全程加密的传输协议，端口信息藏在加密层里外面看不见），<strong>路由器就认不出这是哪条 DetNet 流</strong>，所有保证瞬间失效。实践上的对策：① 在<strong>进入 DetNet 域的边缘</strong>做一次流分类，然后在域内改用 <strong>MPLS 标签或 SRv6 SID</strong>（SRv6 是用 IPv6 地址本身来编码路径的技术，SID 就是路径上每一跳的指令地址）承载身份；② 如果必须端到端 IP，那就<strong>把 DetNet 流量放在隧道外层</strong>，用外层的 IPv6 头和 Flow Label 做标识。这也是为什么运营商级部署几乎都走 MPLS/SRv6 路线。</div>
 
   <h3>3.3 两条路线的对比</h3>
 
@@ -421,8 +421,8 @@
 
   <div class="preof">
     <div class="p-rep"><h5>PRF · Replication</h5><p>在入口或分支点把包复制成 N 份，打上<strong>相同的序号</strong>，分别送入不同路径。</p></div>
-    <div><h5>PEF · Elimination</h5><p>在汇聚点按序号窗口丢弃重复副本，只放行第一个到达的。</p></div>
-    <div class="p-ord"><h5>POF · Ordering</h5><p><strong>TSN 的 FRER 没有这一项。</strong>把乱序的包重排成原始顺序后再交付。</p></div>
+    <div><h5>PEF · Elimination</h5><p>在汇聚点按序号窗口（记录「最近收到过哪些序号」的一小块内存，重复的直接丢）丢弃重复副本，只放行第一个到达的。</p></div>
+    <div class="p-ord"><h5>POF · Ordering</h5><p><strong>TSN 的 FRER（802.1CB 定义的二层版复制/消除机制，思路和 PREOF 同源）没有这一项。</strong>把乱序的包重排成原始顺序后再交付。</p></div>
   </div>
 
   <h3>4.1 为什么 DetNet 需要排序而 TSN 不需要</h3>
@@ -430,8 +430,8 @@
   <p>这是个很好的面试切入点，答案在<strong>两者的网络特性差异</strong>：</p>
 
   <ul>
-    <li><strong>TSN 域内路径极短且对称</strong>。两条冗余路径通常都在同一个机柜或同一辆车里，跳数相同、线长相近，<strong>时延差在微秒级</strong>，乱序几乎不发生。所以 FRER 只做复制和消除，接收端的位图窗口顺手就把少量乱序处理了。</li>
-    <li><strong>DetNet 跨越 L3 网络</strong>。两条路径可能一条走 5 跳、一条走 8 跳，<strong>时延差可达毫秒级</strong>；再加上 ECMP 哈希、链路聚合的成员切换，乱序是常态。如果不重排就交给应用，TCP 会误判丢包触发快速重传，UDP 应用的状态机会直接乱掉。</li>
+    <li><strong>TSN 域内路径极短且对称</strong>。两条冗余路径通常都在同一个机柜或同一辆车里，跳数相同、线长相近，<strong>时延差在微秒级</strong>，乱序几乎不发生。所以 FRER 只做复制和消除，接收端的位图窗口（一张「哪些序号已收到」的勾选表，靠它去重、顺带容纳少量乱序）顺手就把少量乱序处理了。</li>
+    <li><strong>DetNet 跨越 L3（IP 路由器那一层）网络</strong>。两条路径可能一条走 5 跳、一条走 8 跳，<strong>时延差可达毫秒级</strong>；再加上 ECMP（等价多路径：路由器把流量按哈希摊到几条开销相同的链路上，同一股流的包可能被分到不同链路）哈希、链路聚合的成员切换，乱序是常态。如果不重排就交给应用，TCP 会误判丢包触发快速重传，UDP 应用的状态机会直接乱掉。</li>
   </ul>
 
   <div class="analogy">POF 像<strong>快递驿站的分拣台</strong>：同一批货走了顺丰和邮政，两家到货时间不同，第 3 件可能比第 2 件先到。驿站不会按到货顺序直接给你，而是<strong>等齐一小段再按订单号排好</strong>。代价是「等齐」这个动作本身要花时间——排序缓冲区越大，能纠正的乱序越严重，但<strong>引入的延迟也越大</strong>。这个取舍是 POF 的全部工程内容。</div>
@@ -451,7 +451,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>判断依据是故障树，不是均匀撒开。</strong>把复制加在<strong>失效概率最高</strong>的环节：机器人上最容易坏的是<strong>经过旋转关节的滑环</strong>和<strong>拖链里反复弯折的线缆</strong>，这两处的年故障率可能比机柜内固定链路高两三个数量级。在这两段做段内保护，成本只是一小段的带宽翻倍，收益却覆盖了绝大部分故障概率。反过来，给机柜内两台交换机之间的固定短链路做冗余，基本是浪费——除非它们共用了同一个电源。</div>
+  <div class="box tip"><strong>判断依据是故障树，不是均匀撒开。</strong>把复制加在<strong>失效概率最高</strong>的环节：机器人上最容易坏的是<strong>经过旋转关节的滑环</strong>（让关节能无限旋转、同时还能通电通信号的旋转连接器）和<strong>拖链里反复弯折的线缆</strong>（拖链是护住来回运动线缆的链状槽），这两处的年故障率可能比机柜内固定链路高两三个数量级。在这两段做段内保护，成本只是一小段的带宽翻倍，收益却覆盖了绝大部分故障概率。反过来，给机柜内两台交换机之间的固定短链路做冗余，基本是浪费——除非它们共用了同一个电源。</div>
 </section>
 
 <!-- ================================================================ §5 -->
@@ -505,14 +505,14 @@
     </div>
   </div>
 
-  <div class="box tip"><strong>这个 demo 演示的正是 CQF 最反直觉的一点</strong>：包在「周期开头」到达和在「周期末尾」到达，<strong>端到端时延差恰好是一个周期</strong>——而且这个差值<strong>不随跳数累积</strong>。因为从第二跳开始，包总是在周期边界被整齐地放行，相位已经被「对齐」了。所以 CQF 的抖动恒为一个周期，不管走多少跳。这个性质让容量规划变得极其简单：<strong>要满足 500 µs 的端到端预算、路径 5 跳，那周期就得 ≤ 100 µs</strong>，一步算完。</div>
+  <div class="box tip"><strong>这个 demo 演示的正是 CQF 最反直觉的一点</strong>：包在「周期开头」到达和在「周期末尾」到达，<strong>端到端时延差恰好是一个周期</strong>——而且这个差值<strong>不随跳数累积</strong>。因为从第二跳开始，包总是在周期边界被整齐地放行，相位（包到达时刻落在周期内的相对位置）已经被「对齐」了。所以 CQF 的抖动恒为一个周期，不管走多少跳。这个性质让容量规划变得极其简单：<strong>要满足 500 µs 的端到端预算、路径 5 跳，那周期就得 ≤ 100 µs</strong>，一步算完。</div>
 
   <h3>5.2 周期怎么选</h3>
 
   <p>周期是 CQF 唯一的旋钮，但它同时被三个约束夹住：</p>
 
   <ul>
-    <li><strong>下界一：一个周期必须装得下这一跳所有 DetNet 流量。</strong>如果周期内到达的字节数超过一个周期能发出去的字节数，buffer 会持续增长直到溢出。所以 <code>周期 ≥ 该跳 DetNet 流量的总帧时 / 允许占用的带宽比例</code>。</li>
+    <li><strong>下界一：一个周期必须装得下这一跳所有 DetNet 流量。</strong>如果周期内到达的字节数超过一个周期能发出去的字节数，buffer 会持续增长直到溢出。所以 <code>周期 ≥ 该跳 DetNet 流量的总帧时 / 允许占用的带宽比例</code>（「帧时」指把这一跳要发的所有帧挨个发完所需的时间）。</li>
     <li><strong>下界二：周期必须远大于时间同步误差。</strong>如果各跳时钟差 10 µs 而周期只有 20 µs，周期边界就会错乱。经验值：<strong>周期 ≥ 同步误差的 10 倍以上</strong>。这直接把跨域 CQF 的周期下限抬到几十微秒到毫秒级。</li>
     <li><strong>上界：跳数 × 周期 ≤ 时延预算。</strong>这是应用给的硬约束。</li>
   </ul>
@@ -526,7 +526,7 @@
     <div class="t"><h2>资源预留与控制平面</h2><p class="sub">准入控制才是确定性的真正来源</p></div>
   </div>
 
-  <p>这一节讲的东西常被低估：<strong>所有排队机制的时延界都有一个前提——流量符合它声明的规格</strong>。如果谁都可以往 DetNet 队列里塞流量，再精妙的整形也算不出界。所以<strong>准入控制（admission control）是确定性的真正来源</strong>，排队机制只是执行手段。</p>
+  <p>这一节讲的东西常被低估：<strong>所有排队机制的时延界都有一个前提——流量符合它声明的规格</strong>。如果谁都可以往 DetNet 队列里塞流量，再精妙的整形（让包按规定的节奏出门、不许突然扎堆的机制）也算不出界。所以<strong>准入控制（admission control——先算清楚网络还接不接得住，接得住才放行新流的闸门机制）是确定性的真正来源</strong>，排队机制只是执行手段。</p>
 
   <h3>6.1 流规格：RFC 9016 的 YANG 模型</h3>
 
@@ -568,7 +568,7 @@ traffic-requirements:
 
   <div class="box tip"><strong>机器人场景其实很适合「静态配置 + 构型切换」这种务实方案。</strong>一台机器人的传感器和执行器是<strong>固定的</strong>，流集合在出厂时就确定了；不同工作模式（示教 / 高速运行 / 诊断上传）的流量特征不同，但模式数量有限（三五种）。所以完全可以<strong>离线为每种构型算好一套完整配置</strong>，运行时按模式切换整套参数，而不是搭一个动态准入控制器。这样既拿到了确定性，又避开了控制器的复杂度和单点风险。<strong>切换时用「预约未来时刻统一生效」</strong>（TSN 的 <code>admin-base-time</code> 思路），避免半生效状态。</div>
 
-  <div class="danger"><strong>不要漏掉「流的生命周期管理」。</strong>预留了资源的流如果异常终止（节点掉电、进程崩溃）而没有释放，资源就<strong>泄漏</strong>了——几次重启之后网络会拒绝接纳本该能接纳的流，现象是「重启几次就起不来了」。必须有两道防线：① <strong>软状态 + 保活</strong>，流预留带超时，Talker 定期刷新，不刷新自动回收；② <strong>启动时全量对账</strong>，控制器重启或节点重连时重新同步「谁预留了什么」，把孤儿预留清掉。这和分布式系统里租约（lease）的思路完全一致。</div>
+  <div class="danger"><strong>不要漏掉「流的生命周期管理」。</strong>预留了资源的流如果异常终止（节点掉电、进程崩溃）而没有释放，资源就<strong>泄漏</strong>了——几次重启之后网络会拒绝接纳本该能接纳的流，现象是「重启几次就起不来了」。必须有两道防线：① <strong>软状态 + 保活</strong>——软状态指预留信息自带有效期、不是一次写死永久生效，Talker（声明要发流的发送端，比如一个传感器节点）定期刷新续期，不刷新就自动回收；② <strong>启动时全量对账</strong>，控制器重启或节点重连时重新同步「谁预留了什么」，把孤儿预留（发送方早就没了、资源却还挂着的那份预留）清掉。这和分布式系统里租约（lease）的思路完全一致。</div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -642,7 +642,7 @@ traffic-requirements:
   <div class="layers">
     <div class="l-l2">
       <h5>TSN（IEEE 802.1）— 一个二层广播域内</h5>
-      <p>能力上限：抖动<strong>亚微秒到微秒级</strong>，时延界可精确到帧时粒度。边界：<strong>路由器一跳都跨不过去</strong>（gPTP 不被转发、VLAN/PCP 被剥离）。适用：机器人本体内部、单个机柜、单辆车、一个车间的有线骨干。</p>
+      <p>能力上限：抖动<strong>亚微秒到微秒级</strong>，时延界可精确到帧时粒度。边界：<strong>路由器一跳都跨不过去</strong>（gPTP——TSN 靠它给全网对齐时钟的二层时间同步协议——不被路由器转发、VLAN/PCP 标记一出域就被剥离）。适用：机器人本体内部、单个机柜、单辆车、一个车间的有线骨干。</p>
     </div>
     <div>
       <h5>DetNet（IETF）— 一个 IP/MPLS 管理域内</h5>
@@ -650,11 +650,11 @@ traffic-requirements:
     </div>
     <div class="l-air">
       <h5>5G URLLC（3GPP）— 空口那一段</h5>
-      <p>能力上限：单向<strong>1 ms 空口</strong>（理论）、可靠性 99.999%，实际端到端 5–20 ms。边界：受<strong>numerology、TDD 配比、调度授权</strong>物理限制（细节见 <a href="../communication/nr_phy_mac_deep_dive.html">NR 物理层与 MAC</a>）；容量随用户数下降。适用：移动机器人、AGV、不便布线的场景。</p>
+      <p>能力上限：单向<strong>1 ms 空口</strong>（理论）、可靠性 99.999%，实际端到端 5–20 ms。边界：受<strong>numerology（5G 波形的基础参数，决定空口调度的最小时间颗粒度）、TDD 配比（同一根天线上收和发分时使用的比例）、调度授权（基站每次允许终端发多少数据的指令）</strong>物理限制（细节见 <a href="../communication/nr_phy_mac_deep_dive.html">NR 物理层与 MAC</a>）；容量随用户数下降。适用：移动机器人、AGV（自动导引搬运车）、不便布线的场景。</p>
     </div>
     <div class="l-os">
       <h5>端侧实时 OS — 帧进出网络之前的那一段</h5>
-      <p>能力上限：PREEMPT_RT 下 <strong>数十微秒</strong>调度抖动；裸 RTOS 可到微秒级。边界：<strong>普通 Linux 是数百微秒到毫秒</strong>，会直接吃掉整个网络预算。适用：所有场景——<strong>这一段最常被忽略却最常成为瓶颈</strong>，详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
+      <p>能力上限：PREEMPT_RT（给 Linux 内核打实时补丁、把调度延迟压到数十微秒级的改造版本）下 <strong>数十微秒</strong>调度抖动；裸 RTOS（不带通用系统负担的瘦实时操作系统）可到微秒级。边界：<strong>普通 Linux 是数百微秒到毫秒</strong>，会直接吃掉整个网络预算。适用：所有场景——<strong>这一段最常被忽略却最常成为瓶颈</strong>，详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
     </div>
   </div>
 
@@ -663,12 +663,12 @@ traffic-requirements:
   <p>3GPP 从 Release 16 起把<strong>整个 5G 系统建模成一个 TSN 网桥</strong>（TSN Bridge），这是跨域拼接里最巧妙的一步设计：</p>
 
   <ul>
-    <li><strong>对 TSN 侧隐藏 5G 的复杂性</strong>。TSN 的 CNC 看到的只是「一个有确定转发延迟的网桥」，它按正常的 802.1Qcc 流程给这个桥下发配置，不需要懂 5QI、PDU 会话、QoS Flow 这些概念。</li>
-    <li><strong>两侧的翻译由适配功能完成</strong>。设备侧是 <strong>DS-TT</strong>（Device-side TSN Translator），网络侧是 <strong>NW-TT</strong>（Network-side TSN Translator）。它们负责把 TSN 的流规格翻译成 5G 的 QoS Flow 参数，并把 gPTP 报文透传/桥接过 5G 系统。</li>
-    <li><strong>时间同步跨界靠 gPTP 透传</strong>。DS-TT 和 NW-TT 之间用 5G 自己的空口定时做参考，把两侧的 gPTP 域桥接起来，使得 5G 段的驻留时间可以像 TSN 交换机一样被如实上报。</li>
+    <li><strong>对 TSN 侧隐藏 5G 的复杂性</strong>。TSN 的 CNC（TSN 网络里集中计算流预留、统一下发配置的中心控制器）看到的只是「一个有确定转发延迟的网桥」，它按正常的 802.1Qcc 流程给这个桥下发配置，不需要懂 5QI（5G 给每类流量定 QoS 等级的编号）、PDU 会话（终端到 5G 核心网之间的一条数据通道）、QoS Flow（5G 内部按 QoS 等级划分的流）这些概念。</li>
+    <li><strong>两侧的翻译由适配功能完成</strong>。设备侧是 <strong>DS-TT</strong>（Device-side TSN Translator，装在 5G 终端上、替 5G 系统「讲 TSN 语言」的翻译器），网络侧是 <strong>NW-TT</strong>（Network-side TSN Translator，装在 5G 网络侧的对应翻译器）。它们负责把 TSN 的流规格翻译成 5G 的 QoS Flow 参数，并把 gPTP 报文透传/桥接过 5G 系统。</li>
+    <li><strong>时间同步跨界靠 gPTP 透传</strong>。DS-TT 和 NW-TT 之间用 5G 自己的空口定时做参考，把两侧的 gPTP 域桥接起来，使得 5G 段的驻留时间（包在设备里停留等待被转发出去的时间）可以像 TSN 交换机一样被如实上报。</li>
   </ul>
 
-  <div class="warn"><strong>5G-TSN bridge 的时延界比 TSN 交换机差两三个数量级，别抱不切实际的期待。</strong>一个 TSN 交换机的驻留时间是几微秒且抖动极小；5G 系统即使配了 URLLC，<strong>驻留时间也是毫秒级且抖动显著</strong>（受调度授权、HARQ 重传、切换影响）。所以正确的架构不是「用 5G 延长 TSN 域」，而是<strong>「把硬实时闭环完整放在 TSN/有线域内，5G 只承载可容忍毫秒级抖动的流量」</strong>。典型分法：关节伺服闭环留在本体（TSN，µs 级），路径规划和协同决策走 5G（ms 级），全局调度和数据回传走 IP 网络（100 ms 级，无保证）。</div>
+  <div class="warn"><strong>5G-TSN bridge 的时延界比 TSN 交换机差两三个数量级，别抱不切实际的期待。</strong>一个 TSN 交换机的驻留时间是几微秒且抖动极小；5G 系统即使配了 URLLC，<strong>驻留时间也是毫秒级且抖动显著</strong>（受调度授权的节奏、HARQ 重传——5G 空口「边收边校验、错了马上重发」的快速重传机制、以及移动切换的影响）。所以正确的架构不是「用 5G 延长 TSN 域」，而是<strong>「把硬实时闭环完整放在 TSN/有线域内，5G 只承载可容忍毫秒级抖动的流量」</strong>。典型分法：关节伺服闭环留在本体（TSN，µs 级），路径规划和协同决策走 5G（ms 级），全局调度和数据回传走 IP 网络（100 ms 级，无保证）。</div>
 
   <h3>7.3 拼接处最容易断的两条链</h3>
 
@@ -680,7 +680,7 @@ traffic-requirements:
     </tbody>
   </table>
 
-  <div class="box tip"><strong>QoS 标记断链是现场部署最高频的问题</strong>，因为它<strong>不报错</strong>——包照样通，只是没有优先级了。排查方法：在每一跳的入口和出口各抓一次包，比对 PCP/DSCP 字段。常见元凶：运营商网络<strong>默认清零 DSCP</strong>（防止客户滥用高优先级）、VLAN 剥离时丢掉 PCP、隧道封装时<strong>没有把内层 DSCP 拷到外层</strong>。这最后一条尤其隐蔽：包在隧道里带着正确的 DSCP，但中间设备只看外层——所以隧道配置必须显式开启 DSCP 拷贝（<code>qos-mode pipe</code> vs <code>uniform</code> 的选择）。</div>
+  <div class="box tip"><strong>QoS 标记断链是现场部署最高频的问题</strong>，因为它<strong>不报错</strong>——包照样通，只是没有优先级了。排查方法：在每一跳的入口和出口各抓一次包，比对 PCP/DSCP 字段。常见元凶：运营商网络<strong>默认清零 DSCP</strong>（DSCP 是 IP 头里标记服务优先级的字段；清零是为了防止客户滥用高优先级）、VLAN（二层网络做流量隔离的虚拟局域网标签）剥离时丢掉 PCP（VLAN 头里 3 bit 的优先级字段）、隧道封装时<strong>没有把内层 DSCP 拷到外层</strong>。这最后一条尤其隐蔽：包在隧道里带着正确的 DSCP，但中间设备只看外层——所以隧道配置必须显式开启 DSCP 拷贝（<code>qos-mode pipe</code> vs <code>uniform</code> 的选择）。</div>
 </section>
 
 <!-- ================================================================ §8 -->

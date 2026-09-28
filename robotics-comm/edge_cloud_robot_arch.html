@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>端边云一体化通信架构 · 四层拓扑设计 / 频谱资源分配与信道规划 / QoS 端到端映射链 / 容灾冗余与降级矩阵 / 架构文档模板与 ADR</title>
-<meta name="description" content="端边云一体化通信架构：前面几篇讲的是 单点技术： TSN 怎么配、 DDS 怎么调、 预算 怎么算。这篇把它们组装成一套 能写进架构文档、能过评审、能交付施工 的完整方案：四层拓扑怎么划、频谱怎么分、QoS 标记怎么在五种技术之间翻译不丢、容灾冗余放在哪、以及断网断电时系统按什么矩阵降级">
+<meta name="description" content="机器人通信架构怎么把 TSN、DDS 这些单点技术组装成一套能过评审、能交付的整体方案：端边云四层怎么划分、无线频谱怎么分、QoS 优先级标记怎么跨网络翻译不丢、冗余放在哪、断网断电时按什么矩阵降级，每个术语都配了白话解释">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/edge_cloud_robot_arch.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/edge_cloud_robot_arch.html">
 <meta property="og:title" content="端边云一体化通信架构 · 四层拓扑设计 / 频谱资源分配与信道规划 / QoS 端到端映射链 / 容灾冗余与降级矩阵 / 架构文档模板与 ADR">
-<meta property="og:description" content="端边云一体化通信架构：前面几篇讲的是 单点技术： TSN 怎么配、 DDS 怎么调、 预算 怎么算。这篇把它们组装成一套 能写进架构文档、能过评审、能交付施工 的完整方案：四层拓扑怎么划、频谱怎么分、QoS 标记怎么在五种技术之间翻译不丢、容灾冗余放在哪、以及断网断电时系统按什么矩阵降级">
+<meta property="og:description" content="机器人通信架构怎么把 TSN、DDS 这些单点技术组装成一套能过评审、能交付的整体方案：端边云四层怎么划分、无线频谱怎么分、QoS 优先级标记怎么跨网络翻译不丢、冗余放在哪、断网断电时按什么矩阵降级，每个术语都配了白话解释">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="端边云一体化通信架构 · 四层拓扑设计 / 频谱资源分配与信道规划 / QoS 端到端映射链 / 容灾冗余与降级矩阵 / 架构文档模板与 ADR">
-<meta name="twitter:description" content="端边云一体化通信架构：前面几篇讲的是 单点技术： TSN 怎么配、 DDS 怎么调、 预算 怎么算。这篇把它们组装成一套 能写进架构文档、能过评审、能交付施工 的完整方案：四层拓扑怎么划、频谱怎么分、QoS 标记怎么在五种技术之间翻译不丢、容灾冗余放在哪、以及断网断电时系统按什么矩阵降级">
+<meta name="twitter:description" content="机器人通信架构怎么把 TSN、DDS 这些单点技术组装成一套能过评审、能交付的整体方案：端边云四层怎么划分、无线频谱怎么分、QoS 优先级标记怎么跨网络翻译不丢、冗余放在哪、断网断电时按什么矩阵降级，每个术语都配了白话解释">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -197,9 +197,9 @@
     <div class="t"><h2>四层参考架构</h2><p class="sub">先定分层原则，再谈技术选型</p></div>
   </div>
 
-  <p>架构设计的第一个决定不是「用什么技术」，而是<strong>「哪些功能放在哪一层」</strong>。这个决定一旦错了，后面所有技术选型都在为它擦屁股。</p>
+  <p>架构设计的第一个决定不是「用什么技术」，而是<strong>「哪些功能放在哪一层」</strong>。先把四层的名字说清楚：端是机器人本体，边是厂房里就近部署的边缘机房或边缘节点，云是远程云平台；从 L1 端内（机身内）、L2 端间（机器人之间）到 L3 端边、L4 端云，离本体越远，允许的时延越宽，保证越弱。这个决定一旦错了，后面所有技术选型都在为它擦屁股。</p>
 
-  <div class="def"><strong>分层的唯一判据：这个控制回路断开 T 时间会有什么后果？</strong>后果越严重、T 越小，就必须放在越靠近本体的层。这条判据比「算力在哪」「数据在哪」都优先——因为算力可以搬，通信物理时延搬不动。具体地：断开 <strong>100 ms</strong> 会造成机械损坏或人身危险 → <strong>必须在端内闭环</strong>；断开 <strong>1 s</strong> 会造成任务失败但不危险 → 可以放边缘；断开 <strong>10 s</strong> 只影响效率 → 可以放云端。</div>
+  <div class="def"><strong>分层的唯一判据：这个控制回路（closed loop：机器人反复「读状态 → 算 → 出指令」、用实际结果自我修正的那圈循环）断开 T 时间会有什么后果？</strong>后果越严重、T 越小，就必须放在越靠近本体的层。这条判据比「算力在哪」「数据在哪」都优先——因为算力可以搬，通信物理时延搬不动。具体地：断开 <strong>100 ms</strong> 会造成机械损坏或人身危险 → <strong>必须在端内闭环</strong>；断开 <strong>1 s</strong> 会造成任务失败但不危险 → 可以放边缘；断开 <strong>10 s</strong> 只影响效率 → 可以放云端。</div>
 
   <figure class="fig">
     <svg viewBox="0 0 720 360" role="img" aria-label="端边云四层参考架构与各层职责">
@@ -227,20 +227,20 @@
       <path class="ln-a" d="M700 180 L 700 192"/>
       <path class="ln-a" d="M700 268 L 700 280"/>
     </svg>
-    <figcaption>四层参考架构：越往上时延预算越宽、保证越弱；安全关键回路必须完整位于 L1 之内。</figcaption>
+    <figcaption>四层参考架构：越往上时延预算（完成一次往返允许花的最大时间）越宽、保证越弱；安全关键回路必须完整位于 L1 之内。</figcaption>
   </figure>
 
   <h3>1.1 分层的三条硬规则</h3>
 
   <ul>
-    <li><strong>安全回路不跨层。</strong>急停、力矩限制、碰撞检测这些必须在 L1 内闭环，而且最好是<strong>硬件回路（STO，Safe Torque Off）</strong>而非软件回路——即使主控软件全崩，安全链路仍然有效。这是 <a href="../embedded-realtime/iso26262_engineering.html">功能安全</a>的基本要求。</li>
+    <li><strong>安全回路不跨层。</strong>急停、力矩限制、碰撞检测这些必须在 L1 内闭环，而且最好是<strong>硬件回路（STO，Safe Torque Off：一种直接切断电机出力能力的硬件安全功能）</strong>而非软件回路——即使主控软件全崩，安全链路仍然有效。这是 <a href="../embedded-realtime/iso26262_engineering.html">功能安全</a>（ISO 26262 这类标准的要求：安全机制不能以「软件正常工作」为前提）的基本要求。</li>
     <li><strong>每一层都要能在上层失联时独立工作。</strong>L1 失去 L2 时按最后的轨迹安全停止；L2 失去 L3 时按本地规划继续；L3 失去 L4 时按缓存的任务列表继续。<strong>任何一层的存活不依赖上层在线</strong>。</li>
     <li><strong>数据向上聚合，指令向下细化。</strong>L1 上报的是原始高频数据（本地过滤后），L4 下发的是粗粒度目标（去哪里、做什么），中间层负责翻译。<strong>不要让 L4 直接下发关节角度</strong>——那是把 L1 的职责推到了 L4。</li>
   </ul>
 
   <div class="analogy">四层架构像<strong>公司的管理层级</strong>：车间工人（L1）处理毫秒级的具体动作，班组长（L2）协调几个人配合，车间主任（L3）安排今天的生产计划，总部（L4）决定这个月生产什么。<strong>总部断联一个月，车间照样能按上个月的计划生产</strong>——这才是健康的组织。反过来，如果总部一断联工人就不知道该干什么，那是把决策全推到了最上层，任何通信中断都会瘫痪整个系统。</div>
 
-  <div class="danger"><strong>最常见的架构错误：为了「统一管理」把决策上移。</strong>「让云端统一调度所有机器人的动作」听起来先进，实际上要求端云链路具备确定性——<strong>而跨运营商网络物理上给不了</strong>（原因见 <a href="detnet_guide.html">DetNet §8</a>）。正确方向是<strong>智能下沉</strong>：云端只做全局优化和参数下发，本体保留完整的自主运行能力。<strong>评审架构时的第一个问题永远是「云端断联 10 分钟会发生什么」</strong>——答案必须是「继续安全工作」。</div>
+  <div class="danger"><strong>最常见的架构错误：为了「统一管理」把决策上移。</strong>「让云端统一调度所有机器人的动作」听起来先进，实际上要求端云链路具备确定性（deterministic：每次时延都有上限、最坏情况可预测可复现）——<strong>而跨运营商网络物理上给不了</strong>（原因见 <a href="detnet_guide.html">DetNet §8</a>）。正确方向是<strong>智能下沉</strong>：云端只做全局优化和参数下发，本体保留完整的自主运行能力。<strong>评审架构时的第一个问题永远是「云端断联 10 分钟会发生什么」</strong>——答案必须是「继续安全工作」。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -263,11 +263,11 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>拓扑深度直接受时间同步精度约束。</strong>802.1AS 规定 7 跳内累积误差 &lt; 1 µs，所以本体内的交换机层数是<strong>硬上限</strong>。这条约束经常在「为了省线束做成长链」时被违反——20 个关节串成一条 EtherCAT 链没问题（EtherCAT 有自己的分布式时钟机制），但如果是 TSN 交换机串 10 级，同步精度就崩了。<strong>设计时先画拓扑图数跳数，再选技术。</strong></div>
+  <div class="box tip"><strong>拓扑深度直接受时间同步精度约束。</strong>802.1AS（gPTP 的标准名：让全网设备对准同一块表的时间同步协议）规定 7 跳内（数据每经过一台交换机算一跳）累积误差 &lt; 1 µs，所以本体内的交换机层数是<strong>硬上限</strong>。这条约束经常在「为了省线束做成长链」时被违反——20 个关节串成一条 EtherCAT 链没问题（EtherCAT 有自己的分布式时钟机制），但如果是 TSN 交换机串 10 级，同步精度就崩了。<strong>设计时先画拓扑图数跳数，再选技术。</strong></div>
 
   <h3>2.2 无线覆盖与漫游</h3>
 
-  <p>移动机器人的拓扑核心问题是<strong>切换（handover / roaming）</strong>：从一个 AP/基站移动到另一个时的中断时长。</p>
+  <p>移动机器人的拓扑核心问题是<strong>切换（handover / roaming）</strong>：机器人从一个 AP（Access Point，无线接入点，就是提供 Wi-Fi 信号的热点设备）或基站移动到另一个时，连接要交班，这段交班造成的中断时长是移动场景的死穴。</p>
 
   <table>
     <thead><tr><th>技术</th><th>未优化的切换中断</th><th>优化手段</th><th>优化后</th></tr></thead>
@@ -278,7 +278,7 @@
     </tbody>
   </table>
 
-  <div class="warn"><strong>AP 密度不是「越多越好」。</strong>密度过高会导致<strong>同频干扰</strong>和<strong>频繁乒乓切换</strong>（机器人在两个 AP 边界反复来回，每次都触发一次切换中断）。规划原则：① 覆盖重叠区控制在 <strong>15%–25%</strong>，保证有切换余量但不过度；② 相邻 AP 用<strong>非重叠信道</strong>（2.4 GHz 只有 1/6/11 三个）；③ 调低 AP 发射功率而不是调高——功率越大覆盖越大，但<strong>干扰范围也越大且切换点越模糊</strong>；④ 设置合理的漫游触发阈值并加入<strong>滞回</strong>，避免乒乓。</div>
+  <div class="warn"><strong>AP 密度不是「越多越好」。</strong>密度过高会导致<strong>同频干扰</strong>和<strong>频繁乒乓切换</strong>（机器人在两个 AP 边界反复来回，每次都触发一次切换中断）。规划原则：① 覆盖重叠区控制在 <strong>15%–25%</strong>，保证有切换余量但不过度；② 相邻 AP 用<strong>非重叠信道</strong>（2.4 GHz 只有 1/6/11 三个）；③ 调低 AP 发射功率而不是调高——功率越大覆盖越大，但<strong>干扰范围也越大且切换点越模糊</strong>；④ 设置合理的漫游触发阈值并加入<strong>滞回</strong>（hysteresis：给触发条件加一段缓冲带，比如信号要比当前 AP 差出一截才切，避免在边界上反复横跳），避免乒乓。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -287,7 +287,7 @@
     <div class="t"><h2>频谱资源分配</h2><p class="sub">无线是共享介质，规划不好就是互相踩</p></div>
   </div>
 
-  <p>有线网络的带宽是<strong>独占</strong>的——你买了千兆口就有千兆。无线不是：<strong>频谱是共享的公共资源</strong>，你的吞吐取决于周围有多少人在用同一段频率。所以频谱规划是无线架构里最实质的工作。</p>
+  <p>有线网络的带宽是<strong>独占</strong>的——你买了千兆口就有千兆。无线不是：<strong>频谱（无线电的频率资源，Wi-Fi、蓝牙、5G 都得在某一段频率上收发）是共享的公共资源</strong>，你的吞吐（每秒实际传过去的数据量）取决于周围有多少人在用同一段频率。所以频谱规划是无线架构里最实质的工作。</p>
 
   <div class="analogy">频谱像<strong>会议室里的说话声</strong>：房间（频段）的总"声音容量"是固定的，人越多每个人能说的话越少。<strong>2.4 GHz 是那个所有人都挤在里面的大厅</strong>（Wi-Fi、蓝牙、微波炉、无线鼠标都在），5/6 GHz 是分了很多小隔间的楼层，而 <strong>UWB 是用极低音量但覆盖极宽频率的耳语</strong>——它不和别人争音量，靠"铺得极宽"来传信息。</div>
 
@@ -296,23 +296,23 @@
   <div class="bands">
     <div class="b-24">
       <h5>2.4 GHz（Wi-Fi 2/4，802.11b/g/n）—— 尽量别用</h5>
-      <p>只有 <strong>3 个不重叠信道</strong>（1/6/11），且与蓝牙、Zigbee、微波炉、无线摄像头共存。穿墙好但<strong>干扰严重且不可控</strong>。工业环境实测吞吐常常只有标称的 20%。<strong>结论：机器人通信不应把关键流量放在 2.4 GHz</strong>，最多用于低速遥测或作为最后的兜底链路。</p>
+      <p>只有 <strong>3 个不重叠信道</strong>（1/6/11），且与蓝牙、Zigbee（智能家居常见的低速无线协议）、微波炉、无线摄像头共存。穿墙好但<strong>干扰严重且不可控</strong>。工业环境实测吞吐常常只有标称的 20%。<strong>结论：机器人通信不应把关键流量放在 2.4 GHz</strong>，最多用于低速遥测（周期性上报的状态小数据，比如电量、温度）或作为最后的兜底链路。</p>
     </div>
     <div>
       <h5>5 GHz（Wi-Fi 5/6，802.11ac/ax）—— 主力频段</h5>
-      <p>信道多（20 MHz 带宽下可用 20+ 个），干扰远小于 2.4 GHz。注意 <strong>DFS 频段（5.25–5.35 / 5.47–5.725 GHz）</strong>：这些信道要做雷达检测，检测到气象雷达时<strong>必须立即腾空信道</strong>，会造成秒级中断。<strong>关键流量应避开 DFS 信道</strong>，只用非 DFS 的那几个（如 36–48、149–165，具体依地区法规）。</p>
+      <p>信道多（20 MHz 带宽下可用 20+ 个），干扰远小于 2.4 GHz。注意 <strong>DFS 频段（5.25–5.35 / 5.47–5.725 GHz）</strong>：DFS（Dynamic Frequency Selection，动态频率选择）是一套强制机制——这些信道要做雷达检测，检测到气象雷达时<strong>必须立即腾空信道</strong>，会造成秒级中断。<strong>关键流量应避开 DFS 信道</strong>，只用非 DFS 的那几个（如 36–48、149–165，具体依地区法规）。</p>
     </div>
     <div class="b-6">
       <h5>6 GHz（Wi-Fi 6E/7，802.11ax/be）—— 干净但穿透差</h5>
-      <p>频谱最宽最干净（无历史设备），支持 <strong>320 MHz 带宽</strong>和多链路（MLO）。穿透衰减大，需要更密的 AP。<strong>国内 6 GHz 的开放程度和功率限制需按当地法规确认</strong>，规划前必须查清合规边界——这是频谱工作里最容易忽略的一环。</p>
+      <p>频谱最宽最干净（无历史设备），支持 <strong>320 MHz 带宽</strong>和多链路（MLO，Multi-Link Operation：设备同时用两个频段收发）。穿透衰减大，需要更密的 AP。<strong>国内 6 GHz 的开放程度和功率限制需按当地法规确认</strong>，规划前必须查清合规边界——这是频谱工作里最容易忽略的一环。</p>
     </div>
     <div class="b-5g">
       <h5>5G 专网频段 —— 可控性最好</h5>
-      <p>中频 <strong>n78（3.5 GHz）/ n79（4.9 GHz）</strong> 是国内 5G 专网主力，覆盖与容量平衡。毫米波（n257/n258，26/28 GHz）带宽极大但穿透差、需密集部署，室内工厂场景可用性有限。<strong>专网的核心优势是频谱由你独占</strong>——不与公众用户争资源，调度策略可定制，这是 Wi-Fi 无法提供的。</p>
+      <p>中频 <strong>n78（3.5 GHz）/ n79（4.9 GHz）</strong>（n78/n79 是 3GPP 标准给 5G 频段编的号）是国内 5G 专网主力，覆盖与容量平衡。毫米波（n257/n258，26/28 GHz）带宽极大但穿透差、需密集部署，室内工厂场景可用性有限。<strong>专网的核心优势是频谱由你独占</strong>——不与公众用户争资源，调度策略可定制，这是 Wi-Fi 无法提供的。</p>
     </div>
     <div class="b-uwb">
       <h5>UWB（6–8.5 GHz，802.15.4z）—— 定位与授时专用</h5>
-      <p>用 <strong>500 MHz 以上的超宽带宽 + 极低功率谱密度</strong>，因此<strong>不干扰同频段其他系统</strong>（在别人看来只是底噪抬高一点）。带宽只有几百 kbps ~ 几 Mbps，<strong>不承载数据</strong>；价值在<strong>厘米级测距</strong>（ToF/TDoA/AoA）和<strong>纳秒级授时</strong>。典型架构是「UWB 管定位授时，Wi-Fi/5G 管数据」。</p>
+      <p>用 <strong>500 MHz 以上的超宽带宽 + 极低功率谱密度</strong>（把发射功率摊到极宽的频率上，单位频率上薄得像一层雾），因此<strong>不干扰同频段其他系统</strong>（在别人看来只是底噪抬高一点）。带宽只有几百 kbps ~ 几 Mbps，<strong>不承载数据</strong>；价值在<strong>厘米级测距</strong>（ToF/TDoA/AoA：靠信号飞行时间、到达时间差或到达角度算出位置）和<strong>纳秒级授时</strong>（给全网发「现在几点」的标准时间）。典型架构是「UWB 管定位授时，Wi-Fi/5G 管数据」。</p>
     </div>
   </div>
 
@@ -329,9 +329,9 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>Wi-Fi 6 的两个特性对机器人特别有价值，值得专门配置。</strong>① <strong>OFDMA</strong>：把一个信道切成多个子载波组（RU），<strong>多个设备可以在同一时刻各用一部分</strong>，而不是像以前那样轮流占满整个信道。这对「很多机器人各自发小包」的场景是决定性的——它把小包的排队时延大幅降低。② <strong>TWT（Target Wake Time）</strong>：AP 和设备<strong>约定唤醒时刻</strong>，各设备在自己的时隙里通信。这本质上是<strong>无线版的时间门控</strong>，思路和 <a href="tsn_deep_dive.html">TSN 的 Qbv</a> 一致——用调度替代竞争，把 CSMA 的随机性去掉。<strong>要在无线上追求确定性，TWT 是必须打开的开关。</strong></div>
+  <div class="box tip"><strong>Wi-Fi 6 的两个特性对机器人特别有价值，值得专门配置。</strong>① <strong>OFDMA</strong>：把一个信道切成多个子载波组（RU），<strong>多个设备可以在同一时刻各用一部分</strong>，而不是像以前那样轮流占满整个信道。这对「很多机器人各自发小包」的场景是决定性的——它把小包的排队时延大幅降低。② <strong>TWT（Target Wake Time）</strong>：AP 和设备<strong>约定唤醒时刻</strong>，各设备在自己的时隙里通信。这本质上是<strong>无线版的时间门控</strong>，思路和 <a href="tsn_deep_dive.html">TSN 的 Qbv</a>（Qbv：TSN 里按时间表在各自时间窗内放行不同流量的门控标准）一致——用调度替代竞争，把 CSMA（先听后说、撞车就退避重来的抢话机制）的随机性去掉。<strong>要在无线上追求确定性，TWT 是必须打开的开关。</strong></div>
 
-  <div class="warn"><strong>频谱合规是硬约束，不是可以「先做再说」的事。</strong>发射功率、可用频段、DFS 要求、6 GHz 的开放范围都由无线电管理法规规定，各国各地区不同。<strong>产品出货前必须做型式认证</strong>，而认证结果可能反过来限制你的架构（比如某个频段功率不够，覆盖半径达不到设计值，需要加 AP）。<strong>架构文档里必须有「频谱合规」这一节</strong>，明确列出使用的频段、功率、依据的法规条款、以及认证状态——这是评审时一定会被问到的。</div>
+  <div class="warn"><strong>频谱合规是硬约束，不是可以「先做再说」的事。</strong>发射功率、可用频段、DFS 要求、6 GHz 的开放范围都由无线电管理法规规定，各国各地区不同。<strong>产品出货前必须做型式认证</strong>（按无线电法规对整机做的强制认证），而认证结果可能反过来限制你的架构（比如某个频段功率不够，覆盖半径达不到设计值，需要加 AP）。<strong>架构文档里必须有「频谱合规」这一节</strong>，明确列出使用的频段、功率、依据的法规条款、以及认证状态——这是评审时一定会被问到的。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -341,7 +341,7 @@
     <div class="t"><h2>QoS 端到端映射链</h2><p class="sub">最容易断、断了还不报错的一环</p></div>
   </div>
 
-  <p>一个控制包从机器人应用出发到边缘服务器，可能要经过<strong>五种不同的 QoS 标记体系</strong>。每次跨越技术边界都要做一次翻译，<strong>任何一处翻译失败，这个包就退化成 Best Effort</strong>——而且不会有任何错误提示。</p>
+  <p>一个控制包从机器人应用出发到边缘服务器，可能要经过<strong>五种不同的 QoS（Quality of Service，服务质量：网络给不同流量排「谁先走」座次的优先级机制）标记体系</strong>——应用侧的 <code>socket priority</code>、以太网帧头的 802.1p PCP、IP 包头的 DSCP、5G 空口的 5QI、Wi-Fi 空口的 WMM，每一段网络只认自己那一种标记。每次跨越技术边界都要做一次翻译，<strong>任何一处翻译失败，这个包就退化成 Best Effort（尽力而为：没有任何优先级保证，网络一忙就和普通流量一起排队）</strong>——而且不会有任何错误提示。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 720 250" role="img" aria-label="QoS 标记在五种技术之间的翻译链">
@@ -455,7 +455,7 @@
     <div class="t"><h2>容灾冗余</h2><p class="sub">冗余要放在故障概率最高的地方</p></div>
   </div>
 
-  <p>冗余的成本是实打实的（多一条链路、多一块网卡、多一台交换机），所以不能均匀撒。<strong>正确的方法是先做故障树，把冗余投在概率最高的环节上。</strong></p>
+  <p>冗余的成本是实打实的（多一条链路、多一块网卡、多一台交换机），所以不能均匀撒。<strong>正确的方法是先做故障树（把「系统怎么会坏」从顶往下逐层拆成一个个基本故障事件的分析图），把冗余投在概率最高的环节上。</strong></p>
 
   <h3>5.1 机器人系统的故障概率排序</h3>
 
@@ -472,7 +472,7 @@
     </tbody>
   </table>
 
-  <div class="def"><strong>共因失效（Common Cause Failure）分析是冗余设计的核心，而不是「有两条路径」。</strong>两条路径如果<strong>共用同一台核心交换机、同一个电源模块、同一根线槽、同一个时钟源</strong>，那么单个共因故障会让两条路径同时挂掉——<strong>冗余失效而你付了双倍成本</strong>。检查清单：物理路由是否分离（不同线槽/不同侧）、供电是否分离（不同 PSU / 不同配电回路）、时钟是否分离（双 GM）、软件是否分离（同一个固件 bug 会同时影响两条路径）。这和存储做多副本要跨机架跨可用区完全是同一个道理。</div>
+  <div class="def"><strong>共因失效（Common Cause Failure）分析是冗余设计的核心，而不是「有两条路径」。</strong>两条路径如果<strong>共用同一台核心交换机、同一个电源模块、同一根线槽、同一个时钟源</strong>，那么单个共因故障会让两条路径同时挂掉——<strong>冗余失效而你付了双倍成本</strong>。检查清单：物理路由是否分离（不同线槽/不同侧）、供电是否分离（不同 PSU / 不同配电回路）、时钟是否分离（双 GM——GM 即 Grandmaster，时间同步网络里所有设备对表用的那台母钟）、软件是否分离（同一个固件 bug 会同时影响两条路径）。这和存储做多副本要跨机架跨可用区完全是同一个道理。</div>
 
   <h3>5.2 各层的冗余手段</h3>
 
@@ -490,7 +490,7 @@
     </tbody>
   </table>
 
-  <div class="danger"><strong>时间同步的冗余最容易被忘，后果却最严重。</strong>Grandmaster 掉线时，全网门控会错位——<strong>这比根本不用 TSN 更糟</strong>，因为 TT 流被关在门外而 BE 流以为自己有带宽。必做三件事：① 部署<strong>冗余 GM</strong> 并<strong>实测 BMCA 切换时间</strong>（不要相信文档标称值）；② 端节点持续监控 <code>offsetFromMaster</code>，超阈值时<strong>主动降级到不依赖时间的策略</strong>（严格优先级）而不是继续假装同步；③ 时钟跳变时<strong>不要让 GCL 硬跟随</strong>，用平滑调整避免窗口瞬间错乱。这三条应该写进架构文档的「单点故障清单」。</div>
+  <div class="danger"><strong>时间同步的冗余最容易被忘，后果却最严重。</strong>Grandmaster 掉线时，全网门控会错位——<strong>这比根本不用 TSN 更糟</strong>，因为靠时间表放行的时间关键流（TT 流）被关在门外，而普通尽力而为流（BE 流）还以为自己有带宽。必做三件事：① 部署<strong>冗余 GM</strong> 并<strong>实测 BMCA 切换时间</strong>（不要相信文档标称值）；② 端节点持续监控 <code>offsetFromMaster</code>，超阈值时<strong>主动降级到不依赖时间的策略</strong>（严格优先级）而不是继续假装同步；③ 时钟跳变时<strong>不要让 GCL（门控列表：把「每个时间窗放行哪种流量」写成的那张时间表，§3 的 Qbv 用的就是它）硬跟随</strong>，用平滑调整避免窗口瞬间错乱。这三条应该写进架构文档的「单点故障清单」。</div>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -604,7 +604,7 @@
     </tbody>
   </table>
 
-  <div class="warn"><strong>「10 台跑通了就能上 200 台」是最危险的规模化假设。</strong>无线容量、发现流量、控制器计算量这三项都是<strong>超线性增长</strong>的，10 台时看不出任何征兆。所以规模化验证必须做<strong>压力外推</strong>：① 用<strong>流量生成器</strong>模拟 200 台的通信负载（不需要真有 200 台机器人）；② 用<strong>虚拟节点</strong>模拟 ROS2 的发现负载（几百个空节点就能压出发现风暴）；③ 按目标规模的 <strong>1.5–2 倍</strong>做容量规划，因为接近满载时时延会急剧非线性恶化。<strong>这三条应该写进架构文档的「容量与扩展性」一节</strong>，并给出各项的实测外推曲线。</div>
+  <div class="warn"><strong>「10 台跑通了就能上 200 台」是最危险的规模化假设。</strong>无线容量、发现流量、控制器计算量这三项都是<strong>超线性增长</strong>的——台数翻一倍，负载不止翻一倍——10 台时看不出任何征兆。所以规模化验证必须做<strong>压力外推</strong>：① 用<strong>流量生成器</strong>模拟 200 台的通信负载（不需要真有 200 台机器人）；② 用<strong>虚拟节点</strong>模拟 ROS2 的发现负载（几百个空节点就能压出发现风暴）；③ 按目标规模的 <strong>1.5–2 倍</strong>做容量规划，因为接近满载时时延会急剧非线性恶化。<strong>这三条应该写进架构文档的「容量与扩展性」一节</strong>，并给出各项的实测外推曲线。</div>
 </section>
 
 <!-- ================================================================ §8 -->

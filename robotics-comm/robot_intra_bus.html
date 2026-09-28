@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>机器人端内总线选型 · EtherCAT 飞读飞写与分布式时钟 / CAN FD 仲裁与最坏时延 / 共享内存与 DMA / PCIe / 控制周期预算</title>
-<meta name="description" content="机器人端内总线选型：端内是四类场景里 时延要求最严、但最可控 的一类：线路短、拓扑固定、没有外部干扰，所有变量都在你手里。这篇把 EtherCAT 为什么能做到 62.5 µs 周期、CAN FD 的最坏时延怎么算、共享内存为什么比任何网络都快、以及一个 20 关节机器人的控制周期预算该怎么排">
+<meta name="description" content="机器人机身内部的总线怎么选？这篇用白话讲清 EtherCAT 为什么能快到 62.5 微秒一个周期、CAN FD 的最坏时延怎么算清楚、共享内存为什么比任何网络都快，以及 20 关节机器人的控制周期预算怎么排，读完能直接做选型决策">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/robot_intra_bus.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/robot_intra_bus.html">
 <meta property="og:title" content="机器人端内总线选型 · EtherCAT 飞读飞写与分布式时钟 / CAN FD 仲裁与最坏时延 / 共享内存与 DMA / PCIe / 控制周期预算">
-<meta property="og:description" content="机器人端内总线选型：端内是四类场景里 时延要求最严、但最可控 的一类：线路短、拓扑固定、没有外部干扰，所有变量都在你手里。这篇把 EtherCAT 为什么能做到 62.5 µs 周期、CAN FD 的最坏时延怎么算、共享内存为什么比任何网络都快、以及一个 20 关节机器人的控制周期预算该怎么排">
+<meta property="og:description" content="机器人机身内部的总线怎么选？这篇用白话讲清 EtherCAT 为什么能快到 62.5 微秒一个周期、CAN FD 的最坏时延怎么算清楚、共享内存为什么比任何网络都快，以及 20 关节机器人的控制周期预算怎么排，读完能直接做选型决策">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="机器人端内总线选型 · EtherCAT 飞读飞写与分布式时钟 / CAN FD 仲裁与最坏时延 / 共享内存与 DMA / PCIe / 控制周期预算">
-<meta name="twitter:description" content="机器人端内总线选型：端内是四类场景里 时延要求最严、但最可控 的一类：线路短、拓扑固定、没有外部干扰，所有变量都在你手里。这篇把 EtherCAT 为什么能做到 62.5 µs 周期、CAN FD 的最坏时延怎么算、共享内存为什么比任何网络都快、以及一个 20 关节机器人的控制周期预算该怎么排">
+<meta name="twitter:description" content="机器人机身内部的总线怎么选？这篇用白话讲清 EtherCAT 为什么能快到 62.5 微秒一个周期、CAN FD 的最坏时延怎么算清楚、共享内存为什么比任何网络都快，以及 20 关节机器人的控制周期预算怎么排，读完能直接做选型决策">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -138,7 +138,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="robotics_comm_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 25 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -177,7 +177,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★☆☆</span>
       <span class="pill cyan">端内场景</span>
-      <span class="pill green">阅读时长 ~25 min</span>
+      <span class="pill green">阅读时长 ~35 min</span>
       <span class="pill amber">前置 以太网基础 · 实时系统</span>
     </div>
     <div class="meta">
@@ -196,15 +196,15 @@
     <div class="t"><h2>端内场景的特殊性</h2><p class="sub">先想清楚该不该走网络</p></div>
   </div>
 
-  <p>端内指<strong>一台机器人机身里各模组之间</strong>的通信：主控与关节驱动器、力矩传感器、视觉模块、电池管理。它有三个和其他场景截然不同的性质：</p>
+  <p>端内指<strong>一台机器人机身里各模组之间</strong>的通信：主控（机器人身上负责跑控制算法的中央计算板）与关节驱动器（让每个电机按指令转动的模块）、力矩传感器、视觉模块、电池管理。它有三个和其他场景截然不同的性质：</p>
 
   <ul>
-    <li><strong>拓扑固定且已知。</strong>出厂时就确定了有几个关节、几个传感器，运行时不会冒出新节点。这意味着<strong>动态发现、动态准入这些机制毫无价值</strong>，全部可以静态配置——省掉大量复杂度和不确定性。</li>
-    <li><strong>物理环境可控。</strong>线缆长度已知、没有外部干扰源、供电统一。<strong>时延的每一项都能算出来</strong>，不需要统计估计。</li>
-    <li><strong>周期极短。</strong>伺服闭环通常 1 kHz ~ 8 kHz（1 ms ~ 125 µs），力控和碰撞检测可能更快。网络往返只能占其中 10%–20%。</li>
+    <li><strong>拓扑固定且已知。</strong>（拓扑指网络里设备怎么连、连成什么形状。）出厂时就确定了有几个关节、几个传感器，运行时不会冒出新节点。这意味着<strong>动态发现（新设备上线后自己广播「我在这」）、动态准入（网络临时协商要不要放它进来）这些机制毫无价值</strong>，全部可以静态配置（出厂前一次性写死，运行时不再改）——省掉大量复杂度和不确定性。</li>
+    <li><strong>物理环境可控。</strong>线缆长度已知、没有外部干扰源、供电统一。<strong>时延（数据从 A 传到 B 花的时间）的每一项都能算出来</strong>，不需要像开放网络那样靠统计估计（采样大量数据去猜平均值）。</li>
+    <li><strong>周期极短。</strong>伺服闭环（电机控制里「读当前位置 → 算误差 → 发新指令」每秒重复上千次的循环）通常 1 kHz ~ 8 kHz（1 ms ~ 125 µs），力控和碰撞检测可能更快。网络往返（指令发出去、反馈收回来，一来一回的总耗时）只能占其中 10%–20%。</li>
   </ul>
 
-  <div class="def"><strong>端内选型的第一个问题不是「用哪种总线」，而是「能不能不用总线」。</strong>如果两个模组能放在<strong>同一颗 SoC</strong> 上，用共享内存 + 无锁环形缓冲就能做到<strong>亚微秒级</strong>，比任何网络方案都快好几个数量级，而且没有协议开销、没有丢包、没有时钟同步问题。<strong>很多所谓的「确定性通信难题」，本质上是模组划分不合理造成的自找麻烦</strong>——把本该在一起的功能拆到了两颗芯片上，然后再花大力气把它们连起来。</div>
+  <div class="def"><strong>端内选型的第一个问题不是「用哪种总线」，而是「能不能不用总线」。</strong>如果两个模组能放在<strong>同一颗 SoC</strong>（System on Chip，把 CPU、内存、外设都集成进去的一颗芯片）上，用共享内存 + 无锁环形缓冲（两个程序打开同一块物理内存各自读写；「无锁」指不用排队抢一把锁，而是靠读写指针各管各的来避免互相等待）就能做到<strong>亚微秒级</strong>（不到一微秒），比任何网络方案都快好几个数量级，而且没有协议开销、没有丢包、没有时钟同步问题。<strong>很多所谓的「确定性通信难题」</strong>（确定性，deterministic，指每次耗时都有上限、最坏情况可预测可复现——通信要的不是偶尔快，而是永远稳），<strong>本质上是模组划分不合理造成的自找麻烦</strong>——把本该在一起的功能拆到了两颗芯片上，然后再花大力气把它们连起来。</div>
 
   <div class="analogy">这就像<strong>公司里两个协作极其频繁的岗位</strong>：如果他们坐在同一张桌子旁（同一颗 SoC），转个头就能沟通；如果一个在 3 楼一个在 8 楼（两颗芯片），就得走楼梯、等电梯，还要约时间。<strong>与其研究「怎么让电梯更快」，不如先问「他们为什么不坐在一起」。</strong>只有当确实必须分开时（物理位置分散、算力隔离、安全隔离），才去优化中间的传输。</div>
 
@@ -222,7 +222,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>端内场景有一个和其他层完全不同的特点：瓶颈几乎总在端侧，不在总线上。</strong><a href="deterministic_network_engineering.html">保障体系 §3.2</a> 讲过那个典型的错误顺序——先花两个月调 EtherCAT 的 GCL，实测抖动 400 µs，最后才发现主控跑的是普通 Linux、控制线程被内核抢占了。<strong>正确的第一步永远是用 <code>cyclictest</code> 测端侧调度抖动</strong>，达不到目标就先上 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a>，端侧稳定到 &lt; 20 µs 之后，再看总线这一段够不够。</div>
+  <div class="box tip"><strong>端内场景有一个和其他层完全不同的特点：瓶颈几乎总在端侧（机器人主控电脑那一侧），不在总线上。</strong><a href="deterministic_network_engineering.html">保障体系 §3.2</a> 讲过那个典型的错误顺序——先花两个月调 EtherCAT 的 GCL（Gate Control List，门控列表：规定每个微小时间窗口放行哪种流量的时间表），实测抖动（每次耗时忽大忽小的偏差量）有 400 µs，最后才发现主控跑的是普通 Linux、控制线程被内核抢占了（操作系统随时可以把你正在执行的控制程序按下去，先去干别的活）。<strong>正确的第一步永远是用 <code>cyclictest</code>（一个反复定时睡下去、准点醒来，量出实际唤醒延迟的小工具）测端侧调度抖动</strong>，达不到目标就先上 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a>（给 Linux 打的实时补丁，让内核随时可以被高优先级任务抢占），端侧稳定到 &lt; 20 µs 之后，再看总线这一段够不够。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -232,7 +232,7 @@
     <div class="t"><h2>EtherCAT：飞读飞写</h2><p class="sub">工业伺服的事实标准，以及它为什么快</p></div>
   </div>
 
-  <p>标准以太网连 N 个节点，就要发 N 个帧、经历 N 次存储转发。EtherCAT 的核心创新是<strong>让一个帧服务所有节点</strong>。</p>
+  <p>标准以太网（Ethernet，最常见的局域网技术，办公室和家用网络都是它）连 N 个节点，就要发 N 个帧（帧是网络上传送的一个标准长度的数据包）、经历 N 次存储转发（每经过一站都要把整帧收完、再查表转给下一站，站站都耽误一次）。EtherCAT（在以太网基础上改造出的实时总线，工业机器人的事实标准）的核心创新是<strong>让一个帧服务所有节点</strong>：主站（管理整条总线、发指令的那一头，就是主控电脑）把所有从站（挂在总线上被管理的设备，比如每个关节驱动器）要收发的数据排进同一个帧里发出去，让帧依次穿过每个从站。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 720 260" role="img" aria-label="EtherCAT 飞读飞写机制与标准以太网逐站转发对比">
@@ -271,16 +271,16 @@
       <text class="tg" x="30" y="228">N 个从站只需<tspan font-weight="700">一个帧时</tspan>，而非 N 个 —— 这就是 62.5 µs 周期的来源</text>
       <text class="ts" x="30" y="246">代价：拓扑必须串联（线型/环型）；从站需要专用 ESC 芯片；主站要精确控制发帧时刻</text>
     </svg>
-    <figcaption>EtherCAT 的「飞读飞写」：从站在帧经过自己时于硬件层就地读写，帧不停顿、不重组、不排队。</figcaption>
+    <figcaption>EtherCAT 的「飞读飞写」（processing on the fly）：从站在帧经过自己时，由专用芯片 ESC（EtherCAT Slave Controller，每个从站必须配一颗的从站控制器芯片）在硬件层就地读写，帧不停顿、不重组、不排队。</figcaption>
   </figure>
 
   <div class="analogy">EtherCAT 像<strong>一列不停站的火车沿途扔包裹取包裹</strong>：火车匀速经过每个小站，站员在火车经过的瞬间把自己的包裹挂上、把给自己的包裹摘下，火车<strong>一次都不用停</strong>。而标准以太网像<strong>快递车逐站停靠</strong>：到一站、停车、卸货、装货、再出发，站数越多总时间越长。这个差别在 20 个关节的机器人上就是 <strong>62.5 µs 和 1 ms 的差别</strong>。</div>
 
   <h3>2.1 分布式时钟（DC）</h3>
 
-  <div class="def"><strong>EtherCAT 的分布式时钟（Distributed Clocks）</strong>让所有从站的动作<strong>在同一时刻发生</strong>，精度<strong>亚微秒（典型 &lt; 100 ns）</strong>。机制：选第一个支持 DC 的从站作为参考时钟，主站测量到各从站的<strong>传播延迟</strong>（利用帧去程和回程经过每个从站的时间戳差），然后给每个从站下发偏移量。之后从站按<strong>同步信号（SYNC0）</strong>触发动作，而不是「收到帧就动」。</div>
+  <div class="def"><strong>EtherCAT 的分布式时钟（Distributed Clocks，简称 DC）</strong>让所有从站的动作<strong>在同一时刻发生</strong>——好比把全队人的手表统一对准一块母表，精度<strong>亚微秒（典型 &lt; 100 ns）</strong>。机制：选第一个支持 DC 的从站作为参考时钟，主站测量到各从站的<strong>传播延迟</strong>（信号沿线缆跑过去花的时间；利用帧去程和回程经过每个从站的时间戳差就能量出来），然后给每个从站下发偏移量（把它的表拨快或拨慢多少）。之后从站按<strong>同步信号（SYNC0，总线周期性敲响的「到点了」铃声）</strong>触发动作，而不是「收到帧就动」。</div>
 
-  <div class="box tip"><strong>「收到帧就动」和「按 SYNC0 信号动」的区别，是理解伺服同步精度的关键。</strong>帧到达各从站的时刻天然不同（沿链传播有先后，20 个从站的首尾差可达几微秒）。如果每个从站收到帧就立刻执行，<strong>各关节的动作就会错开</strong>，多轴插补精度下降。DC 的做法是：帧到达后数据先<strong>缓存</strong>，等到全局同步的 SYNC0 时刻<strong>所有从站同时执行</strong>。<strong>这样通信的先后就与执行的同步性解耦了</strong>——和 <a href="deterministic_network_engineering.html">端间协同的「时间戳执行」</a>是完全一样的思想。</div>
+  <div class="box tip"><strong>「收到帧就动」和「按 SYNC0 信号动」的区别，是理解伺服同步精度的关键。</strong>帧到达各从站的时刻天然不同（沿链传播有先后，20 个从站的首尾差可达几微秒）。如果每个从站收到帧就立刻执行，<strong>各关节的动作就会错开</strong>，多轴插补（让多个关节按同一条规划轨迹、在每个控制拍同时对齐推进的协同算法）精度下降。DC 的做法是：帧到达后数据先<strong>缓存</strong>，等到全局同步的 SYNC0 时刻<strong>所有从站同时执行</strong>。<strong>这样通信的先后就与执行的同步性解耦了</strong>——和 <a href="deterministic_network_engineering.html">端间协同的「时间戳执行」</a>是完全一样的思想。</div>
 
   <h3>2.2 工程要点</h3>
 
@@ -296,7 +296,7 @@
     </tbody>
   </table>
 
-  <div class="warn"><strong>EtherCAT 的「快」有个前提常被忽略：主站必须准时发帧。</strong>飞读飞写保证了<strong>帧在网络上的传播时间极短且确定</strong>，但如果主站因为调度抖动晚发了 200 µs，那么整个周期就晚了 200 µs——<strong>总线的确定性被端侧的不确定性抵消了</strong>。所以 EtherCAT 项目的成败往往取决于主站侧的实时化做得好不好，而不是总线本身。这和 <a href="tsn_deep_dive.html">TSN 需要 <code>etf</code> + <code>SO_TXTIME</code></a> 是同一个道理。</div>
+  <div class="warn"><strong>EtherCAT 的「快」有个前提常被忽略：主站必须准时发帧。</strong>飞读飞写保证了<strong>帧在网络上的传播时间极短且确定</strong>，但如果主站因为调度抖动晚发了 200 µs，那么整个周期就晚了 200 µs——<strong>总线的确定性被端侧的不确定性抵消了</strong>。所以 EtherCAT 项目的成败往往取决于主站侧的实时化做得好不好，而不是总线本身。这和 <a href="tsn_deep_dive.html">TSN 需要 <code>etf</code>（让网卡到了指定时刻才发帧的排队规则）+ <code>SO_TXTIME</code>（给每个帧标注「我最晚要在哪个时刻被发出去」的套接字选项）</a> 是同一个道理。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -305,13 +305,13 @@
     <div class="t"><h2>CAN FD：仲裁与最坏时延</h2><p class="sub">带宽小，但最坏时延可以算得很清楚</p></div>
   </div>
 
-  <p>CAN 的设计目标和以太网完全不同：它优先考虑<strong>抗干扰、低成本、线束少、以及可预测的优先级</strong>，而不是带宽。这些特性让它在机器人本体的<strong>低速控制与状态回报</strong>上仍有一席之地。</p>
+  <p>CAN（Controller Area Network，控制器局域网，最初为了让汽车里几十个控制器共用两根线互通而生）的设计目标和以太网完全不同：它优先考虑<strong>抗干扰、低成本、线束少（少拉线就是省成本省重量，机器人身体里布线是真实开销）、以及可预测的优先级（谁重要谁先发，而且顺序永远不变）</strong>，而不是带宽（每秒能塞过去多少数据）。这些特性让它在机器人本体的<strong>低速控制与状态回报</strong>上仍有一席之地。</p>
 
   <h3>3.1 无损仲裁：CAN 最精妙的设计</h3>
 
-  <div class="def"><strong>CAN 的仲裁是「无损」的（non-destructive arbitration）。</strong>所有节点可以同时开始发送，它们逐位比较自己发出的电平和总线上的实际电平：<strong>显性位（0）会覆盖隐性位（1）</strong>。某个节点发出 1 却在总线上读到 0，就知道有更高优先级的报文在发，<strong>立即退出并转为接收</strong>——注意<strong>它没有破坏那个高优先级报文</strong>，赢的那一方完全不受影响，继续发完。仲裁字段就是报文 ID，<strong>ID 数值越小优先级越高</strong>。</div>
+  <div class="def"><strong>CAN 的仲裁（多个节点同时想发报文时，决定谁先发的规则）是「无损」的（non-destructive arbitration）。</strong>所有节点可以同时开始发送，它们逐位比较自己发出的电平和总线上的实际电平：<strong>显性位（0，一种更「强势」、能把对方盖住的电平）会覆盖隐性位（1）</strong>。某个节点发出 1 却在总线上读到 0，就知道有更高优先级的报文在发，<strong>立即退出并转为接收</strong>——注意<strong>它没有破坏那个高优先级报文</strong>，赢的那一方完全不受影响，继续发完。仲裁字段就是报文 ID（每条报文的编号，发的时候写在帧开头），<strong>ID 数值越小优先级越高</strong>。</div>
 
-  <div class="analogy">CAN 的仲裁像<strong>一群人同时开口说话，但约定「谁的话里先出现某个特定音节谁就继续说，其他人立刻闭嘴」</strong>。关键是<strong>闭嘴的人不会打断说话的人</strong>——赢家的整句话完好无损地传达了，输家只是白开了个头，下一轮再来。这和以太网的 CSMA/CD「一撞车大家都得重来」相比，<strong>没有浪费任何一次成功的传输</strong>，这也是 CAN 在高负载下依然稳定的原因。</div>
+  <div class="analogy">CAN 的仲裁像<strong>一群人同时开口说话，但约定「谁的话里先出现某个特定音节谁就继续说，其他人立刻闭嘴」</strong>。关键是<strong>闭嘴的人不会打断说话的人</strong>——赢家的整句话完好无损地传达了，输家只是白开了个头，下一轮再来。这和以太网的 CSMA/CD（载波侦听多路访问/冲突检测：大家先听后说，一旦撞车全体退避、整帧重来）「一撞车大家都得重来」相比，<strong>没有浪费任何一次成功的传输</strong>，这也是 CAN 在高负载下依然稳定的原因。</div>
 
   <h3>3.2 最坏时延怎么算</h3>
 
@@ -339,9 +339,9 @@ w_i  <span class="cm">排队等待时间</span>，由两部分构成：
 CAN FD 500 kbps 仲裁 / 2 Mbps 数据段，64 字节：
   C ≈ <span class="cm">150 µs</span>（数据段提速，但仲裁段仍是 500 kbps）</pre>
 
-  <div class="box tip"><strong>CAN 的最坏时延是「可以严格算出来」的，这是它相比 Wi-Fi 之类的巨大优势。</strong>只要你知道总线上所有报文的 ID（优先级）、周期、长度，就能用上面的迭代算出每条报文的最坏响应时间——<strong>和 <a href="tsn_deep_dive.html">TSN 用 Network Calculus 算时延界</a>是同一类方法</strong>。这也意味着 <strong>CAN 的 ID 分配是一个需要认真规划的设计动作</strong>，不是随便编号：<strong>ID 就是优先级</strong>，分错了就会让关键报文被一堆低优先级报文挤在后面。</div>
+  <div class="box tip"><strong>CAN 的最坏时延（worst-case response time，把所有倒霉情况都叠加起来也不会超过的时间上限）是「可以严格算出来」的，这是它相比 Wi-Fi 之类的巨大优势。</strong>只要你知道总线上所有报文的 ID（优先级）、周期、长度，就能用上面的迭代算出每条报文的最坏响应时间——<strong>和 <a href="tsn_deep_dive.html">TSN 用 Network Calculus 算时延界</a>是同一类方法</strong>。这也意味着 <strong>CAN 的 ID 分配是一个需要认真规划的设计动作</strong>，不是随便编号：<strong>ID 就是优先级</strong>，分错了就会让关键报文被一堆低优先级报文挤在后面。</div>
 
-  <div class="warn"><strong>CAN FD 的一个陷阱：仲裁段速率没变。</strong>CAN FD 提升的是<strong>数据段</strong>的速率（可到 2–8 Mbps），但<strong>仲裁段仍然是 500 kbps 或 1 Mbps</strong>——因为仲裁需要所有节点在一个位时间内完成信号传播和比较，速率受总线长度物理限制。后果是：<strong>小数据量报文的收益有限</strong>（开销占比大），只有大载荷（32/64 字节）才能显著受益。所以从 CAN 升级到 CAN FD 时，<strong>要顺便把小报文合并成大报文</strong>，否则拿不到预期的提升。</div>
+  <div class="warn"><strong>CAN FD（Flexible Data-rate，CAN 的提速版：数据部分能跑更高速度、一帧最多装 64 字节）的一个陷阱：仲裁段速率没变。</strong>CAN FD 提升的是<strong>数据段</strong>（一帧里装实际数据的那一段）的速率（可到 2–8 Mbps），但<strong>仲裁段（一帧开头用来决定「这轮归谁发」的那一段）仍然是 500 kbps 或 1 Mbps</strong>——因为仲裁需要所有节点在一个位时间内完成信号传播和比较，速率受总线长度物理限制。后果是：<strong>小数据量报文的收益有限</strong>（开销占比大），只有大载荷（32/64 字节）才能显著受益。所以从 CAN 升级到 CAN FD 时，<strong>要顺便把小报文合并成大报文</strong>，否则拿不到预期的提升。</div>
 
   <h3>3.3 什么时候选 CAN</h3>
 
@@ -376,7 +376,7 @@ CAN FD 500 kbps 仲裁 / 2 Mbps 数据段，64 字节：
     <div class="t"><h2>片内通道：共享内存与 DMA</h2><p class="sub">最快的通信是不通信</p></div>
   </div>
 
-  <p>如果两个模块在同一颗 SoC 上，就不该走任何网络协议。<strong>共享内存 + 无锁数据结构能做到亚微秒级</strong>，比 EtherCAT 快两个数量级。</p>
+  <p>如果两个模块在同一颗 SoC 上，就不该走任何网络协议。<strong>共享内存 + 无锁数据结构能做到亚微秒级</strong>，比 EtherCAT 快两个数量级——因为数据根本不出芯片，没有打包、发送、接收、校验这些环节。</p>
 
   <h3>4.1 无锁环形缓冲的关键点</h3>
 
@@ -407,11 +407,13 @@ bool push(Ring&amp; r, const Frame&amp; f) {
 <span class="cm">   否则在 <span style="font-weight:700">ARM 这类弱内存模型</span>上数据可能先于索引可见 → 读到半截数据</span>
 <span class="cm">③ 容量取 2 的幂，用位与代替取模（取模在热路径上是几十个周期）</span></pre>
 
-  <div class="def"><strong>伪共享（false sharing）是共享内存 IPC 最常见的性能陷阱。</strong>CPU 缓存以「缓存行」（通常 64 字节）为单位同步。如果 <code>head</code> 和 <code>tail</code> 挤在同一个缓存行里，那么<strong>写者更新 head 会让读者的整个缓存行失效</strong>，反之亦然——两个核心不停地互相踢缓存，明明各写各的变量却产生了激烈的竞争。<strong>解法就是把它们对齐到不同缓存行</strong>（C++17 起可用 <code>std::hardware_destructive_interference_size</code>）。更多细节见 <a href="../communication/high_performance.html">Ring Buffer / Zero Copy / Lock-Free</a>。</div>
+  <div class="def"><strong>伪共享（false sharing，两个变量明明互不相干，却因为挤在同一个缓存单元里而互相拖累）是共享内存 IPC（Inter-Process Communication，进程间通信：同一台机器上两个程序之间传数据）最常见的性能陷阱。</strong>CPU 缓存以「缓存行」（cache line，CPU 在缓存和内存之间搬运数据的最小单位，通常 64 字节）为单位同步。如果 <code>head</code> 和 <code>tail</code> 挤在同一个缓存行里，那么<strong>写者更新 head 会让读者的整个缓存行失效</strong>，反之亦然——两个核心不停地互相踢缓存，明明各写各的变量却产生了激烈的竞争，好比合租的两人各买各的菜却共用一个冰箱，谁动一次都把对方的东西翻乱。<strong>解法就是把它们对齐到不同缓存行</strong>（C++17 起可用 <code>std::hardware_destructive_interference_size</code>）。更多细节见 <a href="../communication/high_performance.html">Ring Buffer / Zero Copy / Lock-Free</a>。</div>
 
-  <div class="warn"><strong>ARM 平台上的内存序问题尤其致命，因为它「测不出来」。</strong>x86 的内存模型很强，即使写成 <code>relaxed</code> 通常也能正常工作，所以在开发机上测试一切正常；换到 ARM 的机器人主控上，<strong>偶发地读到半截数据</strong>——现象是「某一帧的关节角度是错的」，频率极低（可能几小时一次），几乎无法复现和定位。<strong>这类 bug 必须靠代码审查和正确的内存序来预防，不能靠测试发现</strong>。相关背景见 <a href="../communication/arm_platform_comm.html">ARM 平台与弱内存模型</a>。</div>
+  <div class="warn"><strong>ARM 平台上的内存序（memory order，规定「一个人写了数据」和「另一个人看到这个写」谁先谁后的规则）问题尤其致命，因为它「测不出来」。</strong>x86 的内存模型很强（CPU 会自动帮程序员维持写入顺序），即使写成 <code>relaxed</code> 通常也能正常工作，所以在开发机上测试一切正常；换到 ARM 的机器人主控上——ARM 属于弱内存模型（不保证别的核心按你写代码的顺序看到这些写操作）——<strong>偶发地读到半截数据</strong>——现象是「某一帧的关节角度是错的」，频率极低（可能几小时一次），几乎无法复现和定位。<strong>这类 bug 必须靠代码审查和正确的内存序来预防，不能靠测试发现</strong>。相关背景见 <a href="../communication/arm_platform_comm.html">ARM 平台与弱内存模型</a>。</div>
 
   <h3>4.2 DMA 的收益与陷阱</h3>
+
+  <p>DMA（Direct Memory Access，直接内存访问：让外设和内存直接互拷数据、不过 CPU 的手，好比雇了个搬运工替你搬货，你腾出手干别的）是片上搬大数据的主力，但用不好会引入新的时延和抖动，收益与陷阱如下：</p>
 
   <table>
     <thead><tr><th>方面</th><th>说明</th></tr></thead>
@@ -434,23 +436,23 @@ bool push(Ring&amp; r, const Frame&amp; f) {
   <div class="buses">
     <div class="b-fast">
       <h5>板内 TSN（千兆以太网 + Qbv/Qbu）</h5>
-      <p>相比 EtherCAT 的优势是<strong>拓扑灵活</strong>（星型、树型都可以，不必串联）、<strong>带宽大</strong>（千兆起）、<strong>与外部网络同构</strong>（协议栈复用，视觉数据和控制数据可以走同一套基础设施）。代价是需要 TSN 交换芯片、需要 <a href="tsn_deep_dive.html">完整的门控配置</a>、且时延（数十到数百 µs）通常不如 EtherCAT 的最优情况。<strong>适合模组多、拓扑会随构型变化、且有大数据流（相机/雷达）要一起承载的机器人。</strong></p>
+      <p>板内 TSN（Time-Sensitive Networking，时间敏感网络：在标准以太网上加一套「到点就发、到点就收」的调度与同步机制，让普通网线也能保证时延上限）相比 EtherCAT 的优势是<strong>拓扑灵活</strong>（星型、树型都可以，不必串联）、<strong>带宽大</strong>（千兆起）、<strong>与外部网络同构</strong>（协议栈复用，视觉数据和控制数据可以走同一套基础设施）。代价是需要 TSN 交换芯片、需要 <a href="tsn_deep_dive.html">完整的门控配置</a>、且时延（数十到数百 µs）通常不如 EtherCAT 的最优情况。<strong>适合模组多、拓扑会随构型变化、且有大数据流（相机/雷达）要一起承载的机器人。</strong></p>
     </div>
     <div>
       <h5>PCIe</h5>
-      <p>带宽极高（Gen3 x4 约 4 GB/s），适合<strong>视觉传感器、AI 加速卡</strong>这类大数据量设备。时延约 µs 级但<strong>抖动受 DMA 引擎、中断合并、以及 PCIe 链路的 ASPM 电源管理影响</strong>——追求确定性时要关掉 ASPM 和中断合并。<strong>它是板内高带宽的默认选择，但不适合做多节点的周期性控制总线</strong>（拓扑是树状点对点，没有广播语义和同步机制）。</p>
+      <p>PCIe（PCI-Express，主板上部件之间的高速串行通道，独立显卡和 NVMe 固态硬盘走的就是它）带宽极高（Gen3 x4 约 4 GB/s），适合<strong>视觉传感器、AI 加速卡</strong>这类大数据量设备。时延约 µs 级但<strong>抖动受 DMA 引擎、中断合并（把多次中断攒成一次上报来省 CPU，代价是后到的数据要多等一会儿）、以及 PCIe 链路的 ASPM 电源管理（Active State Power Management，链路空闲时自动降速休眠，唤醒要多花时间）影响</strong>——追求确定性时要关掉 ASPM 和中断合并。<strong>它是板内高带宽的默认选择，但不适合做多节点的周期性控制总线</strong>（拓扑是树状点对点，没有广播语义和同步机制）。</p>
     </div>
     <div class="b-mid">
       <h5>SPI</h5>
-      <p>主从同步串行，时延低（µs 级）且<strong>因为有独立时钟线所以时序确定</strong>。速率通常几十 Mbps。适合<strong>短距离、少节点的传感器读取</strong>（IMU、编码器、ADC）。缺点是<strong>每个从设备需要一根片选线</strong>，节点多了引脚不够；且不适合长距离（信号完整性差）。</p>
+      <p>SPI（Serial Peripheral Interface，串行外设接口：一根时钟线带几根数据线，主芯片点名哪个从设备、谁就答话）主从同步串行，时延低（µs 级）且<strong>因为有独立时钟线所以时序确定</strong>。速率通常几十 Mbps。适合<strong>短距离、少节点的传感器读取</strong>（IMU 惯性测量单元测姿态、编码器测电机转角、ADC 模数转换器把模拟电压变成数字值）。缺点是<strong>每个从设备需要一根片选线</strong>（用来「点名」的专用引脚），节点多了引脚不够；且不适合长距离（信号完整性差）。</p>
     </div>
     <div class="b-slow">
       <h5>I²C</h5>
-      <p>两线制、可挂多设备、成本最低。但<strong>速率低</strong>（标准 100 kHz / 快速 400 kHz）、<strong>抗干扰差</strong>、且有<strong>总线锁死</strong>的经典问题（从设备异常时把 SDA 拉低不放，需要靠时钟脉冲或复位恢复）。<strong>只适合配置类、低频、非关键的场合</strong>——不要用它传控制指令。</p>
+      <p>I²C（Inter-Integrated Circuit，用两根线挂一串低速设备的接口，常用来配置芯片）两线制、可挂多设备、成本最低。但<strong>速率低</strong>（标准 100 kHz / 快速 400 kHz）、<strong>抗干扰差</strong>、且有<strong>总线锁死</strong>的经典问题（某个从设备出异常时把 SDA 数据线按在地上不放，整条总线就瘫痪，要靠发时钟脉冲或复位才能救回来）。<strong>只适合配置类、低频、非关键的场合</strong>——不要用它传控制指令。</p>
     </div>
     <div class="b-slow">
       <h5>10BASE-T1S（单对以太网）</h5>
-      <p>新兴选项：单对双绞线、支持多点接入（PLCA 无冲突仲裁）、10 Mbps。<strong>目标是取代 CAN</strong>——线束同样简单，但可以直接跑以太网协议栈，与上层网络同构。速率低意味着<a href="tsn_deep_dive.html">帧抢占</a>在这里是必需而非可选（一个 1522 B 帧要占 1.23 ms）。生态还在成长，选型时要确认器件可获得性。</p>
+      <p>新兴选项：单对双绞线（一根线里一对芯，省线）、支持多点接入（PLCA 无冲突仲裁：物理层的轮转发言机制，节点拿到「发言令牌」才能开口，保证不撞车）、10 Mbps。<strong>目标是取代 CAN</strong>——线束同样简单，但可以直接跑以太网协议栈，与上层网络同构。速率低意味着<a href="tsn_deep_dive.html">帧抢占（802.1Qbu：让紧急的小帧打断正在发送的大帧，对方发完后续传）</a>在这里是必需而非可选（一个 1522 B 帧要占 1.23 ms）。生态还在成长，选型时要确认器件可获得性。</p>
     </div>
   </div>
 
@@ -464,7 +466,7 @@ bool push(Ring&amp; r, const Frame&amp; f) {
     <div class="t"><h2>控制周期预算</h2><p class="sub">把总线放进完整的闭环里算</p></div>
   </div>
 
-  <p>总线只是闭环里的一段。按 <a href="deterministic_network_engineering.html">保障体系 §1</a> 的六段分解，看看不同总线在真实周期预算里的表现。</p>
+  <p>总线只是闭环里的一段。闭环（closed loop）就是机器人反复执行「读传感器 → 算下一步 → 发指令」，再用实际结果不断修正自己；而控制周期（这个循环每轮的固定时间间隔）要装下采集、传输、计算、执行所有环节。按 <a href="deterministic_network_engineering.html">保障体系 §1</a> 的六段分解，看看不同总线在真实周期预算（一个周期里各环节分到的时间额度）里的表现。</p>
 
   <div class="demo">
     <h4>交互：端内控制周期预算</h4>
@@ -541,6 +543,8 @@ Q6: 只是读几个近距离传感器？
 
   <h3>7.2 典型的混合架构</h3>
 
+  <p>所谓混合架构，就是一台机器人上按「数据长什么样」分用多种总线：控制指令又小又急，走最快的实时总线；图像又大又稍微晚一点没关系，走高带宽通道；低频状态就塞进便宜的慢总线。典型的分工如下：</p>
+
   <table>
     <thead><tr><th>层次</th><th>方案</th><th>承载</th></tr></thead>
     <tbody>
@@ -553,9 +557,9 @@ Q6: 只是读几个近距离传感器？
     </tbody>
   </table>
 
-  <div class="danger"><strong>最后一行是不可妥协的。</strong>急停、力矩限制这类安全功能<strong>必须走独立的硬件回路</strong>（Safe Torque Off、安全继电器、安全 PLC），而不是软件消息。理由很简单：<strong>即使主控软件全崩、总线全断，安全链路仍然必须有效</strong>。把安全功能建在通信总线上，等于让「通信正常」成为「安全有效」的前提——这在 <a href="../embedded-realtime/iso26262_engineering.html">功能安全</a>的框架下是不可接受的。<strong>通信总线可以承载「安全相关的状态上报」，但不能承载「安全动作的唯一触发路径」。</strong></div>
+  <div class="danger"><strong>最后一行是不可妥协的。</strong>急停、力矩限制这类安全功能<strong>必须走独立的硬件回路</strong>（Safe Torque Off，直接切断电机出力能力的硬件安全功能；安全继电器；安全 PLC，专门跑安全逻辑的独立控制器），而不是软件消息。理由很简单：<strong>即使主控软件全崩、总线全断，安全链路仍然必须有效</strong>。把安全功能建在通信总线上，等于让「通信正常」成为「安全有效」的前提——这在 <a href="../embedded-realtime/iso26262_engineering.html">功能安全</a>（ISO 26262 这类标准的要求：安全机制不能以「软件正常工作」为前提）的框架下是不可接受的。<strong>通信总线可以承载「安全相关的状态上报」，但不能承载「安全动作的唯一触发路径」。</strong></div>
 
-  <div class="box tip"><strong>混合架构的隐性成本是「多套时钟」。</strong>EtherCAT 有分布式时钟、TSN 有 gPTP、主控有 <code>CLOCK_TAI</code>、相机有自己的帧同步——如果这些时间基准不统一，跨子系统的时间戳就对不上，融合算法会拿到相互矛盾的数据。<strong>设计时要明确指定一个「主时间源」，其他所有时钟都对齐到它</strong>，并在架构文档里画出时钟分发树。这一点在多传感器融合的机器人上尤其关键。</div>
+  <div class="box tip"><strong>混合架构的隐性成本是「多套时钟」。</strong>EtherCAT 有分布式时钟、TSN 有 gPTP（通用精确时间协议：靠网络报文让所有设备的表对齐到纳秒级的协议）、主控有 <code>CLOCK_TAI</code>（Linux 内核里按国际原子时走的时钟）、相机有自己的帧同步——如果这些时间基准不统一，跨子系统的时间戳就对不上，融合算法会拿到相互矛盾的数据，好比几个人用没对准的表记录同一件事，事后对时间线全乱。<strong>设计时要明确指定一个「主时间源」，其他所有时钟都对齐到它</strong>，并在架构文档里画出时钟分发树（哪台设备的表是母表、时间信号一级级传给谁的那张图）。这一点在多传感器融合的机器人上尤其关键。</div>
 </section>
 <!-- ================================================================ §8 -->
 <section class="chapter" id="s8">

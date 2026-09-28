@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>前沿技术与路线规划 · 6G 愿景与时间表 / ISAC 通感一体 / NTN 非地面网络 / AI-RAN / 无线确定性演进 / 机器人场景可行性评估</title>
-<meta name="description" content="前沿技术与路线规划：技术前瞻最容易犯的错不是「看漏了什么」，而是 把「标准写了」当成「能用了」。这篇给一套评估框架——用 成熟度、可获得性、收益量级、迁移成本 四个维度去过滤 6G、ISAC、AI-RAN、NTN 这些概念，判断哪些该现在投入、哪些该跟踪、哪些可以先忽略">
+<meta name="description" content="前沿技术评估与路线规划：别把「标准写了」当成「能用了」。用成熟度、可获得性、收益量级、迁移成本四个维度过滤 6G、ISAC、AI-RAN、NTN，判断机器人通信哪些现在就做、哪些先验证、哪些直接划掉">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/frontier_6g_isac.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/frontier_6g_isac.html">
 <meta property="og:title" content="前沿技术与路线规划 · 6G 愿景与时间表 / ISAC 通感一体 / NTN 非地面网络 / AI-RAN / 无线确定性演进 / 机器人场景可行性评估">
-<meta property="og:description" content="前沿技术与路线规划：技术前瞻最容易犯的错不是「看漏了什么」，而是 把「标准写了」当成「能用了」。这篇给一套评估框架——用 成熟度、可获得性、收益量级、迁移成本 四个维度去过滤 6G、ISAC、AI-RAN、NTN 这些概念，判断哪些该现在投入、哪些该跟踪、哪些可以先忽略">
+<meta property="og:description" content="前沿技术评估与路线规划：别把「标准写了」当成「能用了」。用成熟度、可获得性、收益量级、迁移成本四个维度过滤 6G、ISAC、AI-RAN、NTN，判断机器人通信哪些现在就做、哪些先验证、哪些直接划掉">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="前沿技术与路线规划 · 6G 愿景与时间表 / ISAC 通感一体 / NTN 非地面网络 / AI-RAN / 无线确定性演进 / 机器人场景可行性评估">
-<meta name="twitter:description" content="前沿技术与路线规划：技术前瞻最容易犯的错不是「看漏了什么」，而是 把「标准写了」当成「能用了」。这篇给一套评估框架——用 成熟度、可获得性、收益量级、迁移成本 四个维度去过滤 6G、ISAC、AI-RAN、NTN 这些概念，判断哪些该现在投入、哪些该跟踪、哪些可以先忽略">
+<meta name="twitter:description" content="前沿技术评估与路线规划：别把「标准写了」当成「能用了」。用成熟度、可获得性、收益量级、迁移成本四个维度过滤 6G、ISAC、AI-RAN、NTN，判断机器人通信哪些现在就做、哪些先验证、哪些直接划掉">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -129,7 +129,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="robotics_comm_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 25 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -168,7 +168,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★☆☆</span>
       <span class="pill cyan">技术前瞻</span>
-      <span class="pill green">阅读时长 ~25 min</span>
+      <span class="pill green">阅读时长 ~30 min</span>
       <span class="pill amber">前置 5G · TSN · DetNet</span>
     </div>
     <div class="meta">
@@ -201,7 +201,7 @@
     </tbody>
   </table>
 
-  <div class="def"><strong>「它改善的是当前的瓶颈项吗」是四个问题里最锋利的一个。</strong>按 <a href="deterministic_network_engineering.html">保障体系 §1</a> 的预算分解，如果你的系统瓶颈在端侧调度（数百微秒）或 UPF 未下沉（数十毫秒），那么<strong>任何空口新技术带来的几微秒改善都是噪声</strong>。所以评估前沿技术之前，必须先知道<strong>自己当前的瓶颈在哪</strong>——这个前置动作能过滤掉八成的「看起来很美」的技术。</div>
+  <div class="def"><strong>「它改善的是当前的瓶颈项吗」是四个问题里最锋利的一个。</strong>按 <a href="deterministic_network_engineering.html">保障体系 §1</a> 的预算分解，如果你的系统瓶颈在端侧调度（数百微秒）或 UPF（User Plane Function，5G 的用户面网关——所有数据都要先绕到它所在的机房才能出去）未下沉（数十毫秒），那么<strong>任何空口（air interface，终端和基站之间那段无线链路）新技术带来的几微秒改善都是噪声</strong>。所以评估前沿技术之前，必须先知道<strong>自己当前的瓶颈在哪</strong>——这个前置动作能过滤掉八成的「看起来很美」的技术。</div>
 
   <div class="analogy">评估前沿技术像<strong>看新款跑车</strong>：宣传的百公里加速 2.9 秒确实诱人，但如果你每天开的是<strong>限速 30 的厂区道路</strong>，这个指标对你毫无价值。真正该问的是「我现在最慢的环节是什么」——可能是<strong>停车找位（端侧调度）</strong>或者<strong>绕远路（UPF 没下沉）</strong>，换车解决不了这两个问题。</div>
 
@@ -225,7 +225,7 @@
     </div>
   </div>
 
-  <div class="box tip"><strong>这个 demo 想传达的核心判断：技术的价值 = 成熟度 × 收益量级，而不是单看任何一项。</strong>6G 的<strong>愿景收益</strong>很高但成熟度接近零，现在投入产出比极低；r-TWT 的<strong>收益量级</strong>中等但成熟度正在爬升，是值得<strong>今年就开始验证</strong>的；而 5G-TSN Bridge 收益明确、标准也成熟，卡点在<strong>可获得性</strong>（需要 SNPN + 特定设备）——所以它的行动项是「谈供应商」而不是「等技术成熟」。<strong>不同的短板对应完全不同的行动。</strong></div>
+  <div class="box tip"><strong>这个 demo 想传达的核心判断：技术的价值 = 成熟度 × 收益量级，而不是单看任何一项。</strong>6G 的<strong>愿景收益</strong>很高但成熟度接近零，现在投入产出比极低；r-TWT（restricted Target Wake Time，Wi-Fi 7 里给关键流量划定「受保护传输时段」的机制——时段内 AP 只服务约定的设备）的<strong>收益量级</strong>中等但成熟度正在爬升，是值得<strong>今年就开始验证</strong>的；而 5G-TSN Bridge（把 5G 网络桥接进 TSN 工业以太网的标准机制——让 5G 在工业网络看来就像 TSN 的一段）收益明确、标准也成熟，卡点在<strong>可获得性</strong>（需要 SNPN——Standalone Non-Public Network，不依赖运营商公网、企业自己独立组网的 5G 专网——加特定设备）——所以它的行动项是「谈供应商」而不是「等技术成熟」。<strong>不同的短板对应完全不同的行动。</strong></div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -249,7 +249,7 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
 <span class="cm">  2023 后工业专网才开始规模落地，<span style="font-weight:700">中间隔了 5 年</span></span>
 <span class="cm">★ 所以对 2026 年的机器人项目：6G 是<span style="font-weight:700">跟踪对象，不是规划输入</span></span></pre>
 
-  <div class="def"><strong>IMT-2030 定义的六大场景</strong>在 5G 三角（eMBB / URLLC / mMTC）基础上扩展：<strong>沉浸式通信</strong>（eMBB 的延伸）、<strong>极高可靠低时延</strong>（URLLC 的延伸）、<strong>大规模通信</strong>（mMTC 的延伸），再加三个新的——<strong>通感一体（ISAC）</strong>、<strong>泛在连接</strong>（NTN 等）、<strong>AI 与通信融合</strong>。对机器人最相关的是<strong>前两个的延伸</strong>和<strong>ISAC</strong>。</div>
+  <div class="def"><strong>IMT-2030 定义的六大场景</strong>（IMT-2030 是 ITU 给 6G 定的正式名字）在 5G 三角（eMBB 大带宽 / URLLC 超可靠低时延 / mMTC 海量物联——5G 的三大服务类型）基础上扩展：<strong>沉浸式通信</strong>（eMBB 的延伸）、<strong>极高可靠低时延</strong>（URLLC 的延伸）、<strong>大规模通信</strong>（mMTC 的延伸），再加三个新的——<strong>通感一体（ISAC）</strong>、<strong>泛在连接</strong>（NTN 等）、<strong>AI 与通信融合</strong>。对机器人最相关的是<strong>前两个的延伸</strong>和<strong>ISAC</strong>。</div>
 
   <h3>2.2 指标的翻译</h3>
 
@@ -264,7 +264,7 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
     </tbody>
   </table>
 
-  <div class="warn"><strong>看 6G 指标时最该保持的清醒：宣传的每个极限指标都是「在特定配置下、针对单一维度」的。</strong>「亚毫秒 + 六个九 + Tbps」<strong>永远不会同时成立</strong>——它们是不同场景顶点，就像 5G 的「1 ms URLLC」和「百万连接 mMTC」不会同时成立一样。做技术路线规划时，<strong>要按「我需要的那个维度」去看它能给什么，而不是把所有宣传指标加起来想象</strong>。</div>
+  <div class="warn"><strong>看 6G 指标时最该保持的清醒：宣传的每个极限指标都是「在特定配置下、针对单一维度」的。</strong>「亚毫秒空口时延 + 六个九（99.9999% 可靠性）+ Tbps 峰值速率」<strong>永远不会同时成立</strong>——它们是不同场景顶点，就像 5G 的「1 ms URLLC」和「百万连接 mMTC」不会同时成立一样。做技术路线规划时，<strong>要按「我需要的那个维度」去看它能给什么，而不是把所有宣传指标加起来想象</strong>。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -289,7 +289,7 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
     </tbody>
   </table>
 
-  <div class="box tip"><strong>ISAC 最有价值的差异点是「无源检测」，不是「定位」。</strong>定位方面 UWB 已经能做到厘米级且成本很低，ISAC 短期内不会更优。<strong>但 UWB 只能定位「戴了标签的东西」</strong>——它测的是标签和基站之间的距离。而 ISAC 靠回波，<strong>不需要目标携带任何设备</strong>：一个突然走进作业区的访客、一箱掉落的货物、一只跑进来的动物，UWB 完全看不见，ISAC 有可能看见。<strong>这对「人机共存」的安全场景是有实质意义的能力增量</strong>——评估 ISAC 时应该盯住这一点，而不是被「厘米级定位」的宣传吸引。</div>
+  <div class="box tip"><strong>ISAC 最有价值的差异点是「无源检测」，不是「定位」。</strong>定位方面 UWB（Ultra-Wideband，超宽带——用纳秒级脉冲做精确测距的短距无线技术）已经能做到厘米级且成本很低，ISAC 短期内不会更优。<strong>但 UWB 只能定位「戴了标签的东西」</strong>——它测的是标签和基站之间的距离。而 ISAC 靠回波，<strong>不需要目标携带任何设备</strong>：一个突然走进作业区的访客、一箱掉落的货物、一只跑进来的动物，UWB 完全看不见，ISAC 有可能看见。<strong>这对「人机共存」的安全场景是有实质意义的能力增量</strong>——评估 ISAC 时应该盯住这一点，而不是被「厘米级定位」的宣传吸引。</div>
 
   <h3>3.2 现实的约束</h3>
 
@@ -315,15 +315,15 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
   <div class="techs">
     <div class="t-now">
       <h5>AI for RAN —— 用 AI 优化网络（已在落地）</h5>
-      <p>用机器学习做<strong>调度决策、波束管理、干扰协调、异常检测、容量预测</strong>。这条线最成熟，O-RAN 的 <strong>RIC（RAN Intelligent Controller）+ xApp/rApp</strong> 架构就是为它设计的（见 <a href="../communication/oran_architecture.html">O-RAN 架构</a>）。对机器人的价值是<strong>间接的</strong>：网络整体更优 → 你的业务受益，但<strong>不改变时延的物理下限</strong>。</p>
+      <p>用机器学习做<strong>调度决策、波束管理、干扰协调、异常检测、容量预测</strong>。这条线最成熟，O-RAN（一个把传统「黑盒」基站拆成开放接口、允许第三方编程进去的行业联盟及其架构）的 <strong>RIC（RAN Intelligent Controller——RAN 即无线接入网、基站那一侧；RIC 相当于给基站配的「可编程控制中枢」）+ xApp/rApp（跑在 RIC 上的第三方优化小程序）</strong>架构就是为它设计的（见 <a href="../communication/oran_architecture.html">O-RAN 架构</a>）。对机器人的价值是<strong>间接的</strong>：网络整体更优 → 你的业务受益，但<strong>不改变时延的物理下限</strong>。</p>
     </div>
     <div class="t-soon">
       <h5>AI on RAN —— 用网络的算力跑 AI（即 MEC 的延伸）</h5>
-      <p>把基站/边缘的算力开放出来跑推理任务。<strong>这本质上就是 <a href="../communication/private_5g_mec.html">MEC</a></strong>，只是把 GPU 放得更靠近无线侧。对机器人有<strong>直接价值</strong>（感知卸载），但收支要按 <a href="../communication/private_5g_mec.html">MEC §6</a> 的最坏值算。</p>
+      <p>把基站/边缘的算力开放出来跑推理任务。<strong>这本质上就是 <a href="../communication/private_5g_mec.html">MEC</a></strong>（Multi-access Edge Computing，多接入边缘计算——把服务器从远端数据中心搬到基站旁边的边缘机房），只是把 GPU 放得更靠近无线侧。对机器人有<strong>直接价值</strong>（感知卸载——把本机算不动的感知计算交给边缘服务器跑），但收支要按 <a href="../communication/private_5g_mec.html">MEC §6</a> 的最坏值算。</p>
     </div>
     <div class="t-far">
       <h5>AI-native air interface —— 用 AI 重构空口本身（研究阶段）</h5>
-      <p>用神经网络替代传统的信道估计、编解码、波束赋形模块，甚至端到端学习收发机。潜力大但<strong>离商用很远</strong>：需要标准化收发两侧的模型、解决模型版本管理与互操作、以及可解释性和确定性保证（<strong>一个学出来的收发机很难给出可证明的时延界</strong>）。</p>
+      <p>用神经网络替代传统的信道估计（接收端先推断「信号在空中被反射、衰减成了什么样」）、编解码、波束赋形（用天线阵列把信号能量聚成一束、对准接收方）模块，甚至端到端学习收发机。潜力大但<strong>离商用很远</strong>：需要标准化收发两侧的模型、解决模型版本管理与互操作、以及可解释性和确定性保证（<strong>一个学出来的收发机很难给出可证明的时延界</strong>）。</p>
     </div>
   </div>
 
@@ -339,7 +339,7 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
     <div class="t"><h2>NTN 与广域覆盖</h2><p class="sub">对多数机器人场景是无关技术</p></div>
   </div>
 
-  <div class="def"><strong>NTN（Non-Terrestrial Network，非地面网络）</strong>把卫星（主要是低轨 LEO）纳入 3GPP 体系，让终端能直接接入卫星网络。3GPP 从 Rel-17 起有 NTN 标准，Rel-18/19 持续增强。<strong>核心价值是覆盖，不是性能</strong>——它解决的是「没有地面网络的地方怎么连」。</div>
+  <div class="def"><strong>NTN（Non-Terrestrial Network，非地面网络）</strong>把卫星（主要是 LEO——Low Earth Orbit 低地球轨道，高度几百到两千公里，比传统的同步轨道通信卫星近得多、时延也小得多）纳入 3GPP（制定 5G/6G 移动通信标准的国际组织）体系，让终端能直接接入卫星网络。3GPP 从 Rel-17 起有 NTN 标准，Rel-18/19 持续增强。<strong>核心价值是覆盖，不是性能</strong>——它解决的是「没有地面网络的地方怎么连」。</div>
 
   <table>
     <thead><tr><th>特性</th><th>LEO 卫星</th><th>对机器人的含义</th></tr></thead>
@@ -404,9 +404,9 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
     <figcaption>确定性机制从有线向无线的迁移图谱。三种技术的机制高度同构，差别在于无线无法排除域外干扰。</figcaption>
   </figure>
 
-  <div class="def"><strong>这张图是整篇最值得记住的一页。</strong>它说明了两件事：① <strong>确定性网络的核心思想是通用的</strong>——调度替代竞争、准入替代尽力而为、冗余替代重传，这三条在有线、Wi-Fi、蜂窝上都成立，所以<strong>学透了 TSN，理解 r-TWT 和 CG 几乎是零成本</strong>；② <strong>无线有一条不可逾越的边界</strong>——它运行在开放频谱上，邻居的设备、非授权干扰源都不受你控制，所以只能给<strong>统计保证</strong>，给不出 TSN 那样可证明的最坏时延界。<strong>这条边界决定了架构：硬实时闭环不跨无线段。</strong></div>
+  <div class="def"><strong>这张图是整篇最值得记住的一页。</strong>它说明了两件事：① <strong>确定性网络的核心思想是通用的</strong>——调度替代竞争、准入替代尽力而为、冗余替代重传，这三条在有线、Wi-Fi、蜂窝上都成立，所以<strong>学透了 TSN，理解 r-TWT 和 CG（Configured Grant，预配置授权——基站提前把上行发送的时机和资源分给终端，终端不用每次现申请，省掉「申请-批准」的往返）几乎是零成本</strong>；② <strong>无线有一条不可逾越的边界</strong>——它运行在开放频谱上，邻居的设备、非授权干扰源都不受你控制，所以只能给<strong>统计保证</strong>（「绝大多数时候不超时」，但给不出「绝不超时」），给不出 TSN 那样可证明的最坏时延界。<strong>这条边界决定了架构：硬实时闭环（一帧迟到就可能出事故、来不及补救的控制回路）不跨无线段。</strong></div>
 
-  <div class="box tip"><strong>这也解释了为什么这个系列前面几篇要先讲 TSN 和 DetNet。</strong>它们不只是「有线的技术」，而是<strong>确定性网络的思想原型</strong>。理解了 GCL 门控为什么需要 guard band、为什么准入控制才是确定性的真正来源、为什么 FRER 用带宽换时延——再看无线侧的 r-TWT、SCS、MLO，就会发现是同一套逻辑的不同实现。<strong>跟踪前沿技术时，抓住不变的思想比追逐变化的名词有效得多。</strong></div>
+  <div class="box tip"><strong>这也解释了为什么这个系列前面几篇要先讲 TSN 和 DetNet（Deterministic Networking，IETF 制定的 IP 层确定性转发标准，相当于 L3 版的 TSN）。</strong>它们不只是「有线的技术」，而是<strong>确定性网络的思想原型</strong>。理解了 GCL 门控为什么需要 guard band、为什么准入控制才是确定性的真正来源、为什么 FRER 用带宽换时延——再看无线侧的 r-TWT、SCS（Wi-Fi 的流分类服务：由应用告诉 AP「这条流需要什么等级的传输保障」）、MLO（Multi-Link Operation，Wi-Fi 7 的多链路操作——一台设备同时用两个频段收发，可以两路双发做冗余），就会发现是同一套逻辑的不同实现。<strong>跟踪前沿技术时，抓住不变的思想比追逐变化的名词有效得多。</strong></div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -474,9 +474,9 @@ ITU-R  IMT-2030 愿景框架        已发布（定义六大场景）
 
 附录  各技术的详细评估记录（相当于技术侧的 ADR）</pre>
 
-  <div class="box tip"><strong>「明确划掉的技术及理由」和「重新评估的触发条件」是这份文档的两个灵魂。</strong>前者体现你做了取舍而不是罗列——<strong>一份什么都说「值得关注」的路线图等于没有路线图</strong>。后者让跟踪变成有触发条件的动作：「<strong>当 r-TWT 在三家以上主流 AP 上可用、且实测抖动 &lt; 2 ms 时，重新评估是否纳入</strong>」——这比「持续关注」这种空话有用得多，也让接手的人知道该盯什么。<strong>这和架构 <a href="edge_cloud_robot_arch.html">ADR 的「复议条件」</a>是同一个设计。</strong></div>
+  <div class="box tip"><strong>「明确划掉的技术及理由」和「重新评估的触发条件」是这份文档的两个灵魂。</strong>前者体现你做了取舍而不是罗列——<strong>一份什么都说「值得关注」的路线图等于没有路线图</strong>。后者让跟踪变成有触发条件的动作：「<strong>当 r-TWT 在三家以上主流 AP（无线接入点，即 Wi-Fi 路由器/基站那一侧的设备）上可用、且实测抖动 &lt; 2 ms 时，重新评估是否纳入</strong>」——这比「持续关注」这种空话有用得多，也让接手的人知道该盯什么。<strong>这和架构 <a href="edge_cloud_robot_arch.html">ADR 的「复议条件」</a>是同一个设计。</strong></div>
 
-  <div class="warn"><strong>做技术前瞻最实际的一条建议：把「验证」而不是「调研」作为主要产出。</strong>读白皮书和参加会议只能得到厂商想让你知道的信息；<strong>真正的判断来自小规模实测</strong>——买两个模组、搭个最小环境、测你自己关心的那个指标。一次两周的 PoC 得到的结论，比三个月的资料调研可靠得多，而且能<strong>直接回答「在我们的场景里行不行」</strong>，而不是「在厂商的演示里行不行」。</div>
+  <div class="warn"><strong>做技术前瞻最实际的一条建议：把「验证」而不是「调研」作为主要产出。</strong>读白皮书和参加会议只能得到厂商想让你知道的信息；<strong>真正的判断来自小规模实测</strong>——买两个模组、搭个最小环境、测你自己关心的那个指标。一次两周的 PoC（Proof of Concept，小规模概念验证实验）得到的结论，比三个月的资料调研可靠得多，而且能<strong>直接回答「在我们的场景里行不行」</strong>，而不是「在厂商的演示里行不行」。</div>
 </section>
 <!-- ================================================================ §8 -->
 <section class="chapter" id="s8">

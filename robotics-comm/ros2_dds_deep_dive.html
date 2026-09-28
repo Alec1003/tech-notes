@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROS2 与 DDS / RTPS 深入 · 数据中心模型 / 线协议与可靠状态机 / QoS 兼容性 / rmw 实现对比 / Executor 实时陷阱 / 零拷贝 / 规模化调优</title>
-<meta name="description" content="ROS2 与 DDS / RTPS 深入：ROS2 把通信整个交给了 DDS，于是「话题发布订阅」这件看起来简单的事背后有一整套工业标准：数据中心模型、RTPS 线协议、二十多条 QoS 策略、以及一个能让你半天调不通的兼容性矩阵">
+<meta name="description" content="ROS2 与 DDS 深入：ROS2 把节点间通信全交给 DDS 中间件，发布订阅背后是数据中心模型、RTPS 线协议与 QoS 兼容性矩阵；用白话讲清可靠传输状态机、Executor 实时陷阱、零拷贝与大规模发现风暴的调优">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/robotics-comm/ros2_dds_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/robotics-comm/ros2_dds_deep_dive.html">
 <meta property="og:title" content="ROS2 与 DDS / RTPS 深入 · 数据中心模型 / 线协议与可靠状态机 / QoS 兼容性 / rmw 实现对比 / Executor 实时陷阱 / 零拷贝 / 规模化调优">
-<meta property="og:description" content="ROS2 与 DDS / RTPS 深入：ROS2 把通信整个交给了 DDS，于是「话题发布订阅」这件看起来简单的事背后有一整套工业标准：数据中心模型、RTPS 线协议、二十多条 QoS 策略、以及一个能让你半天调不通的兼容性矩阵">
+<meta property="og:description" content="ROS2 与 DDS 深入：ROS2 把节点间通信全交给 DDS 中间件，发布订阅背后是数据中心模型、RTPS 线协议与 QoS 兼容性矩阵；用白话讲清可靠传输状态机、Executor 实时陷阱、零拷贝与大规模发现风暴的调优">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ROS2 与 DDS / RTPS 深入 · 数据中心模型 / 线协议与可靠状态机 / QoS 兼容性 / rmw 实现对比 / Executor 实时陷阱 / 零拷贝 / 规模化调优">
-<meta name="twitter:description" content="ROS2 与 DDS / RTPS 深入：ROS2 把通信整个交给了 DDS，于是「话题发布订阅」这件看起来简单的事背后有一整套工业标准：数据中心模型、RTPS 线协议、二十多条 QoS 策略、以及一个能让你半天调不通的兼容性矩阵">
+<meta name="twitter:description" content="ROS2 与 DDS 深入：ROS2 把节点间通信全交给 DDS 中间件，发布订阅背后是数据中心模型、RTPS 线协议与 QoS 兼容性矩阵；用白话讲清可靠传输状态机、Executor 实时陷阱、零拷贝与大规模发现风暴的调优">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -128,7 +128,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="robotics_comm_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 40 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -170,7 +170,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">机器人中间件核心</span>
-      <span class="pill green">阅读时长 ~35 min</span>
+      <span class="pill green">阅读时长 ~40 min</span>
       <span class="pill amber">前置 UDP / 组播 / C++</span>
     </div>
     <div class="meta">
@@ -189,7 +189,7 @@
     <div class="t"><h2>ROS1 到 ROS2：为什么换成 DDS</h2><p class="sub">理解设计动机才能理解那些复杂性</p></div>
   </div>
 
-  <p>ROS1 的通信是自研的：<strong>TCPROS/UDPROS + 一个中心化的 Master</strong>。它简单好用，但有几个致命问题，正好解释了 ROS2 为什么宁愿引入 DDS 这么重的一套标准。</p>
+  <p>ROS1 的通信是自研的：<strong>TCPROS/UDPROS + 一个中心化的 Master</strong>——TCPROS/UDPROS 是 ROS1 团队自己写的两套传输协议（分别基于 TCP 和 UDP），Master 则是一个中心登记处，所有节点都得先到它那里报到，才能互相找到对方。它简单好用，但有几个致命问题，正好解释了 ROS2 为什么宁愿引入 DDS 这么重的一套标准。</p>
 
   <table>
     <thead><tr><th>问题</th><th>ROS1 的表现</th><th>ROS2 / DDS 的解法</th></tr></thead>
@@ -206,7 +206,7 @@
 
   <div class="def"><strong>DDS（Data Distribution Service）</strong>是 OMG 的数据分发标准，核心抽象是<strong>「全局数据空间」</strong>：参与者不是「给某个节点发消息」，而是「往某个 Topic 写数据 / 从某个 Topic 读数据」，<strong>发布者和订阅者互不知道对方存在</strong>。<strong>RTPS（Real-Time Publish-Subscribe Protocol）</strong>是 DDS 的<strong>线协议</strong>（wire protocol），规定了字节怎么在 UDP 上排布、怎么发现、怎么确认。两者关系是「API 标准」与「传输标准」——<strong>DDS 定义你写什么代码，RTPS 定义网线上跑什么字节</strong>。互操作性靠的是 RTPS。</div>
 
-  <div class="box tip"><strong>ROS2 的复杂性有相当一部分是「DDS 通用性」的代价。</strong>DDS 设计目标是覆盖军舰作战系统、金融交易、工业 SCADA 等各种场景，所以有 20 多条 QoS 策略、复杂的发现机制、可插拔的传输层。而机器人用得上的可能只有 5–6 条。<strong>这个认知很重要</strong>：遇到问题时不要试图理解 DDS 的全部，而是搞清 ROS2 实际用到的那个子集——本文讲的就是这个子集。</div>
+  <div class="box tip"><strong>ROS2 的复杂性有相当一部分是「DDS 通用性」的代价。</strong>DDS 设计目标是覆盖军舰作战系统、金融交易、工业 SCADA（工厂里负责数据采集与监控的一类上位机系统）等各种场景，所以有 20 多条 QoS 策略、复杂的发现机制、可插拔的传输层。而机器人用得上的可能只有 5–6 条。<strong>这个认知很重要</strong>：遇到问题时不要试图理解 DDS 的全部，而是搞清 ROS2 实际用到的那个子集——本文讲的就是这个子集。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -216,7 +216,7 @@
     <div class="t"><h2>DDS 数据中心模型</h2><p class="sub">五个实体，一层层套进去</p></div>
   </div>
 
-  <p>DDS 的对象模型是严格的层次结构。理解它的收益是：<strong>知道每个对象的生命周期和作用域，才能定位「为什么两个节点看不见对方」这类问题</strong>。</p>
+  <p>DDS 的对象模型是严格的层次结构，好比一家公司的组织架构：最外层是 Domain（一个个互不连通的独立园区），园区里每栋楼是一个 Participant（约等于一个进程），楼里再分部门（Publisher / Subscriber），真正干活的是员工（DataWriter / DataReader）。理解它的收益是：<strong>知道每个对象的生命周期和作用域，才能定位「为什么两个节点看不见对方」这类问题</strong>。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 720 290" role="img" aria-label="DDS 实体层次：Domain 内的 Participant、Publisher/Subscriber、DataWriter/DataReader 与 Topic">
@@ -282,7 +282,7 @@
     </tbody>
   </table>
 
-  <div class="box tip"><strong>排查「两个节点互相看不见」的检查顺序</strong>：① <code>ROS_DOMAIN_ID</code> 是否一致（最高频）；② <code>RMW_IMPLEMENTATION</code> 是否一致（不同 DDS 实现之间理论上 RTPS 互通，但实际常有坑）；③ 网络是否允许<strong>组播</strong>（Docker 默认桥接网络、部分云环境、跨子网都会挡住组播，这是第二高频原因）；④ 话题名和<strong>消息类型的哈希</strong>是否完全一致（改了 <code>.msg</code> 没重编译就会不匹配）；⑤ <strong>QoS 是否兼容</strong>（见 §5，最隐蔽）。这五步按顺序走，九成问题在前三步解决。</div>
+  <div class="box tip"><strong>排查「两个节点互相看不见」的检查顺序</strong>：① <code>ROS_DOMAIN_ID</code> 是否一致（最高频）；② <code>RMW_IMPLEMENTATION</code> 是否一致（不同 DDS 实现之间理论上 RTPS 互通，但实际常有坑）；③ 网络是否允许<strong>组播</strong>（一种「一条消息同时发给一组机器」的发送方式，只有加入对应组的机器才收得到——Docker 默认桥接网络、部分云环境、跨子网都会挡住组播，这是第二高频原因）；④ 话题名和<strong>消息类型的哈希</strong>是否完全一致（改了 <code>.msg</code> 没重编译就会不匹配）；⑤ <strong>QoS 是否兼容</strong>（见 §5，最隐蔽）。这五步按顺序走，九成问题在前三步解决。</div>
 </section>
 <!-- ================================================================ §3 -->
 <section class="chapter" id="s3">
@@ -323,7 +323,7 @@ INFO_DST   目的 GUID（用于把组播包定向给某个 Reader）
 
   <h3>3.2 发现机制：SPDP 与 SEDP</h3>
 
-  <p>去中心化发现分<strong>两阶段</strong>，理解这个两阶段是理解发现流量为什么爆炸的前提：</p>
+  <p>去中心化发现分<strong>两阶段</strong>：第一阶段 SPDP 负责「广而告之」——每个参与者周期性地向所有人宣告自己的存在；第二阶段 SEDP 负责「交换名片」——双方互相关注后，再单独交换详细清单（有哪些 Writer / Reader、什么话题、什么 QoS）。理解这个两阶段是理解发现流量为什么爆炸的前提：</p>
 
   <figure class="fig">
     <svg viewBox="0 0 720 250" role="img" aria-label="SPDP 与 SEDP 两阶段发现流程">
@@ -350,7 +350,7 @@ INFO_DST   目的 GUID（用于把组播包定向给某个 Reader）
     <figcaption>SPDP 用组播周期性宣告参与者，SEDP 用单播交换端点清单；后者的 O(N²) 特性是大规模 ROS2 系统的主要瓶颈。</figcaption>
   </figure>
 
-  <div class="warn"><strong>组播是 ROS2 部署的第一大坑。</strong>SPDP 完全依赖 UDP 组播（默认 <code>239.255.0.1</code>），而组播在很多环境下<strong>默认不通</strong>：Docker 的默认 bridge 网络、多数公有云的 VPC、跨子网（组播不跨路由器除非配了 PIM/IGMP snooping）、某些企业交换机的默认配置。症状就是「<code>ros2 topic list</code> 看不到对方」。对策：① 容器用 <code>--net=host</code>；② 配置 DDS 的<strong>静态发现</strong>或<strong>Discovery Server</strong>（见 §9）用单播替代组播；③ 交换机上开 IGMP snooping 并确认组播组正确转发。</div>
+  <div class="warn"><strong>组播是 ROS2 部署的第一大坑。</strong>SPDP 完全依赖 UDP 组播（默认 <code>239.255.0.1</code>），而组播在很多环境下<strong>默认不通</strong>：Docker 的默认 bridge 网络、多数公有云的 VPC（云平台上划给你的虚拟私有网络）、跨子网（组播默认不跨路由器，除非配了 PIM/IGMP snooping——这两个功能的作用是让路由器和交换机学会「哪台机器订了这个组播组，把包转给它」）、某些企业交换机的默认配置。症状就是「<code>ros2 topic list</code> 看不到对方」。对策：① 容器用 <code>--net=host</code>；② 配置 DDS 的<strong>静态发现</strong>或<strong>Discovery Server</strong>（见 §9）用单播替代组播；③ 交换机上开 IGMP snooping 并确认组播组正确转发。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -360,7 +360,7 @@ INFO_DST   目的 GUID（用于把组播包定向给某个 Reader）
     <div class="t"><h2>可靠传输状态机</h2><p class="sub">RELIABLE 是怎么在 UDP 上实现的</p></div>
   </div>
 
-  <p>DDS 的 <code>RELIABLE</code> 不是 TCP。它在 UDP 之上用 <strong>Heartbeat / AckNack 的显式协商</strong>实现可靠性，机制上更像「<strong>周期性对账</strong>」而不是「逐包确认」。这个差别决定了它的时延特性。</p>
+  <p>DDS 的 <code>RELIABLE</code>（可靠传输）不是 TCP。它在 UDP 之上用 <strong>Heartbeat / AckNack 的显式协商</strong>实现可靠性——Heartbeat 是发送方定期发的「我有哪些数据」报文，AckNack 是接收方回的「我收到哪、缺哪」清单——机制上更像「<strong>周期性对账</strong>」而不是「逐包确认」。这个差别决定了它的时延特性。</p>
 
   <div class="analogy">TCP 像<strong>挂号信逐封回执</strong>：每封信都要收到回执，没收到就重寄。RTPS 的 RELIABLE 像<strong>月底对账</strong>：发件人定期（Heartbeat 周期）发一份「本月我寄了 1 到 100 号」的清单，收件人核对后回复「我缺 37 和 82」，发件人只补这两封。<strong>好处是控制报文少得多</strong>（一个 Heartbeat 覆盖上百个样本），<strong>坏处是发现丢包的延迟取决于对账频率</strong>——Heartbeat 周期设成 100 ms，那么最坏要 100 ms 后才知道丢了包。</div>
 
@@ -391,7 +391,7 @@ heartbeatResponseDelay   Reader 收到 HB 后延迟回 ACKNACK  聚合多个 HB
 
   <h3>4.2 Writer 侧的历史缓存与阻塞</h3>
 
-  <p><code>RELIABLE</code> 要求 Writer 保留已发送但未被全部 Reader 确认的样本，这块内存叫 <strong>History Cache</strong>。它满了会发生什么，是个高频事故点：</p>
+  <p><code>RELIABLE</code> 要求 Writer 保留已发送但未被全部 Reader 确认的样本，这块内存叫 <strong>History Cache</strong>（相当于发件人留的发货底账：收件人不签收，底账就不能销）。它满了会发生什么，是个高频事故点：</p>
 
   <div class="vs">
     <div class="bad">
@@ -433,7 +433,7 @@ heartbeatResponseDelay   Reader 收到 HB 后延迟回 ACKNACK  聚合多个 HB
     <div class="t"><h2>QoS 策略与兼容性</h2><p class="sub">半天调不通的元凶通常在这</p></div>
   </div>
 
-  <p>DDS 有 20 多条 QoS 策略，ROS2 暴露了其中 7 条常用的。<strong>关键规则叫「Request vs Offered（RxO）兼容性」</strong>：Reader 请求的服务等级<strong>不能高于</strong> Writer 提供的，否则<strong>静默不匹配</strong>——不报错，就是收不到数据。</p>
+  <p>DDS 有 20 多条 QoS 策略（QoS 即 Quality of Service，服务质量——给每条数据通道单独设定的「收发货规则」，比如丢包要不要重传、最多缓存几条），ROS2 暴露了其中 7 条常用的。<strong>关键规则叫「Request vs Offered（RxO）兼容性」</strong>：Reader 请求的服务等级<strong>不能高于</strong> Writer 提供的，否则<strong>静默不匹配</strong>——不报错，就是收不到数据。</p>
 
   <h3>5.1 七条常用策略</h3>
 
@@ -503,7 +503,7 @@ heartbeatResponseDelay   Reader 收到 HB 后延迟回 ACKNACK  聚合多个 HB
     </tbody>
   </table>
 
-  <div class="box tip"><strong>ROS2 提供了预置 QoS profile，优先用它们而不是手搓。</strong><code>rclcpp::SensorDataQoS()</code>（BEST_EFFORT + KEEP_LAST(5)，适合传感器）、<code>rclcpp::SystemDefaultsQoS()</code>、<code>rclcpp::ServicesQoS()</code>、<code>rclcpp::ParameterEventsQoS()</code>。它们的组合是社区踩过坑之后定下来的。<strong>最需要手动指定的场景只有两类</strong>：① 需要 latched 语义（地图/静态 TF）→ 手动设 <code>TRANSIENT_LOCAL</code>；② 硬实时控制流 → 手动设 <code>BEST_EFFORT + KEEP_LAST(1) + Lifespan</code>。</div>
+  <div class="box tip"><strong>ROS2 提供了预置 QoS profile，优先用它们而不是手搓。</strong><code>rclcpp::SensorDataQoS()</code>（BEST_EFFORT + KEEP_LAST(5)，适合传感器）、<code>rclcpp::SystemDefaultsQoS()</code>、<code>rclcpp::ServicesQoS()</code>、<code>rclcpp::ParameterEventsQoS()</code>。它们的组合是社区踩过坑之后定下来的。<strong>最需要手动指定的场景只有两类</strong>：① 需要 latched 语义（「锁存」——订阅者哪怕晚加入，也要能立刻拿到最后一条已发布的数据，地图/静态 TF 常用）→ 手动设 <code>TRANSIENT_LOCAL</code>；② 硬实时控制流 → 手动设 <code>BEST_EFFORT + KEEP_LAST(1) + Lifespan</code>。</div>
 
   <div class="warn"><strong>调试 QoS 不匹配的最快方法</strong>：<code>ros2 topic info /topic_name --verbose</code> 会列出所有 Publisher 和 Subscriber 的<strong>完整 QoS</strong>，直接肉眼比对。另外可以订阅 <code>rclcpp</code> 的 <code>QOSRequestedIncompatibleQoS</code> 事件回调（<code>SubscriptionOptions::event_callbacks</code>），<strong>在代码里主动捕获不兼容事件并打日志</strong>——比事后猜测高效得多。生产系统应该<strong>默认注册这个回调</strong>，把静默失败变成显式告警。</div>
 </section>
@@ -514,7 +514,7 @@ heartbeatResponseDelay   Reader 收到 HB 后延迟回 ACKNACK  聚合多个 HB
     <div class="t"><h2>rmw 层与实现选型</h2><p class="sub">换一行环境变量，性能差几倍</p></div>
   </div>
 
-  <p>ROS2 通过 <strong>rmw（ROS MiddleWare）抽象层</strong>把自己和具体 DDS 实现解耦。切换实现只需换一个环境变量，但<strong>行为差异相当大</strong>。</p>
+  <p>ROS2 通过 <strong>rmw（ROS MiddleWare）抽象层</strong>把自己和具体 DDS 实现解耦——rmw 相当于 ROS2 和 DDS 之间约定的一套「插座标准」，底下接哪家实现，上面的代码都不用改。切换实现只需换一个环境变量，但<strong>行为差异相当大</strong>。</p>
 
 <pre><span class="cm">── 分层结构 ────────────────────────────────────</span>
 你的代码
@@ -544,7 +544,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     </div>
     <div class="i-zenoh">
       <h5>rmw_zenoh —— 不是 DDS</h5>
-      <p>ROS 2 Jazzy 起提供的<strong>非 DDS 后端</strong>。用 Zenoh 协议替代 RTPS，<strong>从根上解决了发现风暴和组播依赖</strong>：默认走 router 模式（单播、可跨网段、天然穿 NAT），大规模和跨网络场景表现明显更好。代价：与原生 DDS 系统不互通、生态较新、部分 QoS 语义映射不完全对齐。</p>
+      <p>ROS 2 Jazzy 起提供的<strong>非 DDS 后端</strong>。用 Zenoh 协议替代 RTPS，<strong>从根上解决了发现风暴和组播依赖</strong>：默认走 router 模式（单播、可跨网段、天然穿 NAT——NAT 是路由器做的内外网地址转换，外面的机器没法主动连进来，靠 router 中转就绕开了这个限制），大规模和跨网络场景表现明显更好。代价：与原生 DDS 系统不互通、生态较新、部分 QoS 语义映射不完全对齐。</p>
     </div>
     <div class="i-shm">
       <h5>RTI Connext —— 商业</h5>
@@ -552,7 +552,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     </div>
   </div>
 
-  <div class="box tip"><strong>选型判断</strong>：① 刚起步、要文档和社区支持 → <strong>Fast DDS 默认</strong>；② 产品化、要稳定的尾部延迟和小内存 → <strong>Cyclone DDS</strong>；③ 节点数量多（&gt; 50）、要跨网段/跨 NAT、被组播折磨 → <strong>rmw_zenoh</strong>；④ 需要功能安全认证 → <strong>Connext</strong>。<strong>最重要的一条：不管选哪个，都要在自己的负载下实测 P99.9 延迟</strong>，不要照抄别人的 benchmark——DDS 的性能对配置极其敏感，同一个实现调优前后能差三五倍。</div>
+  <div class="box tip"><strong>选型判断</strong>：① 刚起步、要文档和社区支持 → <strong>Fast DDS 默认</strong>；② 产品化、要稳定的尾部延迟和小内存 → <strong>Cyclone DDS</strong>；③ 节点数量多（&gt; 50）、要跨网段/跨 NAT、被组播折磨 → <strong>rmw_zenoh</strong>；④ 需要功能安全认证 → <strong>Connext</strong>。<strong>最重要的一条：不管选哪个，都要在自己的负载下实测 P99.9 延迟</strong>（把 1000 次传输按快慢排序，取第 999 名的速度——专门衡量「最倒霉的那一小簇有多慢」），不要照抄别人的 benchmark——DDS 的性能对配置极其敏感，同一个实现调优前后能差三五倍。</div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -575,7 +575,7 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     </tbody>
   </table>
 
-  <div class="danger"><strong>默认 Executor 的调度顺序不是「先到先服务」，而是有固定优先级的轮询。</strong>ROS2 默认 Executor 每一轮按<strong>固定类别顺序</strong>扫描：timer → subscription → service → client → waitable，并且<strong>同类别内按注册顺序</strong>取第一个就绪的。后果是：如果一个高频 timer 一直就绪，它可能<strong>持续抢在 subscription 之前</strong>；而同一类别里注册顺序靠前的实体也天然占优。这意味着<strong>回调的执行顺序既不公平也不由业务优先级决定</strong>——是实现细节。生产系统里如果依赖某种回调顺序，那是隐藏的 bug。</div>
+  <div class="danger"><strong>默认 Executor 的调度顺序不是「先到先服务」，而是有固定优先级的轮询。</strong>ROS2 默认 Executor 每一轮按<strong>固定类别顺序</strong>扫描：timer（定时器）→ subscription（订阅）→ service（服务）→ client（客户端）→ waitable（其余可等待的事件），并且<strong>同类别内按注册顺序</strong>取第一个就绪的。后果是：如果一个高频 timer 一直就绪，它可能<strong>持续抢在 subscription 之前</strong>；而同一类别里注册顺序靠前的实体也天然占优。这意味着<strong>回调的执行顺序既不公平也不由业务优先级决定</strong>——是实现细节。生产系统里如果依赖某种回调顺序，那是隐藏的 bug。</div>
 
   <h3>7.2 回调组：控制并发的唯一手段</h3>
 
@@ -629,15 +629,15 @@ int main(int argc, char** argv) {
   rclcpp::shutdown();
 }</pre>
 
-  <div class="def"><strong>「一个 Executor 一个线程一种优先级」是 ROS2 实时化的标准模式。</strong>因为 <code>MultiThreadedExecutor</code> 的线程池<strong>无法为不同回调设置不同的实时优先级</strong>——线程是共享的，你不知道哪个回调会跑在哪个线程上。而多个 <code>SingleThreadedExecutor</code> 各跑在自己的线程里，你就能精确控制「控制回路这个线程是 SCHED_FIFO 80 并绑在隔离核上，点云处理那个线程是普通优先级」。<strong>这个模式加上 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a>，才是 ROS2 能做实时的前提。</strong></div>
+  <div class="def"><strong>「一个 Executor 一个线程一种优先级」是 ROS2 实时化的标准模式。</strong>因为 <code>MultiThreadedExecutor</code> 的线程池<strong>无法为不同回调设置不同的实时优先级</strong>——线程是共享的，你不知道哪个回调会跑在哪个线程上。而多个 <code>SingleThreadedExecutor</code> 各跑在自己的线程里，你就能精确控制「控制回路这个线程是 SCHED_FIFO 80（Linux 的实时调度策略，高优先级线程可以随时抢占普通线程）并绑在隔离核上，点云处理那个线程是普通优先级」。<strong>这个模式加上 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a>，才是 ROS2 能做实时的前提。</strong></div>
 
   <h3>7.3 四个必做的实时化动作</h3>
 
   <ul>
-    <li><strong>内存预分配 + 锁定</strong>。启动时 <code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>，避免运行时页错误（一次 major fault 就是几百微秒到毫秒）。消息类型尽量用<strong>定长</strong>（避免 <code>std::vector</code>/<code>string</code> 在回调里动态分配），或者用自定义分配器 + 内存池。</li>
+    <li><strong>内存预分配 + 锁定</strong>。启动时 <code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>，避免运行时页错误（major fault 指进程要访问的内存不在物理内存里、操作系统得从磁盘把它搬回来，一次就是几百微秒到毫秒）。消息类型尽量用<strong>定长</strong>（避免 <code>std::vector</code>/<code>string</code> 在回调里动态分配），或者用自定义分配器 + 内存池。</li>
     <li><strong>避免回调里做任何可能阻塞的事</strong>：文件 I/O、日志落盘（<code>RCLCPP_INFO</code> 在某些配置下会同步写）、锁竞争、内存分配、DNS 解析。把这些挪到低优先级线程。</li>
     <li><strong>不要用 <code>SharedPtr</code> 的引用计数做热路径传递</strong>——原子操作在多核上有跨核缓存同步开销。热路径优先用 <code>unique_ptr</code>（触发进程内零拷贝，见 §8）。</li>
-    <li><strong>关闭不必要的中间件开销</strong>：不用的 <code>/parameter_events</code>、<code>/rosout</code> 日志话题、以及 introspection（<code>--enable-type-description-service</code> 之类）在高频场景下都是额外的发现和序列化成本。</li>
+    <li><strong>关闭不必要的中间件开销</strong>：不用的 <code>/parameter_events</code>、<code>/rosout</code> 日志话题、以及 introspection（运行时自描述功能，让外部工具能查询节点和类型的详细信息，<code>--enable-type-description-service</code> 之类）在高频场景下都是额外的发现和序列化（把内存里的对象转成字节流才能发到网上）成本。</li>
   </ul>
 
   <div class="warn"><strong>最反直觉的一条：进程内通信（intra-process）不一定更快。</strong>ROS2 的 <code>use_intra_process_comms(true)</code> 会绕过 DDS 直接在进程内传指针，<strong>理论上零拷贝</strong>。但它有两个陷阱：① 只在<strong>发布时用 <code>unique_ptr</code> 且订阅端接受 <code>unique_ptr</code> 或 <code>const&amp;</code></strong> 时才真正零拷贝，用 <code>SharedPtr</code> 或值传递会退化为拷贝；② 进程内通信的<strong>队列满了会静默丢弃</strong>，行为和 DDS 的 QoS 不完全一致，容易出现「同样的代码在单进程和多进程下行为不同」。<strong>要用就要实测确认真的零拷贝了</strong>（看有没有 memcpy 的开销）。</div>
@@ -650,7 +650,7 @@ int main(int argc, char** argv) {
     <div class="t"><h2>零拷贝与共享内存</h2><p class="sub">点云和图像的唯一出路</p></div>
   </div>
 
-  <p>一帧 1080p RGB 图像是 6 MB，一帧 32 线激光点云约 200 KB。<strong>如果每次发布都做序列化 + 内存拷贝 + UDP 分片</strong>，光是拷贝和分片就吃掉几毫秒，还会把 CPU 打满。零拷贝是大数据话题的必需品，不是优化。</p>
+  <p>一帧 1080p RGB 图像是 6 MB，一帧 32 线激光点云约 200 KB。<strong>如果每次发布都做序列化 + 内存拷贝 + UDP 分片（消息超过网络单包上限时拆成多片发送）</strong>，光是拷贝和分片就吃掉几毫秒，还会把 CPU 打满。零拷贝是大数据话题的必需品，不是优化。</p>
 
   <h3>8.1 三个层次的零拷贝</h3>
 
@@ -687,7 +687,7 @@ perf record -g ./your_node &amp;&amp; perf report | grep -i memcpy</pre>
 
   <div class="analogy">三个层次像<strong>三种交接文件的方式</strong>：<strong>进程内</strong>是「把桌上那份文件推给同办公室的同事」（只是换个人拿）；<strong>共享内存</strong>是「放到公共文件柜里，谁要谁去看」（放一次，多人共读）；<strong>Loaned Message</strong> 是「直接在公共文件柜里的纸上写」（连「放进去」这一步都省了）。而没有零拷贝的默认路径是「每个人都复印一份自己拿走」——人越多复印越多。</div>
 
-  <div class="box tip"><strong>「消息类型必须是 POD」是 Loaned Message 最大的限制，也是设计上的一个重要提示。</strong>标准的 <code>sensor_msgs/PointCloud2</code> 含变长 <code>data</code> 字段，<strong>不满足条件</strong>，所以拿不到真零拷贝。实践中的做法是<strong>自定义定长消息</strong>：把点云按固定最大点数定义（比如 <code>Point points[65536]; uint32 valid_count;</code>），牺牲一点内存换零拷贝。这个取舍在高频大数据场景通常是值得的——<strong>浪费 20% 内存换来省掉 90% 的 CPU 拷贝开销</strong>。同样的思路在高性能网络编程里叫「以空间换时间的定长协议」，见 <a href="../communication/binary_protocol.html">二进制协议设计</a>。</div>
+  <div class="box tip"><strong>「消息类型必须是 POD（plain old data，纯定长数据——整个结构体是一块固定大小的连续内存，不含字符串和变长字段）」是 Loaned Message 最大的限制，也是设计上的一个重要提示。</strong>标准的 <code>sensor_msgs/PointCloud2</code> 含变长 <code>data</code> 字段，<strong>不满足条件</strong>，所以拿不到真零拷贝。实践中的做法是<strong>自定义定长消息</strong>：把点云按固定最大点数定义（比如 <code>Point points[65536]; uint32 valid_count;</code>），牺牲一点内存换零拷贝。这个取舍在高频大数据场景通常是值得的——<strong>浪费 20% 内存换来省掉 90% 的 CPU 拷贝开销</strong>。同样的思路在高性能网络编程里叫「以空间换时间的定长协议」，见 <a href="../communication/binary_protocol.html">二进制协议设计</a>。</div>
 </section>
 
 <!-- ================================================================ §9 -->
@@ -739,7 +739,7 @@ P = 100, E = 20：
 
   <ul>
     <li><strong>增大 socket 缓冲</strong>。默认 <code>net.core.rmem_max</code> 常常只有 200 KB 左右，点云突发时直接溢出丢包。调到 16–64 MB，并在 DDS 配置里设置对应的 <code>socketBufferSize</code>。<strong>这是「点云偶发丢帧」最常见的原因。</strong></li>
-    <li><strong>调大 MTU 或启用分片控制</strong>。大消息走 <code>DATA_FRAG</code>，UDP 层再分片就是双重分片。局域网内启用 jumbo frame（MTU 9000）能显著降低分片开销和丢包放大效应。</li>
+    <li><strong>调大 MTU 或启用分片控制</strong>。大消息走 <code>DATA_FRAG</code>，UDP 层再分片就是双重分片。局域网内启用 jumbo frame（巨型帧——把单包上限从 1500 字节提到 9000 字节，同样的消息要拆的片数就少得多）能显著降低分片开销和丢包放大效应。</li>
     <li><strong>限制 History 与 resource_limits</strong>。<code>KEEP_ALL</code> + 无限 resource_limits 是内存泄漏式增长的配方；生产配置必须显式设上限。</li>
     <li><strong>关掉不用的传输</strong>。如果只在本机通信，禁用 UDP 只留 SHM，能省掉大量开销和端口占用。</li>
     <li><strong>把发现流量和业务流量分开</strong>。多网卡场景用 <code>whitelist</code> 指定 DDS 只用某张网卡，避免发现包跑到业务网或管理网上。</li>
@@ -753,7 +753,7 @@ P = 100, E = 20：
     <div class="t"><h2>DDS over TSN</h2><p class="sub">中间件和确定性网络怎么对接</p></div>
   </div>
 
-  <p>把 <a href="tsn_deep_dive.html">TSN</a> 和 DDS 拼起来时，最关键的问题是：<strong>DDS 的 QoS 概念和 TSN 的流概念怎么映射</strong>？两者都叫 QoS，但完全不是一个层面的东西。</p>
+  <p>把 <a href="tsn_deep_dive.html">TSN</a>（Time-Sensitive Networking，时间敏感网络——一套让普通以太网也能给出确定性时延保证的标准）和 DDS 拼起来时，最关键的问题是：<strong>DDS 的 QoS 概念和 TSN 的流概念怎么映射</strong>？两者都叫 QoS，但完全不是一个层面的东西。</p>
 
   <table>
     <thead><tr><th>维度</th><th>DDS QoS</th><th>TSN</th></tr></thead>
@@ -765,14 +765,14 @@ P = 100, E = 20：
     </tbody>
   </table>
 
-  <div class="def"><strong>DDS 的 Deadline 不提供任何时延保证</strong>——这是最常见的误解。它的语义是「如果连续两个样本的间隔超过 X，触发一个回调告诉你违约了」。它是<strong>监控机制</strong>，不是<strong>调度机制</strong>。真正的时延保证必须来自下层：TSN 的门控、DetNet 的排队、或 5G 的 5QI。<strong>所以「我配了 Deadline 10 ms 为什么还会晚到」这个问题的答案是：Deadline 从来就不管这个。</strong></div>
+  <div class="def"><strong>DDS 的 Deadline 不提供任何时延保证</strong>——这是最常见的误解。它的语义是「如果连续两个样本的间隔超过 X，触发一个回调告诉你违约了」。它是<strong>监控机制</strong>，不是<strong>调度机制</strong>。真正的时延保证必须来自下层：TSN 的门控、DetNet（IETF 制定的确定性网络标准，在路由器层面保证转发时延）的排队、或 5G 的 5QI（5G 里给不同业务定优先级和时延档位的编号）。<strong>所以「我配了 Deadline 10 ms 为什么还会晚到」这个问题的答案是：Deadline 从来就不管这个。</strong></div>
 
   <h3>10.1 对接的三个动作</h3>
 
   <ol>
-    <li><strong>把 DDS 流量映射到正确的 socket priority。</strong>这是唯一的连接点：DDS 发出的 UDP 包要带上正确的 <code>SO_PRIORITY</code>，TSN 的 <code>mqprio</code> 才能把它放进对应的硬件队列。Fast DDS 和 Cyclone 都支持在传输配置里设置 socket 的 <code>SO_PRIORITY</code> 或 DSCP（<code>IP_TOS</code>）。<strong>不设的话所有 DDS 流量都是同一个优先级，TSN 的门控形同虚设。</strong></li>
-    <li><strong>把发布时刻对齐到 TSN 周期。</strong>光有优先级不够——TT 窗口只在特定时刻打开，如果应用在窗口之外调用 <code>publish()</code>，包要等到下一个窗口。所以发布线程要用 <code>clock_nanosleep(CLOCK_TAI, TIMER_ABSTIME)</code> 对齐到 GCL 周期，配合 <code>etf</code> qdisc 和 <code>SO_TXTIME</code>。</li>
-    <li><strong>把大消息挡在 TT 通道之外。</strong>点云、图像这类大消息会产生大量 <code>DATA_FRAG</code>，塞进 TT 窗口会挤爆它。必须<strong>按 Topic 分优先级</strong>：控制类 Topic 走高优先级 + TT 窗口，大数据 Topic 走 CBS 或 BE 队列。</li>
+    <li><strong>把 DDS 流量映射到正确的 socket priority。</strong>这是唯一的连接点：DDS 发出的 UDP 包要带上正确的 <code>SO_PRIORITY</code>，TSN 的 <code>mqprio</code>（Linux 的排队规则，负责把不同优先级的流量分进不同硬件队列）才能把它放进对应的硬件队列。Fast DDS 和 Cyclone 都支持在传输配置里设置 socket 的 <code>SO_PRIORITY</code> 或 DSCP（<code>IP_TOS</code>，写在 IP 包头里标记「这个包多重要」的字段）。<strong>不设的话所有 DDS 流量都是同一个优先级，TSN 的门控形同虚设。</strong></li>
+    <li><strong>把发布时刻对齐到 TSN 周期。</strong>光有优先级不够——TT 窗口只在特定时刻打开，如果应用在窗口之外调用 <code>publish()</code>，包要等到下一个窗口。所以发布线程要用 <code>clock_nanosleep(CLOCK_TAI, TIMER_ABSTIME)</code> 对齐到 GCL（gate control list，门控列表——规定每个时间窗放行哪个队列的时刻表）周期，配合 <code>etf</code> qdisc（Linux 里「把包提前放进网卡、到点才发出去」的排队规则）和 <code>SO_TXTIME</code>。</li>
+    <li><strong>把大消息挡在 TT 通道之外。</strong>点云、图像这类大消息会产生大量 <code>DATA_FRAG</code>，塞进 TT 窗口会挤爆它。必须<strong>按 Topic 分优先级</strong>：控制类 Topic 走高优先级 + TT 窗口，大数据 Topic 走 CBS（credit-based shaper，按信用值限速的整形队列）或 BE（best effort，尽力而为的普通队列）。</li>
   </ol>
 
   <div class="warn"><strong>DDS 的自身控制流量也要考虑进去。</strong>Heartbeat、AckNack、SPDP、SEDP 这些报文<strong>和业务数据走同一个 socket</strong>，因此享受同样的优先级。后果是：如果把控制 Topic 设成最高优先级，那么这个 Participant 的<strong>发现流量也变成最高优先级</strong>——启动时的发现风暴会直接冲进 TT 窗口。对策是<strong>把控制流放在独立的 Participant</strong> 里（甚至独立 domain），让它的发现流量规模极小；或者用静态发现彻底消除发现流量。这个细节很容易漏，而症状是「平时正常，只在有节点重启时抖动」。</div>
