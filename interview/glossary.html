@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- tn-theme-init --><script>try{var d=document.documentElement,t=localStorage.getItem('theme')||localStorage.getItem('tn-theme');if(t==='dark')d.setAttribute('data-theme','dark');}catch(e){}</script>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通俗术语词典 · 白话版技术概念速查 — Tech Notes</title>
+<meta name="description" content="全站技术术语的白话速查：9 大领域 60+ 个专业名词，每个都配一句人话加一个比喻——术语保留（它是搜索和跳转的钩子），解释全说人话。覆盖 C++、系统、架构、AI、大数据、通信、机器人、管理、性能调试的核心概念。">
+<!-- tn-social:v1 -->
+<link rel="canonical" href="https://kavinchan13.github.io/tech-notes/interview/glossary.html">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Kavin Tech Notes">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:url" content="https://kavinchan13.github.io/tech-notes/interview/glossary.html">
+<meta property="og:title" content="通俗术语词典 · 白话版技术概念速查">
+<meta property="og:description" content="全站技术术语的白话速查：9 大领域 60+ 个专业名词，每个都配一句人话加一个比喻——术语保留（它是搜索和跳转的钩子），解释全说人话。覆盖 C++、系统、架构、AI、大数据、通信、机器人、管理、性能调试的核心概念。">
+<meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="通俗术语词典 · 白话版技术概念速查">
+<meta name="twitter:description" content="全站技术术语的白话速查：9 大领域 60+ 个专业名词，每个都配一句人话加一个比喻——术语保留（它是搜索和跳转的钩子），解释全说人话。覆盖 C++、系统、架构、AI、大数据、通信、机器人、管理、性能调试的核心概念。">
+<meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
+<!-- /tn-social:v1 -->
+<link rel="stylesheet" href="../assets/guide-theme.css">
+<style>
+.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin:18px 0}
+.g-card{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--bg-card,var(--bg))}
+.g-term{font-weight:700;font-size:15px;color:var(--text)}
+.g-term a{color:inherit;text-decoration:none;border-bottom:1px dashed color-mix(in srgb,var(--accent) 55%,transparent)}
+.g-term a:hover{color:var(--accent)}
+.g-say{margin-top:6px;font-size:13.5px;line-height:1.65;color:var(--text)}
+.g-meta{margin-top:8px;font:11px var(--mono,monospace);color:var(--text-dim)}
+.g-dom-h2{margin-top:40px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+</style>
+<link rel="stylesheet" href="../assets/site-tokens.css">
+<link rel="stylesheet" href="../assets/article.css">
+
+</head>
+<body class="has-topnav">
+<!-- tn-nav:v2 -->
+<nav class="tn-topnav"><div class="tn-topnav-in">
+  <a class="tn-brand" href="../index.html">Kavin <b>Tech Notes</b></a>
+  <div class="tn-navlinks"><a class="tn-home" href="../index.html">← 主页</a><a href="interview_directory.html">目录</a>
+  <button class="theme-btn" id="themeBtn" type="button" aria-label="切换深色/浅色主题">◐</button></div>
+</div></nav>
+<!-- /tn-nav:v2 -->
+<div class="layout">
+  <aside class="toc"><h2>通俗术语词典</h2><nav><ol>
+    <li><a href="#cpp">C++ 与 STL</a></li>
+    <li><a href="#system">系统与 Linux</a></li>
+    <li><a href="#architect">架构与分布式</a></li>
+    <li><a href="#ai">AI / 机器学习</a></li>
+    <li><a href="#bigdata">大数据</a></li>
+    <li><a href="#comm">通信与网络</a></li>
+    <li><a href="#robotics">机器人与嵌入式</a></li>
+    <li><a href="#perf">性能与调试</a></li>
+    <li><a href="#mgmt">工程管理与 PM</a></li>
+  </ol></nav></aside>
+  <main>
+    <header class="hero">
+      <div class="badge">Glossary · 白话版</div>
+      <h1>通俗术语词典</h1>
+      <p class="sub">全站技术名词的「人话对照表」。这个知识库的深度文章是专业写法，术语密集——它们是搜索的钩子、面试的语言，不该稀释；但第一次接触时，谁都值得先听到一句大白话。这本词典把 9 大领域 60+ 个核心名词各配一句白话加一个比喻，点术语进深度文章，听懂了再进去读。</p>
+      <div class="meta-row"><span class="pill amber">9 大领域</span><span class="pill cyan">60+ 术语</span><span class="pill">每条一句人话</span></div>
+    </header>
+
+    <section class="chapter">
+      <h2 class="g-dom-h2" id="cpp">C++ 与 STL</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../cpp/object_model.html">对象模型 / vptr / 虚表</a></div><p class="g-say">C++ 对象怎么「记住」自己是什么类型：每个带虚函数的对象里都揣着一张小纸条（vptr），指向全班同学共用的「花名册」（虚表）——调虚函数就是先查花名册再找对人。</p><div class="g-meta">领域：C++ · 对象模型</div></div>
+        <div class="g-card"><div class="g-term"><a href="../cpp/value_categories_guide.html">左值 / 右值 / 移动语义</a></div><p class="g-say">「有名字有住址的东西」vs「用完即扔的临时工」。移动就是搬家时不搬家具、只把钥匙要过来——原主继续住，但屋里已经空了。</p><div class="g-meta">领域：C++ · 值类别</div></div>
+        <div class="g-card"><div class="g-term"><a href="../cpp/smart_pointers_deep_dive.html">智能指针 / RAII</a></div><p class="g-say">「谁最后走谁锁门」的自动记账本：unique_ptr 是独苗（钥匙只有一把），shared_ptr 是合租（计数器记录几人共用），weak_ptr 只留门牌号不占房。</p><div class="g-meta">领域：C++ · 内存</div></div>
+        <div class="g-card"><div class="g-term"><a href="../cpp/templates_guide.html">模板 / SFINAE</a></div><p class="g-say">编译期乐高：把「类型」当零件传进模具，编译器替你把每个版本都造一遍。SFINAE 是「不合规格的模具自动跳过」——替换失败不算错误，只是不选你。</p><div class="g-meta">领域：C++ · 模板</div></div>
+        <div class="g-card"><div class="g-term"><a href="../cpp/coroutines_deep_dive.html">协程 / co_await</a></div><p class="g-say">能「排队等叫号」的函数：执行到一半主动让出柜台（线程），等数据到了再回来从断点继续——一个柜台服务很多客户，而不是每个客户独占柜台。</p><div class="g-meta">领域：C++ · 并发</div></div>
+        <div class="g-card"><div class="g-term"><a href="../stl/concurrency_patterns_guide.html">原子操作 / 内存序</a></div><p class="g-say">多线程下的「最小心跳」：不加锁也能保证这一下要么做完整、要么没做。内存序是给编译器和 CPU 的排队规矩——什么时候你的改动别人能看见。</p><div class="g-meta">领域：STL · 并发</div></div>
+        <div class="g-card"><div class="g-term"><a href="../cpp/memory_model.html">内存模型 / 数据竞争</a></div><p class="g-say">多线程一起改同一块内存又不排队，结果谁说了算？C++ 的答案：没排队就是未定义——不是「结果随机」，是「整个程序作废」。</p><div class="g-meta">领域：C++ · 并发</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="system">系统与 Linux</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../system/process_scheduling.html">进程调度 / CFS</a></div><p class="g-say">操作系统这个「大管家」怎么分配 CPU 这一个灶台：CFS 的思路是谁饿得久谁先做饭，大家都别想吃独食。</p><div class="g-meta">领域：系统 · 调度</div></div>
+        <div class="g-card"><div class="g-term"><a href="../system/filedescriptor_deepdive.html">文件描述符 fd</a></div><p class="g-say">进程向内核租东西拿到的「取件码」：文件、管道、socket 全是它。fd 用完不还（泄漏），柜台名额被占满，最后连新客人都进不来。</p><div class="g-meta">领域：系统 · IO</div></div>
+        <div class="g-card"><div class="g-term"><a href="../system/io_linux_kernel_guide.html">epoll / IO 多路复用</a></div><p class="g-say">一个前台同时盯着几百路电话：不再逐个问「你有事吗」（轮询），而是谁的灯亮了去接谁（事件通知）。</p><div class="g-meta">领域：系统 · IO</div></div>
+        <div class="g-card"><div class="g-term"><a href="../system/cgroup_namespace_containers.html">容器 / namespace / cgroup</a></div><p class="g-say">容器不是小虚拟机，是给进程戴上的「隔离眼镜 + 消费限额」：namespace 让它看见的世界只剩自己（错觉），cgroup 给它限额电费（真实）。</p><div class="g-meta">领域：系统 · 脚下虚拟化</div></div>
+        <div class="g-card"><div class="g-term"><a href="../system/ipc_guide.html">共享内存 / mmap</a></div><p class="g-say">两个进程之间最快的传话方式：不写信不打电话，直接把同一块白板挂进各自家里——快是快，但谁先写谁后写得自己立规矩。</p><div class="g-meta">领域：系统 · IPC</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="architect">架构与分布式</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../architect/distributed_systems_fundamentals.html">CAP 定理</a></div><p class="g-say">分布式系统的「不可能三角」：网络一断，你只能二选一——要么全体暂停等同步（保一致），要么各自接客（保可用）。三者不可兼得是物理约束，不是工程没做好。</p><div class="g-meta">领域：架构 · 分布式</div></div>
+        <div class="g-card"><div class="g-term"><a href="../architect/distributed_systems_fundamentals.html">共识算法 / Raft</a></div><p class="g-say">一群人意见不一致时怎么开会决议：Raft 先选一个「会议主席」（Leader），主席记账、大家照抄；主席失联就超时重选。日志一致就是「会议纪要全国统一」。</p><div class="g-meta">领域：架构 · 共识</div></div>
+        <div class="g-card"><div class="g-term"><a href="../architect/microservices_architecture.html">微服务 / 单体</a></div><p class="g-say">把一家「什么部门都挤在一栋楼」的大公司（单体），拆成各租各的、靠合同（API）协作的小团队（微服务）。拆了灵活，但楼与楼之间的通信、对账都成了新麻烦。</p><div class="g-meta">领域：架构 · 服务化</div></div>
+        <div class="g-card"><div class="g-term"><a href="../architect/architecture_methodology.html">C4 模型 / ADR</a></div><p class="g-say">C4 是画架构图的四层变焦：全景 → 容器 → 组件 → 代码。ADR 是「当时为什么这么选」的一页纸会议纪要——半年后没人记得为什么选 B 弃 A 时，它救所有人的命。</p><div class="g-meta">领域：架构 · 方法论</div></div>
+        <div class="g-card"><div class="g-term"><a href="../architect/observability_engineering.html">可观测性 / 三支柱</a></div><p class="g-say">给系统装「行车记录仪 + 体检报告 + 定位追踪」：指标（数字趋势）、日志（事发经过）、追踪（一个请求走过的路）。出事时能回答「哪里、何时、为什么」。</p><div class="g-meta">领域：架构 · 可观测</div></div>
+        <div class="g-card"><div class="g-term"><a href="../architect/resilience_patterns.html">限流 / 熔断 / 降级</a></div><p class="g-say">系统自我保护三件套：限流是门口发号（超过就别进了），熔断是闸门跳闸（下游挂了就别硬调了），降级是保命模式（排队功能关掉，保住下单）。</p><div class="g-meta">领域：架构 · 弹性</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="ai">AI / 机器学习</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../neural-networks/ml_fundamentals.html">过拟合 / 偏差-方差</a></div><p class="g-say">「背题的学生」：训练题满分、新题不及格——把噪音当规律背了下来。偏差大是「学得太死板」，方差大是「学得太随份子」，调模型就是在两者之间找平衡。</p><div class="g-meta">领域：ML 基础</div></div>
+        <div class="g-card"><div class="g-term"><a href="../neural-networks/forward_backward_propagation.html">反向传播 / 梯度下降</a></div><p class="g-say">训练 = 「下山找谷底」：损失函数是海拔，梯度是当前位置最陡的上坡方向，那就朝反方向走一小步。反向传播是高效算出「每个参数各背多少锅」的流水账技法。</p><div class="g-meta">领域：神经网络</div></div>
+        <div class="g-card"><div class="g-term"><a href="../ai-native/transformer_llm_architecture.html">Transformer / 注意力机制</a></div><p class="g-say">读懂一句话时知道该重点看哪几个词的机制：「The animal didn't cross the street because <b>it</b> was tired」——"it" 要把注意力分给 "animal"。Transformer 整个架构就建在这一个操作上。</p><div class="g-meta">领域：LLM</div></div>
+        <div class="g-card"><div class="g-term"><a href="../ai-native/rag_deep_dive.html">RAG / Embedding</a></div><p class="g-say">开卷考试：不让模型凭记忆答题（会编），而是先从你的资料里翻出相关段落、贴在题目后面再答。Embedding 是把文字变成「语义坐标」，意思近的词住得近，翻书才快。</p><div class="g-meta">领域：LLM 子应用</div></div>
+        <div class="g-card"><div class="g-term"><a href="../ai-native/agent_architecture.html">Agent / 工具调用</a></div><p class="g-say">会自己干活的 AI：不只回答「怎么办」，而是「我来办」——拆任务、调工具、看结果、再决定下一步。工具调用就是给模型一双手，让它能查数据库、发邮件、执行代码。</p><div class="g-meta">领域：AI 工程</div></div>
+        <div class="g-card"><div class="g-term"><a href="../reinforcement/rl_fundamentals.html">强化学习 / 奖励</a></div><p class="g-say">训狗式训练：不告诉标准答案，做对了给零食（奖励），做错了没有。狗自己摸索出「坐下有肉吃」的策略。RL 的难点是奖励稀疏——走了 100 步才知输赢，前面每步谁的锅？</p><div class="g-meta">应用领域：强化学习</div></div>
+        <div class="g-card"><div class="g-term"><a href="../ai-infra/quantization.html">量化 / INT4 / FP8</a></div><p class="g-say">给模型「瘦身」：把高精度数字换成低精度存（32 位浮点 → 4 位整数），体积掉 8 倍、速度提数倍，代价是精度微降。GPTQ / AWQ 是不同的瘦身路线。</p><div class="g-meta">领域：AI Infra</div></div>
+        <div class="g-card"><div class="g-term"><a href="../ai-infra/inference_serving.html">vLLM / KV Cache</a></div><p class="g-say">LLM 生成是逐词的，每一步都要重读前文——KV Cache 把读过的部分存起来不重算，是推理提速的头号手段；vLLM 的 PagedAttention 把这块缓存像操作系统管理内存一样分页管理，不浪费。</p><div class="g-meta">领域：推理服务</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="bigdata">大数据</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../bigdata/spark_internals.html">Spark / MapReduce</a></div><p class="g-say">把大活拆给一群电脑并行干的引擎：MapReduce 是第一代（先各自整理、再汇总），Spark 是进化版——中间结果放内存里传递，快十倍。</p><div class="g-meta">领域：批处理</div></div>
+        <div class="g-card"><div class="g-term"><a href="../bigdata/flink_streaming.html">流处理 / 批处理</a></div><p class="g-say">批处理是「月底统一对账」，流处理是「每笔交易实时记账」。数据像水流一样来，来一条算一条，不攒批。</p><div class="g-meta">领域：流处理</div></div>
+        <div class="g-card"><div class="g-term"><a href="../bigdata/lakehouse_table_formats.html">湖仓一体 / Iceberg</a></div><p class="g-say">数据界的「仓库 + 超市合体」：数据湖便宜能装但乱，数据仓库整齐但贵——湖仓一体用 Iceberg 这类「表格格式」给湖里的裸数据补上仓库的管理能力（事务、版本、模式）。</p><div class="g-meta">领域：湖仓</div></div>
+        <div class="g-card"><div class="g-term"><a href="../bigdata/olap_engines_internals.html">OLAP / OLTP</a></div><p class="g-say">「超市收银台」vs「经营分析室」：OLTP 每笔交易记一行、要快；OLAP 把一年的小票摊开算总账、要全。两种负载对数据库的要求几乎相反。</p><div class="g-meta">领域：分析引擎</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="comm">通信与网络</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../communication/comm_overview.html">协议 / 分层</a></div><p class="g-say">双方约定的「说话规矩」。分层是把复杂对话拆成等级分明的公文流转：上层只管写内容，下层负责怎么送——每层只对上负责、只使唤下一层。</p><div class="g-meta">领域：网络基础</div></div>
+        <div class="g-card"><div class="g-term"><a href="../communication/http_protocol.html">TCP vs UDP</a></div><p class="g-say">挂号信 vs 广播喇叭：TCP 先握手、丢了重发、保证顺序（可靠但慢）；UDP 发出去就不管了（快但可能丢）。直播能容忍丢几帧，转账一分不能错。</p><div class="g-meta">领域：传输层</div></div>
+        <div class="g-card"><div class="g-term"><a href="../communication/private_5g_mec.html">5G 专网 / MEC</a></div><p class="g-say">企业自建的「院内 5G」：不跟公网抢车道，覆盖自己厂房、延迟更低。MEC 是把算力机房从千里之外搬到园区隔壁——路近了，往返时间就短了。</p><div class="g-meta">领域：5G</div></div>
+        <div class="g-card"><div class="g-term"><a href="../robotics-comm/tsn_deep_dive.html">TSN / 确定性网络</a></div><p class="g-say">给网络装红绿灯和时钟：普通网络像自由车道（尽力而为、时快时慢），TSN 给关键车辆划专用道、定好通过时刻表——机器人控制指令必须准点，不能「大概齐」。</p><div class="g-meta">领域：确定性网络</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="robotics">机器人与嵌入式</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../robotics-comm/ros2_dds_deep_dive.html">ROS2 / DDS</a></div><p class="g-say">机器人部件间的「群聊软件」：摄像头、雷达、控制器各自往群里发消息，谁需要谁订阅。DDS 是群聊底下的运营商线路，QoS 决定消息「丢了补不补、过期作不作数」。</p><div class="g-meta">领域：机器人中间件</div></div>
+        <div class="g-card"><div class="g-term"><a href="../robotics-comm/robot_intra_bus.html">EtherCAT / CAN 总线</a></div><p class="g-say">机器人体内的「神经系统」：一根线串起所有电机和传感器，指令像列车一样逐站停靠卸货。EtherCAT 是高铁（快、准点、贵），CAN 是老铁路（慢、便宜、抗造）。</p><div class="g-meta">领域：端内总线</div></div>
+        <div class="g-card"><div class="g-term"><a href="STUDY_PATH.html">面试学习路径</a></div><p class="g-say">不知道从哪读起时看这里：按角色和经验等级排好的阅读顺序，卡片（5-10 分钟）→ 深度页（30-60 分钟）→ 自测。</p><div class="g-meta">领域：导航</div></div>
+        <div class="g-card"><div class="g-term"><a href="../robotics-comm/embodied_ai_study_path.html">具身智能 / VLA</a></div><p class="g-say">有身体的人工智能：ChatGPT 只有嘴，具身智能有手有眼。「VLA（视觉-语言-动作）」是当下最热的机器人大脑架构——看得懂画面、听得懂指令、使得出动作。</p><div class="g-meta">领域：具身智能</div></div>
+        <div class="g-card"><div class="g-term"><a href="../embedded-realtime/preempt_rt_deep_dive.html">实时系统 / PREEMPT_RT</a></div><p class="g-say">「说 1 毫秒就 1 毫秒」的系统：实时不是快，是「最坏情况也能保证截止时间」。PREEMPT_RT 是把通用 Linux 改造成准实时系统的内核补丁——机器人控制、工业产线用的就是它。</p><div class="g-meta">领域：实时系统</div></div>
+        <div class="g-card"><div class="g-term"><a href="../embedded-realtime/iso26262_engineering.html">功能安全 / ASIL</a></div><p class="g-say">「怎么向监管证明这台机器不会伤人」的方法论：把所有能出的事故先想一遍（危害分析），按严重程度定级（ASIL A 到 D），级别越高，要求越苛刻的冗余与验证。</p><div class="g-meta">领域：功能安全</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="perf">性能与调试</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../perf-debug/performance_guide.html">CPU 缓存 / 局部性</a></div><p class="g-say">CPU 的书架分层：寄存器在手边、内存在楼下仓库。缓存命中是「书就在手边」，缓存未命中是「下仓库等几百拍」。写快代码的秘诀常是让数据「排队来、扎堆放」。</p><div class="g-meta">领域：性能</div></div>
+        <div class="g-card"><div class="g-term"><a href="../perf-debug/sanitizers_guide.html">ASan / TSan / Sanitizer</a></div><p class="g-say">给程序装的「行车记录仪」：编译时插桩，内存越界、用完释放、数据竞争这些「事后查无对证」的错，当场抓现行。代价是慢几倍到几十倍，所以用在测试不是生产。</p><div class="g-meta">领域：调试</div></div>
+        <div class="g-card"><div class="g-term"><a href="../perf-debug/crash_debugging_guide.html">Core dump / 栈回溯</a></div><p class="g-say">程序崩溃时的「黑匣子」：内存现场完整存档，事后用 gdb 打开，沿着「谁调用谁」的链条（栈回溯）找到出事时正在执行的那行代码。</p><div class="g-meta">领域：调试</div></div>
+      </div>
+
+      <h2 class="g-dom-h2" id="mgmt">工程管理与 PM</h2>
+      <div class="g-grid">
+        <div class="g-card"><div class="g-term"><a href="../management/software_management_guide.html">1on1 / OKR / 绩效</a></div><p class="g-say">经理的三件日常：1on1 是每周跟下属的单独茶话会（聊人不说事），OKR 是「我们要去哪、怎么知道到了」的导航，绩效是期末按贡献发糖——三件事混着做，全都做不好。</p><div class="g-meta">领域：管理</div></div>
+        <div class="g-card"><div class="g-term"><a href="../pm/prd_writing_kit.html">PRD / 用户故事</a></div><p class="g-say">产品的「施工图」：PRD 写清楚给谁、解决什么问题、做成什么样算成功。用户故事是它的一句话单元——「作为〈谁〉，我想〈干什么〉，以便〈得到什么〉」。</p><div class="g-meta">领域：产品</div></div>
+        <div class="g-card"><div class="g-term"><a href="../pm/evm_planning_guide.html">EVM / 挣值管理</a></div><p class="g-say">用钱衡量进度：计划花 100 万干完的活，现在花了 80 万只干完 50 万的量——「挣值」就是已干完活的预算价。一眼看出「花了多少 vs 干了多少」的错位。</p><div class="g-meta">领域：项目管理</div></div>
+      </div>
+
+      <div class="path-nav"><a href="interview_directory.html">← 目录</a><a href="../index.html">主页</a><a href="STUDY_PATH.html">全站学习路径</a><a href="../robotics-comm/embodied_ai_study_path.html">具身智能路径</a></div>
+    </section>
+  </main>
+</div>
+<script src="../assets/site-theme-toggle.js" defer></script>
+</body>
+</html>
