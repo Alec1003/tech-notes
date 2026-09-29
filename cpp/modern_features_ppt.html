@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)</title>
-<meta name="description" content="C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)：面向 面试准备 + 工程实战 的系统化学习材料 —— 覆盖 C++11 / 14 / 17 / 20 / 23 / 26 每一代的核心特性，从 auto · 移动语义 · 智能指针">
+<meta name="description" content="用大白话讲透 C++11 到 C++26 核心特性：auto、移动语义、智能指针、Lambda，再到 Concepts、Ranges、协程、反射，每个特性配真实工程代码与面试要点，适合面试准备与实战入门。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/modern_features_ppt.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/modern_features_ppt.html">
 <meta property="og:title" content="C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)">
-<meta property="og:description" content="C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)：面向 面试准备 + 工程实战 的系统化学习材料 —— 覆盖 C++11 / 14 / 17 / 20 / 23 / 26 每一代的核心特性，从 auto · 移动语义 · 智能指针">
+<meta property="og:description" content="用大白话讲透 C++11 到 C++26 核心特性：auto、移动语义、智能指针、Lambda，再到 Concepts、Ranges、协程、反射，每个特性配真实工程代码与面试要点，适合面试准备与实战入门。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)">
-<meta name="twitter:description" content="C++ 现代特性 PPT 学习指南 (C++11 / 14 / 17 / 20 / 23 / 26)：面向 面试准备 + 工程实战 的系统化学习材料 —— 覆盖 C++11 / 14 / 17 / 20 / 23 / 26 每一代的核心特性，从 auto · 移动语义 · 智能指针">
+<meta name="twitter:description" content="用大白话讲透 C++11 到 C++26 核心特性：auto、移动语义、智能指针、Lambda，再到 Concepts、Ranges、协程、反射，每个特性配真实工程代码与面试要点，适合面试准备与实战入门。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -525,7 +525,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 135 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 140 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -544,11 +544,11 @@
   <header class="hero">
     <div class="badge">C++ Modern Features · C++11 → 26 · 2026</div>
     <h1>C++ 现代特性 完全指南</h1>
-    <p class="sub">面向 <strong>面试准备 + 工程实战</strong> 的系统化学习材料 —— 覆盖 <strong>C++11 / 14 / 17 / 20 / 23 / 26</strong> 每一代的核心特性，从 <strong>auto · 移动语义 · 智能指针 · Lambda</strong> 的语言基石，到 <strong>Concepts · Ranges · 协程 · Modules · 反射</strong> 的现代范式 —— 每个特性都附带 <em>真实项目级</em> 使用场景与伪 production 代码，按「定义 / 引入原因 / 替代了什么 / 性能影响」组织。</p>
+    <p class="sub">面向 <strong>面试准备 + 工程实战</strong> 的系统化学习材料 —— 覆盖 <strong>C++11 / 14 / 17 / 20 / 23 / 26</strong> 每一代的核心特性，从 <strong>auto · 移动语义 · 智能指针 · Lambda</strong> 的语言基石，到 <strong>Concepts · Ranges · 协程 · Modules · 反射</strong> 的现代范式 —— 每个特性都附带 <em>真实项目级</em> 使用场景与伪 production 代码，按「定义 / 引入原因 / 替代了什么 / 性能影响」组织（先说它是什么、再说它为谁而生、顶替了哪些旧写法、性能上要付什么代价）。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">面试出现率 极高</span>
-      <span class="pill green">阅读时长 ~135 min</span>
+      <span class="pill green">阅读时长 ~140 min</span>
       <span class="pill amber">前置 C++ 基础语法</span>
     </div>
     <div class="meta">
@@ -575,15 +575,15 @@
       <a class="cpp26" href="#slide-55">C++26 <span>制定中 · 8 篇</span></a>
     </div>
 
-    <p style="font-size:.88rem;color:var(--text-dim)">标签含义：<i class="k-tag lang">语</i> 核心语言特性（编译器前端实现，改的是语法/语义） ·
-      <i class="k-tag lib">库</i> 标准库特性（本质是用现有语言写的头文件） ·
+    <p style="font-size:.88rem;color:var(--text-dim)">标签含义：<i class="k-tag lang">语</i> 核心语言特性（编译器前端实现，改的是语法/语义——好比改了游戏规则本身） ·
+      <i class="k-tag lib">库</i> 标准库特性（本质是用现有语言写的头文件——好比规则没变，只是发了一套新道具） ·
       <i class="k-tag mix">混</i> 语言与库协同（关键字 + 配套库设施，或一页里混着多项）。
       这个区分决定了移植难度：库特性常能用第三方实现（如 <code>fmt</code>、<code>tl::expected</code>）在旧标准里提前用，语言特性只能等编译器。</p>
 
     <div class="ver-grid">
       <div class="ver-card cpp11">
         <div class="vh"><span class="v">C++11</span><span class="yr">2011</span><span class="cnt">16 篇</span></div>
-        <p class="vwhy">现代 C++ 的地基：把<strong>所有权与值语义</strong>（移动 + 智能指针）、<strong>可写的泛型</strong>（变参模板 / constexpr）和<strong>第一份标准内存模型</strong>一次性补齐。这一代不通，后面全是空中楼阁。</p>
+        <p class="vwhy">现代 C++ 的地基：把<strong>所有权与值语义</strong>（所有权——对象归谁管、由谁负责释放；移动和智能指针就是它的两件工具）、<strong>可写的泛型</strong>（变参模板 / constexpr——constexpr 让"编译期就把结果算出来"可以用普通函数语法来写）和<strong>第一份标准内存模型</strong>（多线程同时读写内存时大家都遵守的统一规则）一次性补齐。这一代不通，后面全是空中楼阁。</p>
         <ol>
           <li><a href="#slide-01"><span class="n">01</span><i class="k-tag lang">语</i>auto / decltype 类型推导</a></li>
           <li><a href="#slide-02"><span class="n">02</span><i class="k-tag lang">语</i>nullptr 类型安全空指针</a></li>
@@ -621,7 +621,7 @@
 
       <div class="ver-card cpp17">
         <div class="vh"><span class="v">C++17</span><span class="yr">2017</span><span class="cnt">11 篇</span></div>
-        <p class="vwhy"><strong>工程化落地</strong>的一代：<code>optional / variant / string_view / filesystem</code> 这批「词汇类型」统一了跨库接口，<code>if constexpr</code> + 折叠表达式让模板从递归 + SFINAE 变回正常控制流。今天最实用的基线标准。</p>
+        <p class="vwhy"><strong>工程化落地</strong>的一代：<code>optional / variant / string_view / filesystem</code> 这批「词汇类型」（大家通用的标准"积木"，不同库靠它们对齐接口）统一了跨库接口，<code>if constexpr</code> + 折叠表达式让模板从递归 + SFINAE（替换失败不算错——老一套靠"让重载匹配失败"来做编译期分支的晦涩技巧）变回正常控制流。今天最实用的基线标准。</p>
         <ol>
           <li><a href="#slide-21"><span class="n">21</span><i class="k-tag lang">语</i>结构化绑定 Structured Bindings</a></li>
           <li><a href="#slide-22"><span class="n">22</span><i class="k-tag lang">语</i>if constexpr 编译期分支</a></li>
@@ -639,7 +639,7 @@
 
       <div class="ver-card cpp20">
         <div class="vh"><span class="v">C++20</span><span class="yr">2020</span><span class="cnt">11 篇</span></div>
-        <p class="vwhy"><strong>范式革命</strong>，也是工具链代价最高的一代：Concepts 让模板报错可读，Ranges 让算法可组合，协程与模块改变了代码组织方式。收益大，但模块/协程的编译器与构建系统支持要逐项确认。</p>
+        <p class="vwhy"><strong>范式革命</strong>，也是工具链代价最高的一代：Concepts（给模板参数定"入选条件"）让模板报错可读，Ranges（像流水线一样组合数据处理）让算法可组合，协程与模块改变了代码组织方式。收益大，但模块/协程的编译器与构建系统支持要逐项确认。</p>
         <ol>
           <li><a href="#slide-32"><span class="n">32</span><i class="k-tag lang">语</i>Concepts 概念约束</a></li>
           <li><a href="#slide-33"><span class="n">33</span><i class="k-tag lib">库</i>Ranges 视图与管道</a></li>
@@ -657,7 +657,7 @@
 
       <div class="ver-card cpp23">
         <div class="vh"><span class="v">C++23</span><span class="yr">2023</span><span class="cnt">12 篇</span></div>
-        <p class="vwhy"><strong>把 C++20 的坑填平</strong>：<code>expected</code> 给出不依赖异常的错误路径，<code>generator</code> 让协程真的能直接用，<code>print / mdspan / flat_map / stacktrace</code> 补齐日常缺口。基本没有新范式，全是「早该有」的东西。</p>
+        <p class="vwhy"><strong>把 C++20 的坑填平</strong>：<code>expected</code>（要么是结果、要么是错误的对象）给出不依赖异常的错误路径，<code>generator</code> 让协程真的能直接用，<code>print / mdspan / flat_map / stacktrace</code> 补齐日常缺口。基本没有新范式，全是「早该有」的东西。</p>
         <ol>
           <li><a href="#slide-43"><span class="n">43</span><i class="k-tag lib">库</i>std::expected 类型化错误处理</a></li>
           <li><a href="#slide-44"><span class="n">44</span><i class="k-tag lib">库</i>std::print / std::println</a></li>
@@ -676,7 +676,7 @@
 
       <div class="ver-card cpp26">
         <div class="vh"><span class="v">C++26</span><span class="yr">制定中 · 预计 2027 定稿</span><span class="cnt">8 篇</span></div>
-        <p class="vwhy">把「以前只能靠第三方库」的能力<strong>收进标准</strong>：结构化并发（<code>execution</code>）、静态反射、契约、SIMD、无锁回收。用来<strong>判断技术方向</strong>，而不是当下直接上生产 —— 编译器支持仍在推进，条文也可能微调。</p>
+        <p class="vwhy">把「以前只能靠第三方库」的能力<strong>收进标准</strong>：结构化并发（<code>execution</code>——任务之间的父子关系由框架统一管理，父任务收尾时子任务必然已结束）、静态反射（编译期让程序"看清"自己的类型成员）、契约、SIMD（一条指令同时处理多个数据的向量化）、无锁回收。用来<strong>判断技术方向</strong>，而不是当下直接上生产 —— 编译器支持仍在推进，条文也可能微调。</p>
         <ol>
           <li><a href="#slide-55"><span class="n">55</span><i class="k-tag lib">库</i>std::execution (P2300) Sender/Receiver</a></li>
           <li><a href="#slide-56"><span class="n">56</span><i class="k-tag lib">库</i>std::hazard_pointer + std::rcu</a></li>
@@ -727,15 +727,15 @@
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念（面试表达）</h3>
-        <p><b>auto</b>：让编译器从初始化表达式 <em>推导</em> 变量类型，规则与函数模板参数推导一致（会去掉引用和顶层 const）。</p>
-        <p><b>decltype(expr)</b>：在<em>不求值</em>表达式的前提下推导其类型，<b>保留引用 / const / cv 限定符</b>，是写转发包装、SFINAE 的基础工具。</p>
+        <p><b>auto</b>：让编译器从初始化表达式 <em>推导</em> 变量类型（你给右边一个值，编译器替你推断左边该声明成什么类型），规则与函数模板参数推导一致（会去掉引用和顶层 const）。</p>
+        <p><b>decltype(expr)</b>：在<em>不求值</em>表达式的前提下推导其类型（只"看"表达式的类型、不真正运行它），<b>保留引用 / const / cv 限定符</b>，是写转发包装、SFINAE（靠"替换失败不是错误"来做编译期筛选的老技巧）的基础工具。</p>
         <p><b>编译期角度</b>：两者都是 <em>编译期</em> 行为，运行时零开销，最终生成的目标代码与手写类型完全一致。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
         <ul>
           <li>模板里类型名极长：<code>std::map&lt;K,V&gt;::const_iterator</code></li>
-          <li>Lambda 类型不可写出（每个 lambda 都是匿名 closure 类型）</li>
+          <li>Lambda 类型不可写出（每个 lambda 都是匿名 closure 类型——闭包类型，lambda 自己生成的那个"带捕获变量的类"）</li>
           <li>函数返回类型依赖参数类型 → 必须 <code>decltype</code> + 尾置返回</li>
           <li>替代旧写法：迭代器 <code>typename Container::iterator it = ...</code></li>
         </ul>
@@ -800,8 +800,8 @@
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>nullptr</b> 是一个 <code>std::nullptr_t</code> 类型的字面量，可隐式转换到<em>任意指针类型</em>，但<em>不能</em>转换为整型。</p>
-        <p>解决了 C 时代 <code>NULL</code>（通常 <code>#define NULL 0</code>）在<strong>函数重载</strong>下的二义性 bug。</p>
+        <p><b>nullptr</b> 是一个 <code>std::nullptr_t</code> 类型的字面量（专门表示"空指针"的字面值，有自己独立的类型），可隐式转换到<em>任意指针类型</em>，但<em>不能</em>转换为整型。</p>
+        <p>解决了 C 时代 <code>NULL</code>（通常 <code>#define NULL 0</code>，本质就是个整数 0）在<strong>函数重载</strong>（同名函数按参数类型选版本）下的二义性 bug。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -858,14 +858,14 @@ sess.<span class="fn">reset</span>(<span class="kw">nullptr</span>);  <span clas
     <div class="grid-2">
       <div class="panel accent">
         <h3>Range-based for 本质</h3>
-        <p>编译器把 <code>for (auto x : c)</code> 改写为：调用 <code>begin(c)</code> / <code>end(c)</code>，循环 <code>++it</code> 并解引用。</p>
+        <p>编译器把 <code>for (auto x : c)</code> 改写为：调用 <code>begin(c)</code> / <code>end(c)</code>，循环 <code>++it</code> 并解引用（range-for 本质上就是编译器替你写好的传统迭代器循环的语法糖）。</p>
         <p>支持任意提供 begin/end 的类型（含 C 数组、std 容器、自定义容器）。</p>
       </div>
       <div class="panel green">
         <h3>统一初始化 {} (Uniform initialization)</h3>
-        <p>用 <code>{}</code> 初始化任何对象（聚合、容器、POD、有构造函数的类、返回值）。</p>
-        <p>禁止<strong>窄化转换</strong>（<code>int x{3.14}</code> 编译错），更安全。</p>
-        <p>引入 <code>std::initializer_list&lt;T&gt;</code> 让自定义类支持 <code>MyVec v{1,2,3};</code></p>
+        <p>用 <code>{}</code> 初始化任何对象（聚合、容器、POD、有构造函数的类、返回值）——一套花括号写法通吃所有初始化场景。</p>
+        <p>禁止<strong>窄化转换</strong>（数据放进更小的类型时可能丢精度，比如 double 塞进 int；<code>int x{3.14}</code> 直接编译错），更安全。</p>
+        <p>引入 <code>std::initializer_list&lt;T&gt;</code>（花括号里那串值的"清单"类型）让自定义类支持 <code>MyVec v{1,2,3};</code></p>
       </div>
     </div>
 
@@ -924,9 +924,9 @@ sess.<span class="fn">reset</span>(<span class="kw">nullptr</span>);  <span clas
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>语法 <code>[capture](params) -> ret { body }</code>。每个 lambda 是一个<strong>编译器自动生成的匿名类</strong>（closure type），含有 <code>operator()</code>。</p>
-        <p><b>capture</b> 列表决定如何把外层变量「装进闭包对象的成员」。</p>
-        <p><code>mutable</code> 让按值捕获的成员在 <code>operator()</code> 中可修改。</p>
+        <p>语法 <code>[capture](params) -> ret { body }</code>。每个 lambda 是一个<strong>编译器自动生成的匿名类</strong>（closure type，闭包类型），含有 <code>operator()</code>。</p>
+        <p><b>capture</b> 列表决定如何把外层变量「装进闭包对象的成员」（相当于把要用到的外部变量打包随身带走）。</p>
+        <p><code>mutable</code> 让按值捕获的成员在 <code>operator()</code> 中可修改（默认按值拷进来的成员是只读的）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1005,7 +1005,7 @@ loop-&gt;<span class="fn">on_readable</span>(fd, [<span class="kw">this</span>](
 
     <h2 id="slide-04-unique">unique_ptr 三种捕获 — 闭包就是带环境的可调用对象</h2>
     <div class="tip"><b>是什么</b>：lambda 编译后是一个<strong>匿名类</strong>（closure type），捕获列表变成该类的<strong>数据成员</strong>，<code>operator()</code> 是调用入口。闭包 = 可调用对象 + 捕获进来的环境。</div>
-    <p>异步投递时，环境必须<strong>活过回调执行</strong>。对 <code>unique_ptr</code>，按值拷会编不过，按引用会 UAF，正确解是 C++14 init-capture 把所有权搬进闭包。</p>
+        <p>异步投递时，环境必须<strong>活过回调执行</strong>。对 <code>unique_ptr</code>，按值拷会编不过，按引用会 UAF（Use-After-Free——对象已被销毁后还在使用它，属于未定义行为），正确解是 C++14 init-capture（初始化捕获——在捕获列表里直接写 <code>x = 表达式</code>，把 move 进来的结果存成闭包成员）把所有权搬进闭包。</p>
 
 <pre><span class="kw">auto</span> buf = std::<span class="fn">make_unique</span>&lt;<span class="kw">char</span>[]&gt;(<span class="num">1</span> &lt;&lt; <span class="num">20</span>);
 
@@ -1053,7 +1053,7 @@ io_.<span class="fn">post</span>([buf = std::<span class="fn">move</span>(buf)]{
         <h3>三种语义</h3>
         <ul>
           <li><b>unique_ptr&lt;T&gt;</b>：独占所有权，<em>不可拷贝</em>，可移动；零开销（≈ 裸指针 + 析构调用）。</li>
-          <li><b>shared_ptr&lt;T&gt;</b>：引用计数共享所有权；控制块 + 强/弱计数（原子操作）。</li>
+          <li><b>shared_ptr&lt;T&gt;</b>：引用计数共享所有权（每多一个人持有就给计数加一，最后一个放手的人负责销毁）；控制块 + 强/弱计数（原子操作）。</li>
           <li><b>weak_ptr&lt;T&gt;</b>：观察者，<em>不影响</em>对象生命周期；用 <code>lock()</code> 临时升级为 shared_ptr。</li>
         </ul>
       </div>
@@ -1138,9 +1138,9 @@ io_.<span class="fn">post</span>([buf = std::<span class="fn">move</span>(buf)]{
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>左值 / 右值 / xvalue</b>：左值有名字、可取地址；右值是临时对象。<code>T&amp;&amp;</code> 只能绑右值。</p>
-        <p><b>移动构造 / 移动赋值</b>：把源对象的内部资源（堆指针 / 文件句柄）<em>窃取</em>过来，源对象置为「合法但未指定」状态。</p>
-        <p><b>std::move</b> 不移动任何东西，它只是<em>把左值无条件转换为右值</em>。</p>
+        <p><b>左值 / 右值 / xvalue</b>：左值有名字、可取地址；右值是临时对象（用完即弃、没人再引用它的值）。<code>T&amp;&amp;</code> 只能绑右值。</p>
+        <p><b>移动构造 / 移动赋值</b>：把源对象的内部资源（堆指针 / 文件句柄）<em>窃取</em>过来——好比搬家时直接把钥匙拿走，而不是把家具复刻一套；源对象置为「合法但未指定」状态。</p>
+        <p><b>std::move</b> 不移动任何东西，它只是<em>把左值无条件转换为右值</em>（打个"我可以被搬走"的标记，真正的搬发生在随后选中的移动构造/赋值里）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1219,9 +1219,9 @@ logger.<span class="fn">push</span>(<span class="kw">std::move</span>(e));      
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>函数模板里的 <code>T&amp;&amp;</code> 是<strong>万能引用</strong>（forwarding reference），通过<em>引用折叠规则</em>既能绑左值也能绑右值。</p>
-        <p><code>std::forward&lt;T&gt;(x)</code>：根据 T 是否带引用，决定保留左值/右值属性 → 完美转发。</p>
-        <p><b>编译期机制</b>：模板参数推导 + 引用折叠（&amp; &amp; → &amp;，&amp; &amp;&amp; → &amp;，&amp;&amp; &amp;&amp; → &amp;&amp;）。</p>
+        <p>函数模板里的 <code>T&amp;&amp;</code> 是<strong>万能引用</strong>（forwarding reference，转发引用——形如 <code>T&amp;&amp;</code> 且 T 需要推导时，它左值右值都能接），通过<em>引用折叠规则</em>既能绑左值也能绑右值。</p>
+        <p><code>std::forward&lt;T&gt;(x)</code>：根据 T 是否带引用，决定保留左值/右值属性（来的本来是右值就还是右值、本来是左值就还是左值，属性不丢失）→ 完美转发。</p>
+        <p><b>编译期机制</b>：模板参数推导 + 引用折叠（&amp; &amp; → &amp;，&amp; &amp;&amp; → &amp;，&amp;&amp; &amp;&amp; → &amp;&amp;；只要出现一个左值引用就折叠成左值引用）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1301,8 +1301,8 @@ logger.<span class="fn">push</span>(<span class="kw">std::move</span>(e));      
         <ul>
           <li><b>std::thread</b>：构造即启动，必须 <code>join()</code> 或 <code>detach()</code>，否则析构会 std::terminate</li>
           <li><b>std::mutex / recursive_mutex / shared_mutex(C++17)</b></li>
-          <li><b>std::lock_guard / unique_lock</b>：RAII 锁守卫</li>
-          <li><b>std::condition_variable</b>：配合 unique_lock，wait + 谓词避免虚假唤醒</li>
+          <li><b>std::lock_guard / unique_lock</b>：RAII 锁守卫（RAII——资源获取即初始化，拿到锁顺手构造对象、对象析构时自动还锁，异常路径也不漏放）</li>
+          <li><b>std::condition_variable</b>：配合 unique_lock，wait + 谓词避免虚假唤醒（谓词——一个返回 true/false 的小函数，醒来后再亲自确认条件真的成立，因为操作系统可能"假叫醒"线程）</li>
           <li><b>std::async / future / promise</b>：基于 future 的任务模型</li>
         </ul>
       </div>
@@ -1384,13 +1384,13 @@ job.<span class="fn">run</span>();</pre>
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>std::atomic&lt;T&gt;</b>：保证 load/store/RMW 的原子性，并通过<strong>内存序参数</strong>描述与其他线程的同步关系。</p>
+        <p><b>std::atomic&lt;T&gt;</b>：保证 load/store/RMW 的原子性（RMW——read-modify-write，"读出来、改一改、写回去"三步一气呵成，别的线程插不进来），并通过<strong>内存序参数</strong>描述与其他线程的同步关系。</p>
         <p>常见内存序：
-          <code>memory_order_relaxed</code>（仅原子，不同步），
-          <code>acquire/release</code>（建立 happens-before），
-          <code>seq_cst</code>（全局总序，默认）。
+          <code>memory_order_relaxed</code>（仅原子，不同步——只保证这一下操作不可分割，不约束别的读写顺序），
+          <code>acquire/release</code>（建立 happens-before——写端 release 发布、读端 acquire 看见后，发布之前的所有写入对读者可见），
+          <code>seq_cst</code>（全局总序，默认——所有线程看到的操作顺序完全一致，最直观也最保守）。
         </p>
-        <p><b>底层</b>：编译器 + CPU（x86 强一致；ARM 弱一致）协同插入屏障指令。</p>
+        <p><b>底层</b>：编译器 + CPU（x86 强一致；ARM 弱一致）协同插入屏障指令（相当于在指令流里立"此路不可重排穿越"的关卡）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1461,9 +1461,9 @@ ready.<span class="fn">store</span>(<span class="kw">true</span>, <span class="t
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><code>template&lt;class... Ts&gt;</code> 声明<strong>参数包</strong>（parameter pack），用 <code>Ts...</code> 展开。</p>
+        <p><code>template&lt;class... Ts&gt;</code> 声明<strong>参数包</strong>（parameter pack——能装下任意个类型/值的"打包参数"），用 <code>Ts...</code> 展开（把包里的内容一个一个摊开用）。</p>
         <p>展开发生在<em>编译期</em>，不同参数组合会实例化不同函数版本。</p>
-        <p>常见技巧：<em>递归展开</em>（C++11/14）、<em>折叠表达式</em>（C++17 起）。</p>
+        <p>常见技巧：<em>递归展开</em>（C++11/14——每次处理一个、剩下的交给下一层，直到参数包空为止）、<em>折叠表达式</em>（C++17 起）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1529,7 +1529,7 @@ on_login.<span class="fn">connect</span>([](<span class="kw">int</span> uid, <sp
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>constexpr 变量</b>：必须在编译期能求值的常量，强于 <code>const</code>（const 只表示「不可修改」）。</p>
+        <p><b>constexpr 变量</b>：必须在编译期能求值的常量（程序还没跑，值就已经算好写进二进制里），强于 <code>const</code>（const 只表示「不可修改」，值可以运行期才定）。</p>
         <p><b>constexpr 函数</b>（C++11 限制极严：单条 return 表达式；C++14 起允许循环/局部变量）：调用上下文为常量表达式时<em>编译期求值</em>，否则按普通函数运行。</p>
         <p>结果可用于：模板非类型参数、数组大小、case 标签、static_assert。</p>
       </div>
@@ -1594,9 +1594,9 @@ on_login.<span class="fn">connect</span>([](<span class="kw">int</span> uid, <sp
       <div class="panel accent">
         <h3>核心概念</h3>
         <ul>
-          <li><b>有作用域</b>：必须 <code>Color::Red</code> 访问，避免污染外层命名空间</li>
-          <li><b>强类型</b>：不能隐式转换为整型；不同 enum class 不能互相比较</li>
-          <li><b>可指定底层类型</b>：<code>enum class E : uint8_t {}</code></li>
+          <li><b>有作用域</b>：必须 <code>Color::Red</code> 访问（枚举值关在类型自己的"命名空间"里），避免污染外层命名空间</li>
+          <li><b>强类型</b>：不能隐式转换为整型；不同 enum class 不能互相比较（好比不同单位的数值不许直接混算）</li>
+          <li><b>可指定底层类型</b>：<code>enum class E : uint8_t {}</code>（明确占用几个字节，协议/内存布局可控）</li>
           <li>支持<strong>前置声明</strong>（旧 enum 不能）</li>
         </ul>
       </div>
@@ -1668,10 +1668,10 @@ on_login.<span class="fn">connect</span>([](<span class="kw">int</span> uid, <sp
       <div class="panel accent">
         <h3>核心概念</h3>
         <ul>
-          <li><b>override</b>：标注「我打算重写虚函数」→ 编译器检查签名是否真匹配</li>
+          <li><b>override</b>：标注「我打算重写虚函数」→ 编译器检查签名是否真匹配（拼错签名会当场编译报错，而不是默默变成一个新函数）</li>
           <li><b>final</b>：禁止派生类再重写该函数 / 禁止类被继承</li>
           <li><b>= default</b>：让编译器生成默认实现（构造/析构/拷贝/移动）</li>
-          <li><b>= delete</b>：禁用某个函数（删除拷贝、禁某个重载）</li>
+          <li><b>= delete</b>：禁用某个函数（删除拷贝、禁某个重载——谁想调用就编译失败）</li>
         </ul>
       </div>
       <div class="panel yellow">
@@ -1747,9 +1747,9 @@ on_login.<span class="fn">connect</span>([](<span class="kw">int</span> uid, <sp
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>std::function&lt;Sig&gt;</b>：通用<strong>类型擦除</strong>容器，可以装下任意符合签名 <code>Sig</code> 的可调用对象（普通函数、lambda、bind 结果、仿函数、成员函数指针包装）。</p>
-        <p>底层通常含 <em>小对象优化（SBO）</em> + 堆分配（lambda 大时）+ 一次<em>虚调用</em>（vtbl 风格）。</p>
-        <p><b>std::bind</b>：把可调用对象 + 部分参数<em>预绑定</em>，返回新可调用对象。</p>
+        <p><b>std::function&lt;Sig&gt;</b>：通用<strong>类型擦除</strong>容器（类型擦除——把"具体是什么可调用类型"藏起来，对外只暴露统一的调用接口），可以装下任意符合签名 <code>Sig</code> 的可调用对象（普通函数、lambda、bind 结果、仿函数、成员函数指针包装）。</p>
+        <p>底层通常含 <em>小对象优化（SBO——对象够小时直接存在自身内存里，免一次堆分配）</em> + 堆分配（lambda 大时）+ 一次<em>虚调用</em>（vtbl 风格）。</p>
+        <p><b>std::bind</b>：把可调用对象 + 部分参数<em>预绑定</em>（提前占好几个参数位，剩下的留给调用时再填），返回新可调用对象。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -1825,7 +1825,7 @@ routes_[<span class="str">"POST /api/v1/users"</span>] = [<span class="kw">this<
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>把任意数量、任意类型的值打包到一起。访问用 <code>std::get&lt;I&gt;(t)</code> 或 <code>std::get&lt;T&gt;(t)</code>（C++14）。</p>
+        <p>把任意数量、任意类型的值打包到一起（相当于一个匿名的小结构体，字段类型各不相同）。访问用 <code>std::get&lt;I&gt;(t)</code>（按下标 I 取第几个）或 <code>std::get&lt;T&gt;(t)</code>（C++14，按类型取）。</p>
         <p>常配合 <code>std::tie</code>（解构）、<code>std::make_tuple</code>（构造），C++17 起更推荐 structured bindings。</p>
       </div>
       <div class="panel yellow">
@@ -1883,9 +1883,9 @@ routes_[<span class="str">"POST /api/v1/users"</span>] = [<span class="kw">this<
       <div class="panel accent">
         <h3>核心三件</h3>
         <ul>
-          <li><b>duration&lt;Rep, Period&gt;</b>：时长（毫秒、纳秒等），编译期单位</li>
-          <li><b>time_point&lt;Clock&gt;</b>：某时钟下的时间点</li>
-          <li><b>Clock</b>：<code>system_clock</code>（墙钟，可被调）/ <code>steady_clock</code>（单调，不可调）/ <code>high_resolution_clock</code></li>
+          <li><b>duration&lt;Rep, Period&gt;</b>：时长（毫秒、纳秒等），编译期单位（单位是类型的一部分，配错单位直接编译失败）</li>
+          <li><b>time_point&lt;Clock&gt;</b>：某时钟下的时间点（"哪个钟、走到的刻度"）</li>
+          <li><b>Clock</b>：<code>system_clock</code>（墙钟，可被调——显示给人的日历时间）/ <code>steady_clock</code>（单调，不可调——只往前走，适合测耗时）/ <code>high_resolution_clock</code></li>
         </ul>
       </div>
       <div class="panel yellow">
@@ -1965,12 +1965,12 @@ cv.<span class="fn">wait_for</span>(lk, timeout, []{ <span class="kw">return</sp
     <div class="grid-2">
       <div class="panel accent">
         <h3>auto 返回类型</h3>
-        <p>函数可写成 <code>auto f(...)</code>，编译器从 return 语句推导。多 return 必须类型一致。</p>
-        <p><code>decltype(auto)</code>：保留引用 / cv，常用于「转发型 getter」。</p>
+        <p>函数可写成 <code>auto f(...)</code>，编译器从 return 语句推导返回类型。多 return 必须类型一致。</p>
+        <p><code>decltype(auto)</code>：保留引用 / cv（比 <code>auto</code> 更"原样照搬"返回类型），常用于「转发型 getter」。</p>
       </div>
       <div class="panel green">
         <h3>泛型 Lambda</h3>
-        <p>参数列表里允许 <code>auto</code>，等价于编译器生成的<strong>模板 operator()</strong>。</p>
+        <p>参数列表里允许 <code>auto</code>（参数类型不限，传什么类型都能调），等价于编译器生成的<strong>模板 operator()</strong>。</p>
         <p>同一 lambda 可用不同类型参数调用 → 编译期生成多个版本。</p>
       </div>
     </div>
@@ -2020,12 +2020,12 @@ std::<span class="fn">sort</span>(items.<span class="fn">begin</span>(), items.<
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>C++14 补全的 <code>make_unique&lt;T&gt;(args...)</code>，与 C++11 的 <code>make_shared</code> 对应。内部一次 <code>new T(...)</code> 后立即放入 unique_ptr。</p>
+        <p>C++14 补全的 <code>make_unique&lt;T&gt;(args...)</code>，与 C++11 的 <code>make_shared</code> 对应。内部一次 <code>new T(...)</code> 后立即放入 unique_ptr（分配和接管一步完成，不给泄漏留窗口）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入 / 解决什么</h3>
         <ul>
-          <li>消除「<code>f(new A(), new B())</code>」执行顺序未定义导致的<strong>异常安全泄漏</strong></li>
+          <li>消除「<code>f(new A(), new B())</code>」执行顺序未定义导致的<strong>异常安全泄漏</strong>（两个 new 的先后顺序编译器说了算，一个成功一个抛异常时，成功那个就没人管了）</li>
           <li>使代码读起来对称：make_unique / make_shared</li>
           <li>避免显式写出类型名两次：<code>unique_ptr&lt;Foo&gt;(new Foo)</code></li>
         </ul>
@@ -2075,12 +2075,12 @@ std::unique_ptr&lt;<span class="type">Codec</span>&gt; <span class="fn">make_cod
     <div class="grid-2">
       <div class="panel accent">
         <h3>变量模板</h3>
-        <p><code>template&lt;class T&gt; constexpr T pi = T(3.14159...);</code> — 让常量也参数化。</p>
-        <p>极大简化 type traits 的「value 版本」：<code>std::is_integral_v&lt;T&gt;</code>。</p>
+        <p><code>template&lt;class T&gt; constexpr T pi = T(3.14159...);</code> — 让常量也参数化（同一份定义，按类型 T 各取所需：要 double 给 double，要 float 给 float）。</p>
+        <p>极大简化 type traits 的「value 版本」：<code>std::is_integral_v&lt;T&gt;</code>（type traits——编译期"问类型问题"的工具，比如"T 是不是整型"；_v 后缀就是它最常用的值形式）。</p>
       </div>
       <div class="panel green">
         <h3>二进制字面量 + 数字分隔符</h3>
-        <p><code>0b1010</code>（二进制） · <code>1'000'000</code>（分隔符仅作可读，无语义）。</p>
+        <p><code>0b1010</code>（二进制——直接按位写值，不用再心算十六进制） · <code>1'000'000</code>（分隔符仅作可读，无语义——撇号只是给人看的"千分位"）。</p>
         <p>位掩码、寄存器、协议字段宽度等场景<strong>大幅提升可读性</strong>。</p>
       </div>
     </div>
@@ -2135,7 +2135,7 @@ std::unique_ptr&lt;<span class="type">Codec</span>&gt; <span class="fn">make_cod
     <div class="grid-2">
       <div class="panel accent">
         <h3>放宽的 constexpr</h3>
-        <p>C++14 起 constexpr 函数可写循环、局部变量、多 return → 真正可用。</p>
+        <p>C++14 起 constexpr 函数可写循环、局部变量、多 return → 真正可用（写起来和普通函数一样，只是有机会在编译期跑完）。</p>
         <ul>
           <li>编译期预计算查找表更容易</li>
           <li>状态机校验、协议校验在编译期完成</li>
@@ -2143,7 +2143,7 @@ std::unique_ptr&lt;<span class="type">Codec</span>&gt; <span class="fn">make_cod
       </div>
       <div class="panel green">
         <h3>[[deprecated]]</h3>
-        <p>属性，标注废弃 API，调用处出 warning。便于跨版本演进。</p>
+        <p>属性（写在声明前的编译器标注），标注废弃 API，调用处出 warning。便于跨版本演进。</p>
       </div>
     </div>
 
@@ -2204,7 +2204,7 @@ std::unique_ptr&lt;<span class="type">Codec</span>&gt; <span class="fn">make_cod
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><code>auto [a, b, c] = expr;</code> — 把 tuple / pair / 聚合 struct / 数组的成员一次性绑到多个新名字上。</p>
+        <p><code>auto [a, b, c] = expr;</code> — 把 tuple / pair / 聚合 struct / 数组的成员一次性绑到多个新名字上（一次声明、多个变量各自接住对应的值，像快递签收时一箱货物直接分到各人手里）。</p>
         <p>三种来源：① <code>std::tuple_size</code> 特化的类型；② 数组；③ 公开数据成员的聚合类。</p>
         <p><code>auto&amp;</code>、<code>const auto&amp;</code>、<code>auto&amp;&amp;</code> 都可用，<strong>避免不必要拷贝</strong>。</p>
       </div>
@@ -2268,7 +2268,7 @@ client_.<span class="fn">connect</span>(host, port);
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>编译期判断条件，<strong>未被选中的分支不参与编译</strong>（template 实例化时丢弃）。</p>
+        <p>编译期判断条件，<strong>未被选中的分支不参与编译</strong>（template 实例化时直接丢弃——相当于编译时就把不走的岔路从地图上抹掉）。</p>
         <p>替代 SFINAE / tag dispatch / 多版本特化的繁琐技巧。</p>
       </div>
       <div class="panel yellow">
@@ -2331,7 +2331,7 @@ client_.<span class="fn">connect</span>(host, port);
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>表示「<em>有值或无值</em>」，无值时为 <code>std::nullopt</code>。内部存 T 的对齐缓冲 + bool 标志位（不堆分配，<strong>零额外开销</strong>）。</p>
+        <p>表示「<em>有值或无值</em>」，无值时为 <code>std::nullopt</code>。内部存 T 的对齐缓冲 + bool 标志位（不堆分配，<strong>零额外开销</strong>——好比给值配了一个"有没有"的指示灯）。</p>
         <p>访问：<code>has_value() / *opt / opt-&gt;m / opt.value() / opt.value_or(default)</code>。</p>
       </div>
       <div class="panel yellow">
@@ -2400,8 +2400,8 @@ client_.<span class="fn">connect</span>(host, port);
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><code>std::variant&lt;A,B,C&gt;</code> 同一时间只持有 A、B、C 中的一个，运行时记录当前类型 index。</p>
-        <p>访问用 <code>std::visit(visitor, var)</code>（推荐）或 <code>std::get&lt;T&gt;</code> / <code>std::holds_alternative&lt;T&gt;</code>。</p>
+        <p><code>std::variant&lt;A,B,C&gt;</code> 同一时间只持有 A、B、C 中的一个（一个"多选一"的盒子），运行时记录当前类型 index（记着"现在装的是第几种"）。</p>
+        <p>访问用 <code>std::visit(visitor, var)</code>（推荐——把访问者按当前类型分发到对应分支）或 <code>std::get&lt;T&gt;</code> / <code>std::holds_alternative&lt;T&gt;</code>。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -2476,9 +2476,9 @@ Result&lt;<span class="type">int</span>, ParseError&gt; <span class="fn">parse_p
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>本质是 <code>{const char* ptr; size_t len;}</code>，<strong>不持有内存</strong>，只是「指向某段字符序列」的非拥有引用。</p>
+        <p>本质是 <code>{const char* ptr; size_t len;}</code>，<strong>不持有内存</strong>，只是「指向某段字符序列」的非拥有引用（相当于给现成的字符串贴一张"窗口标签"，不复制内容）。</p>
         <p>支持几乎所有 std::string 的只读操作（substr / find / compare / starts_with(C++20)）。</p>
-        <p><code>substr</code> 返回 string_view，<strong>O(1)</strong>，不复制。</p>
+        <p><code>substr</code> 返回 string_view，<strong>O(1)</strong>，不复制（只挪一下"窗口"的起点和长度，一字节都不搬）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -2543,7 +2543,7 @@ Result&lt;<span class="type">int</span>, ParseError&gt; <span class="fn">parse_p
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>来自 boost::filesystem，进入标准。提供 <code>path</code> / <code>directory_iterator</code> / <code>recursive_directory_iterator</code> / <code>copy / remove / rename / status</code> 等。</p>
+        <p>来自 boost::filesystem，进入标准。提供 <code>path</code>（跨平台的路径对象）/ <code>directory_iterator</code> / <code>recursive_directory_iterator</code> / <code>copy / remove / rename / status</code> 等。</p>
         <p>路径运算符 <code>/</code> 拼接：<code>path p = base / "logs" / "app.log";</code></p>
       </div>
       <div class="panel yellow">
@@ -2610,7 +2610,7 @@ fs::path log_dir = <span class="str">"/var/log/myapp"</span>;
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>给 STL 算法加一个执行策略参数：</p>
+        <p>给 STL 算法加一个执行策略参数（告诉标准库"这个算法可以怎么跑"——单线程、多线程还是向量指令并行）：</p>
         <ul>
           <li><code>std::execution::seq</code> — 顺序</li>
           <li><code>std::execution::par</code> — 并行（多线程）</li>
@@ -2679,8 +2679,8 @@ std::<span class="fn">transform</span>(std::execution::par_unseq,
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>对参数包用<strong>二元运算符</strong>展开，无需递归终止函数。</p>
-        <p>四种形式：unary 左折叠 <code>(... op p)</code>、unary 右折叠 <code>(p op ...)</code>、binary 左 <code>(init op ... op p)</code>、binary 右 <code>(p op ... op init)</code>。</p>
+        <p>对参数包用<strong>二元运算符</strong>展开，无需递归终止函数（把包里所有元素用同一个运算符"从左到右"或"从右到左"依次结合，像把一串珠子一发穿起来）。</p>
+        <p>四种形式：unary 左折叠 <code>(... op p)</code>、unary 右折叠 <code>(p op ...)</code>、binary 左 <code>(init op ... op p)</code>、binary 右 <code>(p op ... op init)</code>（binary 比 unary 多一个初始值 init 参与运算）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -2747,8 +2747,8 @@ std::string <span class="fn">concat</span>(Sv... parts) {
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>构造类模板对象时，模板参数可由构造函数实参推导，不必显式写。</p>
-        <p>必要时可写「推导指引 (deduction guide)」帮助编译器。</p>
+        <p>构造类模板对象时，模板参数可由构造函数实参推导，不必显式写（模板尖括号里的类型让编译器从你传的参数自己推出来）。</p>
+        <p>必要时可写「推导指引 (deduction guide)」帮助编译器（当默认推导规则不够用时，手动告诉它"这个构造该推成哪个模板参数"）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -2809,7 +2809,7 @@ std::map cache{
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><code>inline</code> 关键字用于变量（含静态成员），允许在多个翻译单元中定义而<strong>不违反 ODR</strong>，链接时合并为同一对象。</p>
+        <p><code>inline</code> 关键字用于变量（含静态成员），允许在多个翻译单元中定义而<strong>不违反 ODR</strong>（One Definition Rule，单一定义规则——同一变量全程序只允许一份定义），链接时合并为同一对象。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -2868,8 +2868,8 @@ std::map cache{
         <h3>语法糖打包</h3>
         <ul>
           <li><b>嵌套 namespace</b>：<code>namespace a::b::c {}</code></li>
-          <li><b>[[nodiscard]]</b>：返回值不该被丢弃，调用处忽略会 warning</li>
-          <li><b>if/switch with init</b>：<code>if (auto v = f(); v)</code></li>
+          <li><b>[[nodiscard]]</b>：返回值不该被丢弃，调用处忽略会 warning（把返回值扔掉这种"结果没人接"的写法当场黄牌警告）</li>
+          <li><b>if/switch with init</b>：<code>if (auto v = f(); v)</code>（临时变量声明在 if 里，出了 if 就销毁，不污染外层作用域）</li>
           <li><b>constexpr lambda</b>：lambda 自动 constexpr (满足条件时)</li>
         </ul>
       </div>
@@ -2942,9 +2942,9 @@ mycorp::net::tcp::<span class="fn">send</span>(fd, payload);   <span class="cm">
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>给模板参数加<strong>编译期谓词</strong>，编译器在实例化前就拒绝不满足约束的类型。</p>
+        <p>给模板参数加<strong>编译期谓词</strong>（编译期就能算出 true/false 的条件判断），编译器在实例化前就拒绝不满足约束的类型。</p>
         <p>语法：<code>template&lt;Concept T&gt;</code> / <code>requires</code> 子句 / <code>requires { 表达式; }</code> 表达式。</p>
-        <p><b>本质</b>：让模板报错信息从「几屏的 SFINAE 噩梦」→「concept "X" not satisfied」。</p>
+        <p><b>本质</b>：让模板报错信息从「几屏的 SFINAE 噩梦」→「concept "X" not satisfied」（报错从几百行天书变成一句"这个类型不满足某某条件"）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -3019,8 +3019,8 @@ mycorp::net::tcp::<span class="fn">send</span>(fd, payload);   <span class="cm">
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>把「迭代器对」抽象为 <strong>range</strong>，提供一组 <strong>views</strong>（filter / transform / take / drop / reverse / split / join…）。</p>
-        <p>用 <code>|</code> 管道符组合，<strong>惰性求值</strong>，不复制数据。</p>
+        <p>把「迭代器对」抽象为 <strong>range</strong>（一段数据的整体，不再手动传 begin/end），提供一组 <strong>views</strong>（视图——filter / transform / take / drop / reverse / split / join…，每种都是一层"加工程序"）。</p>
+        <p>用 <code>|</code> 管道符组合，<strong>惰性求值</strong>（真正迭代时才逐个加工，不提前算），不复制数据。</p>
         <p>STL 算法新增 <code>std::ranges::sort(v)</code> 等无须传 begin/end 的形式。</p>
       </div>
       <div class="panel yellow">
@@ -3085,8 +3085,8 @@ std::ranges::<span class="fn">sort</span>(v);   <span class="cm">// 不再 sort(
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>函数体中出现 <code>co_await</code> / <code>co_yield</code> / <code>co_return</code> 即为协程。编译器自动把函数<strong>切分为状态机</strong>（无栈协程）。</p>
-        <p>三件套：<b>promise_type</b>（控制行为）、<b>coroutine_handle</b>（运行时句柄）、<b>awaiter</b>（决定挂起/恢复时机）。</p>
+        <p>函数体中出现 <code>co_await</code> / <code>co_yield</code> / <code>co_return</code> 即为协程（能"暂停让出、之后从暂停点继续"的函数）。编译器自动把函数<strong>切分为状态机</strong>（无栈协程——不靠调用栈保存现场，现场存在堆上的协程帧里）。</p>
+        <p>三件套：<b>promise_type</b>（控制行为——协程启动/结束/产出值时的钩子）、<b>coroutine_handle</b>（运行时句柄——拿着它才能恢复/销毁协程）、<b>awaiter</b>（决定挂起/恢复时机的对象）。</p>
         <p><b>注意</b>：标准只提供「机制」，<em>实际可用的</em> Task / Generator 类型要业务自己写或用第三方库（cppcoro / folly::coro）。</p>
       </div>
       <div class="panel yellow">
@@ -3160,7 +3160,7 @@ Generator&lt;<span class="type">Frame</span>&gt; <span class="fn">read_frames</s
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>用 <code>export module my.lib;</code> 声明模块；不再依赖 <code>#include</code> 的文本展开。</p>
+        <p>用 <code>export module my.lib;</code> 声明模块；不再依赖 <code>#include</code> 的文本展开（include 是把头文件原样"抄"进来一遍，模块则是读一份编译好的接口清单）。</p>
         <p>编译器把模块编译为<strong>预编译二进制接口</strong>（BMI），下游 import 时直接读符号 → <strong>编译速度大幅提升</strong>。</p>
         <p>不再受宏污染：模块外的宏不会进入模块内部。</p>
       </div>
@@ -3222,8 +3222,8 @@ Generator&lt;<span class="type">Frame</span>&gt; <span class="fn">read_frames</s
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>类似 <code>string_view</code> 但更通用：<code>{T* ptr; size_t len;}</code>，可指向 C 数组、std::array、std::vector 的任意子段。</p>
-        <p>静态范围 <code>span&lt;int, 4&gt;</code> 或动态 <code>span&lt;int&gt;</code>（dynamic_extent）。</p>
+        <p>类似 <code>string_view</code> 但更通用：<code>{T* ptr; size_t len;}</code>，可指向 C 数组、std::array、std::vector 的任意子段（一段连续内存的"窗口"，不拷贝也不拥有）。</p>
+        <p>静态范围 <code>span&lt;int, 4&gt;</code>（长度固定为 4，编译期已知）或动态 <code>span&lt;int&gt;</code>（dynamic_extent，长度运行期确定）。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -3284,7 +3284,7 @@ std::vector&lt;<span class="type">uint8_t</span>&gt; v(1024);
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>来自 fmt 库（fmt::format），进入标准。语法 <code>"{}"</code>，编译期解析占位符。</p>
+        <p>来自 fmt 库（fmt::format），进入标准。语法 <code>"{}"</code>（花括号占位、按顺序填参数），编译期解析占位符。</p>
         <p>支持自定义类型：特化 <code>std::formatter&lt;T&gt;</code>。</p>
       </div>
       <div class="panel yellow">
@@ -3343,7 +3343,7 @@ std::<span class="fn">format</span>(<span class="str">"connecting to {}"</span>,
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>一个运算符<strong>同时</strong>表达 &lt; / &lt;= / &gt; / &gt;= / == / !=。返回值是 <code>std::strong_ordering</code> / <code>weak_ordering</code> / <code>partial_ordering</code>。</p>
+        <p>一个运算符<strong>同时</strong>表达 &lt; / &lt;= / &gt; / &gt;= / == / !=（一次写出"小于/等于/大于"三态答案，其余比较全从它推导）。返回值是 <code>std::strong_ordering</code> / <code>weak_ordering</code> / <code>partial_ordering</code>（三种"比较结果"类型，对应严格可区分、可区分但可替换、可能无法比较三档语义）。</p>
         <p>类内 <code>auto operator&lt;=&gt;(const T&amp;) const = default;</code> 即可<strong>一行生成全部比较</strong>。</p>
       </div>
       <div class="panel yellow">
@@ -3412,14 +3412,14 @@ std::ranges::<span class="fn">sort</span>(eps);                <span class="cm">
         <ul>
           <li><b>const</b>：值不可变（运行期决定也行）</li>
           <li><b>constexpr</b>：可在编译期，也可在运行期</li>
-          <li><b>constinit</b>：保证<em>静态变量</em>是<strong>常量初始化</strong>（解决 SIOF）</li>
+          <li><b>constinit</b>：保证<em>静态变量</em>是<strong>常量初始化</strong>（解决 SIOF——Static Initialization Order Fiasco，静态初始化顺序灾难：跨文件的静态对象谁先初始化没有规定，用未初始化的对象就出事）</li>
           <li><b>consteval</b>：函数<strong>必须</strong>编译期求值（运行期调用 → 编译错）</li>
         </ul>
       </div>
       <div class="panel yellow">
         <h3>解决什么</h3>
         <ul>
-          <li><b>SIOF</b>（Static Initialization Order Fiasco）：跨 TU 静态对象初始化顺序未定义</li>
+          <li><b>SIOF</b>（Static Initialization Order Fiasco）：跨 TU 静态对象初始化顺序未定义（TU——translation unit，翻译单元，一个 .cpp 编译出来的独立产物）</li>
           <li>区分「希望编译期生成」与「允许运行期回退」</li>
         </ul>
       </div>
@@ -3463,8 +3463,8 @@ std::ranges::<span class="fn">sort</span>(eps);                <span class="cm">
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p><b>std::jthread</b>：析构时<strong>自动 request_stop() + join()</strong>，避免 std::thread 析构未 join → terminate 的坑。</p>
-        <p><b>stop_token</b>：合作式取消信号，被调函数主动检查 <code>stop_requested()</code>。</p>
+        <p><b>std::jthread</b>：析构时<strong>自动 request_stop() + join()</strong>（离开作用域自动"打招呼停 + 等收尾"），避免 std::thread 析构未 join → terminate 的坑。</p>
+        <p><b>stop_token</b>：合作式取消信号（不是外部强杀，而是发个"该停了"的信号），被调函数主动检查 <code>stop_requested()</code>。</p>
         <p><b>stop_callback</b>：在 stop 信号触发时执行回调（用于唤醒条件变量）。</p>
       </div>
       <div class="panel yellow">
@@ -3537,12 +3537,12 @@ std::ranges::<span class="fn">sort</span>(eps);                <span class="cm">
     <div class="grid-2">
       <div class="panel accent">
         <h3>Designated Initializers</h3>
-        <p>聚合类型可按字段名初始化：<code>Point p{.x=1, .y=2};</code></p>
+        <p>聚合类型可按字段名初始化：<code>Point p{.x=1, .y=2};</code>（赋的是哪个字段一目了然，不用数逗号）。</p>
         <p>必须按声明顺序、不能跳跃；可读性大幅提升。</p>
       </div>
       <div class="panel green">
         <h3>[[likely]] / [[unlikely]]</h3>
-        <p>给编译器分支预测提示。常用于热路径上的错误处理分支。</p>
+        <p>给编译器分支预测提示（告诉它"这条分支基本不走/基本都走"，好把机器码排得更顺）。常用于热路径上的错误处理分支。</p>
       </div>
     </div>
 
@@ -3610,7 +3610,7 @@ server.<span class="fn">add_listener</span>({
     <div class="grid-2">
       <div class="panel accent">
         <h3>std::atomic_ref&lt;T&gt;</h3>
-        <p>给现有非 atomic 对象一个原子访问视图，无需把数据成员声明为 atomic。</p>
+        <p>给现有非 atomic 对象一个原子访问视图（对象本身还是普通变量，需要原子操作时临时"套上原子视角"），无需把数据成员声明为 atomic。</p>
       </div>
       <div class="panel green">
         <h3>std::source_location</h3>
@@ -3618,11 +3618,11 @@ server.<span class="fn">add_listener</span>({
       </div>
       <div class="panel purple">
         <h3>std::bit_cast / 位操作</h3>
-        <p>类型安全的 bit 重解释（替代不安全的 reinterpret/memcpy）；<code>&lt;bit&gt;</code> 头提供 popcount / countl_zero 等。</p>
+        <p>类型安全的 bit 重解释（按位重新解释一段内存，替代不安全的 reinterpret/memcpy）；<code>&lt;bit&gt;</code> 头提供 popcount / countl_zero 等（数 1 的个数、数前导 0 等位操作）。</p>
       </div>
       <div class="panel orange">
         <h3>std::erase / erase_if</h3>
-        <p>非成员函数，统一容器删除写法，告别 erase-remove 惯用法。</p>
+        <p>非成员函数，统一容器删除写法，告别 erase-remove 惯用法（旧式两步走的删除套路）。</p>
       </div>
     </div>
 
@@ -3675,7 +3675,7 @@ std::<span class="fn">erase_if</span>(sessions,
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>携带值 <code>T</code> 或错误 <code>E</code> 的"<strong>必有其一</strong>"类型，是 Rust <code>Result</code>、Haskell <code>Either</code> 的 C++ 实现。</p>
+        <p>携带值 <code>T</code> 或错误 <code>E</code> 的"<strong>必有其一</strong>"类型（要么装着成功结果、要么装着失败原因，二选一必有内容），是 Rust <code>Result</code>、Haskell <code>Either</code> 的 C++ 实现。</p>
         <p>语义：<code>expected&lt;int, ErrCode&gt;</code> = "成功是 int，失败是 ErrCode"。</p>
       </div>
       <div class="panel yellow">
@@ -3753,7 +3753,7 @@ std::expected&lt;<span class="type">Response</span>, <span class="type">RpcError
     <div class="grid-2">
       <div class="panel accent">
         <h3>核心概念</h3>
-        <p>C++20 引入 <code>std::format</code>（只生成字符串），C++23 增加 <code>std::print</code> / <code>std::println</code> <strong>直接写到 FILE*</strong>，绕开 iostream 同步开销。</p>
+        <p>C++20 引入 <code>std::format</code>（只生成字符串），C++23 增加 <code>std::print</code> / <code>std::println</code> <strong>直接写到 FILE*</strong>（格式化加输出一步完成），绕开 iostream 同步开销。</p>
       </div>
       <div class="panel yellow">
         <h3>为什么引入</h3>
@@ -3874,7 +3874,7 @@ std::<span class="fn">println</span>(<span class="str">"{::02d}"</span>, v);    
     <div class="slide-header"><span class="version-badge cpp23">C++23</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">std::generator&lt;T&gt; — 协程版生成器</h1>
 
-    <p>C++20 给了协程<strong>机制</strong>但没标准 Task/Generator 类型 → 用户/库各搓一个。C++23 补上 <code>std::generator</code>，是 ranges 的 yield 端。</p>
+    <p>C++20 给了协程<strong>机制</strong>但没标准 Task/Generator 类型 → 用户/库各搓一个。C++23 补上 <code>std::generator</code>（生成器——每次"产出一个值、暂停等取"的惰性序列），是 ranges 的 yield 端。</p>
 
     <h2>核心用法</h2>
 <pre><span class="kw">#include</span> <span class="str">&lt;generator&gt;</span>
@@ -3925,7 +3925,7 @@ std::generator&lt;<span class="type">Node</span>&amp;&gt; <span class="fn">walk<
     <div class="slide-header"><span class="version-badge cpp23">C++23</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">std::mdspan&lt;T, Extents&gt; — 多维数组的非拥有视图</h1>
 
-    <p>HPC / 图像处理 / 张量计算的福音：把扁平 <code>T*</code> + 维度信息组合成"多维视图"，无拷贝、支持任意 layout（row-major / col-major / strided）。</p>
+    <p>HPC / 图像处理 / 张量计算的福音：把扁平 <code>T*</code> + 维度信息组合成"多维视图"（一块一维内存 + 一份"按几个维度解读"的说明书），无拷贝、支持任意 layout（row-major / col-major / strided——行优先、列优先、带步长的内存排布方式）。</p>
 
     <h2>核心用法</h2>
 <pre><span class="kw">#include</span> <span class="str">&lt;mdspan&gt;</span>
@@ -3978,7 +3978,7 @@ tensor[n, c, h, w] = activation(...);</pre>
       <div class="panel red">
         <h3>std::map 的问题</h3>
         <ul>
-          <li>红黑树节点散落堆上 → cache miss 频繁</li>
+          <li>红黑树节点散落堆上 → cache miss 频繁（缓存未命中——CPU 要的数据不在高速缓存里，得去内存慢取）</li>
           <li>每个节点 3-4 倍内存开销（左右指针、父指针、颜色）</li>
           <li>遍历缓慢（指针追逐）</li>
           <li>小数据集尤其不划算（&lt; 100 个元素）</li>
@@ -3987,7 +3987,7 @@ tensor[n, c, h, w] = activation(...);</pre>
       <div class="panel green">
         <h3>std::flat_map = 排序的 vector</h3>
         <ul>
-          <li>底层是两个 <code>std::vector</code>（keys + values）— 连续内存</li>
+          <li>底层是两个 <code>std::vector</code>（keys + values）— 连续内存（key 和 value 各排成一个紧凑数组）</li>
           <li>查找 O(log N) 二分搜索 — cache 友好</li>
           <li>遍历线性扫描 — 极快</li>
           <li>缺点：插入/删除 O(N)（数组搬移）</li>
@@ -4030,7 +4030,7 @@ std::flat_map&lt;<span class="kw">int</span>, std::string&gt; m{
     <div class="slide-header"><span class="version-badge cpp23">C++23</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">std::stacktrace — 标准化的 backtrace</h1>
 
-    <p>过去拿调用栈要 backtrace(3) / libunwind / glog 等平台特定方案，且符号解析麻烦。C++23 把 <code>boost::stacktrace</code> 标准化进来。</p>
+    <p>过去拿调用栈要 backtrace(3) / libunwind / glog 等平台特定方案，且符号解析麻烦（把内存地址翻译回"哪个函数第几行"很费劲）。C++23 把 <code>boost::stacktrace</code> 标准化进来。</p>
 
     <h2>用法</h2>
 <pre><span class="kw">#include</span> <span class="str">&lt;stacktrace&gt;</span>
@@ -4084,7 +4084,7 @@ std::flat_map&lt;<span class="kw">int</span>, std::string&gt; m{
     <div class="grid-2">
       <div class="panel red">
         <h3>std::function 的痛</h3>
-        <p><code>std::function</code> 要求 callable <strong>必须可拷贝</strong>。但很多现代 callable 是 only-move 的：</p>
+        <p><code>std::function</code> 要求 callable <strong>必须可拷贝</strong>。但很多现代 callable 是 only-move 的（只能搬走、不能复制）：</p>
         <ul>
           <li>持有 <code>std::unique_ptr</code> 的 lambda</li>
           <li>std::packaged_task / promise</li>
@@ -4094,7 +4094,7 @@ std::flat_map&lt;<span class="kw">int</span>, std::string&gt; m{
       </div>
       <div class="panel green">
         <h3>std::move_only_function</h3>
-        <p>同样的 type-erased 接口，但<strong>只允许移动</strong>。</p>
+        <p>同样的 type-erased 接口（类型擦除——隐藏具体类型、只留统一调用形式），但<strong>只允许移动</strong>。</p>
         <p>支持 <code>const</code> / <code>noexcept</code> / 引用限定（&amp; / &amp;&amp;）等修饰符。</p>
       </div>
     </div>
@@ -4145,7 +4145,7 @@ pool.<span class="fn">submit</span>([conn = std::<span class="fn">move</span>(un
     <div class="slide-header"><span class="version-badge cpp23">C++23</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">Monadic optional / expected — 函数式错误处理链</h1>
 
-    <p>C++23 给 <code>std::optional</code> 和 <code>std::expected</code> 加上了三个 monadic 算子，让"有值就继续做、没值/出错就短路"的代码无需手写嵌套 if。</p>
+    <p>C++23 给 <code>std::optional</code> 和 <code>std::expected</code> 加上了三个 monadic 算子（monadic——函数式风格的链式组合操作，像传送带一样"有值就送进下一步、没值就整条线停住"），让"有值就继续做、没值/出错就短路"的代码无需手写嵌套 if。</p>
 
     <h2>三个算子</h2>
     <table>
@@ -4201,7 +4201,7 @@ std::optional&lt;<span class="type">Avatar</span>&gt; <span class="fn">get</span
     <div class="slide-header"><span class="version-badge cpp23">C++23</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">if consteval — "我现在是在编译期被求值吗？"</h1>
 
-    <p>C++20 给了 <code>std::is_constant_evaluated()</code>，但作为函数有限制（不能在<strong>分支条件</strong>里用它来调 consteval 函数）。C++23 补 <code>if consteval { ... }</code> 语法消除这些限制。</p>
+    <p>C++20 给了 <code>std::is_constant_evaluated()</code>（在编译期求值时返回 true 的探测函数），但作为函数有限制（不能在<strong>分支条件</strong>里用它来调 consteval 函数）。C++23 补 <code>if consteval { ... }</code> 语法消除这些限制。</p>
 
     <h2>典型用法</h2>
 <pre><span class="kw">constexpr</span> <span class="kw">double</span> <span class="fn">my_sqrt</span>(<span class="kw">double</span> x) {
@@ -4250,7 +4250,7 @@ std::optional&lt;<span class="type">Avatar</span>&gt; <span class="fn">get</span
     <h1 class="slide-title">多维 <code>operator[]</code> + Ranges 进阶视图</h1>
 
     <h2>① 多维下标</h2>
-    <p>C++23 起 <code>operator[]</code> 可以接受多个参数。彻底告别 <code>m(i, j)</code> 这种"用函数调用伪装下标"的丑陋习惯。</p>
+    <p>C++23 起 <code>operator[]</code> 可以接受多个参数（方括号里能一次写多个下标）。彻底告别 <code>m(i, j)</code> 这种"用函数调用伪装下标"的丑陋习惯。</p>
 <pre><span class="kw">class</span> <span class="type">Matrix</span> {
     std::vector&lt;<span class="kw">double</span>&gt; d_;
     <span class="kw">size_t</span> cols_;
@@ -4305,7 +4305,7 @@ m[<span class="num">3</span>, <span class="num">5</span>] = <span class="num">1.
     <div class="grid-2">
       <div class="panel accent">
         <h3>std::byteswap</h3>
-        <p>大端小端字节序翻转，替代旧的 <code>__builtin_bswap*</code>。<code>std::byteswap(uint32_t)</code> 一行搞定。</p>
+        <p>大端小端字节序翻转（高位在前还是低位在前的互换），替代旧的 <code>__builtin_bswap*</code>。<code>std::byteswap(uint32_t)</code> 一行搞定。</p>
       </div>
       <div class="panel green">
         <h3>std::to_underlying</h3>
@@ -4313,7 +4313,7 @@ m[<span class="num">3</span>, <span class="num">5</span>] = <span class="num">1.
       </div>
       <div class="panel purple">
         <h3>[[assume(expr)]]</h3>
-        <p>告诉编译器"这个条件一定成立"，让优化器更激进。比 <code>__builtin_assume</code> 标准化。</p>
+        <p>告诉编译器"这个条件一定成立"（编译器信了它、省去不必要的检查），让优化器更激进。比 <code>__builtin_assume</code> 标准化。</p>
       </div>
       <div class="panel orange">
         <h3>contains() 成员</h3>
@@ -4321,7 +4321,7 @@ m[<span class="num">3</span>, <span class="num">5</span>] = <span class="num">1.
       </div>
       <div class="panel red">
         <h3>auto(x) — Decay-copy</h3>
-        <p>显式触发一次"按值拷贝并衰退"，常用于强制 prvalue 上下文，替代奇怪的 <code>(void)x;</code> 习惯。</p>
+        <p>显式触发一次"按值拷贝并衰退"（decay——数组退化为指针、去掉引用/顶层 const 的类型退化），常用于强制 prvalue 上下文，替代奇怪的 <code>(void)x;</code> 习惯。</p>
       </div>
       <div class="panel yellow">
         <h3>size_t / ptrdiff_t literals</h3>
@@ -4329,11 +4329,11 @@ m[<span class="num">3</span>, <span class="num">5</span>] = <span class="num">1.
       </div>
       <div class="panel accent">
         <h3>static operator() / []</h3>
-        <p>函数对象的 <code>operator()</code> 可以是 <code>static</code>，省去隐式 this 参数 → STL 算法里传值的函数对象有性能微优化。</p>
+        <p>函数对象的 <code>operator()</code> 可以是 <code>static</code>（不依赖 this，调用时不传对象指针），省去隐式 this 参数 → STL 算法里传值的函数对象有性能微优化。</p>
       </div>
       <div class="panel green">
         <h3>import std; (Modules)</h3>
-        <p>一行替代上百个 #include。需 C++23 + 编译器/构建系统支持（CMake 3.28+ / Clang 17+）。</p>
+        <p>一行替代上百个 #include（把整个标准库当作一个模块导入）。需 C++23 + 编译器/构建系统支持（CMake 3.28+ / Clang 17+）。</p>
       </div>
     </div>
 
@@ -4365,7 +4365,7 @@ std::map&lt;<span class="kw">int</span>, std::string&gt; m;
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta">⭐⭐⭐ 范式革命</span></div>
     <h1 class="slide-title">std::execution (P2300) — Sender / Receiver / Scheduler</h1>
 
-    <p>P2300 由 NVIDIA + Microsoft + Meta + Google 联合推动，给 C++ 一套<strong>跨 CPU / GPU / IO 通用的异步执行抽象</strong>。这是 C++26 最重要的特性。</p>
+    <p>P2300 由 NVIDIA + Microsoft + Meta + Google 联合推动，给 C++ 一套<strong>跨 CPU / GPU / IO 通用的异步执行抽象</strong>（写一份异步代码，跑在哪种执行环境都行）。这是 C++26 最重要的特性。</p>
 
     <h2>三大概念</h2>
     <div class="grid-3">
@@ -4375,11 +4375,11 @@ std::map&lt;<span class="kw">int</span>, std::string&gt; m;
       </div>
       <div class="panel purple">
         <h3>Sender</h3>
-        <p>"做什么"。异步操作描述符，懒求值，可组合。</p>
+        <p>"做什么"。异步操作描述符，懒求值（先描述任务、真正启动要等订阅），可组合。</p>
       </div>
       <div class="panel green">
         <h3>Receiver</h3>
-        <p>"结果交给谁"。三入口：<code>set_value / set_error / set_stopped</code>。</p>
+        <p>"结果交给谁"。三入口：<code>set_value / set_error / set_stopped</code>（分别接住正常结果、错误、取消三种结局）。</p>
       </div>
     </div>
 
@@ -4450,7 +4450,7 @@ Task&lt;<span class="kw">int</span>&gt; <span class="fn">orchestrate</span>() {
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">std::hazard_pointer + std::rcu — 无锁回收终于标准化</h1>
 
-    <p>无锁数据结构最难的不是 CAS，是<strong>"什么时候 delete 节点"</strong>。C++26 把两个工业标准方案进入标准库：</p>
+    <p>无锁数据结构最难的不是 CAS（compare-and-swap，"值没被别人动过才写入"的原子操作），是<strong>"什么时候 delete 节点"</strong>（别的线程可能还捏着这个节点的指针，删早了就踩空）。C++26 把两个工业标准方案进入标准库：</p>
 
     <h2>std::hazard_pointer (P1121)</h2>
 <pre><span class="kw">#include</span> <span class="str">&lt;hazard_pointer&gt;</span>
@@ -4512,7 +4512,7 @@ std::atomic&lt;<span class="type">Config</span>*&gt; g_cfg;
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta">⭐⭐⭐ 等了 20 年</span></div>
     <h1 class="slide-title">Reflection (P2996) — 编译期静态反射</h1>
 
-    <p>C++ 等了 20 年的特性。P2996 是<strong>编译期反射</strong>（不是 Java 那种运行时反射），可在编译期内省类型成员、生成 JSON 序列化、生成 ORM 映射、消除几乎所有"宏 + 模板偏特化"的样板。</p>
+    <p>C++ 等了 20 年的特性。P2996 是<strong>编译期反射</strong>（不是 Java 那种运行时反射——不是程序跑起来再查类型，而是编译时就让代码"看清"类型的结构），可在编译期内省类型成员、生成 JSON 序列化、生成 ORM 映射、消除几乎所有"宏 + 模板偏特化"的样板。</p>
 
     <h2>核心机制：reflexpr 与 splicers</h2>
 <pre><span class="cm">// 反射运算符 ^ 获取类型/成员的 meta-info</span>
@@ -4579,7 +4579,7 @@ std::string <span class="fn">to_json</span>(<span class="kw">const</span> T&amp;
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta">候选中</span></div>
     <h1 class="slide-title">Pattern Matching — Rust/Haskell 风格的模式匹配</h1>
 
-    <p>P2688 / P1371（C++26 候选）引入 <code>inspect</code> 表达式 — 一站式处理 variant、结构化解构、类型分发、范围条件等。</p>
+    <p>P2688 / P1371（C++26 候选）引入 <code>inspect</code> 表达式（模式匹配——拿值去逐条试"形状"，命中哪条走哪条） — 一站式处理 variant、结构化解构、类型分发、范围条件等。</p>
 
     <h2>对比：今天写法 vs C++26</h2>
 <pre><span class="cm">// 今天（C++17/20） — std::visit + overloaded</span>
@@ -4632,7 +4632,7 @@ std::string <span class="fn">classify</span>(<span class="type">Point</span> p) 
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">std::simd — 标准化的便携 SIMD</h1>
 
-    <p>P1928 把 <code>std::experimental::simd</code>（已在 GCC libstdc++ 多年）转正为 <code>std::simd</code>。让 C++ 第一次有<strong>跨平台、跨 ISA</strong>的 SIMD 类型 — 不再写 <code>_mm256_*</code> intrinsics。</p>
+    <p>P1928 把 <code>std::experimental::simd</code>（已在 GCC libstdc++ 多年）转正为 <code>std::simd</code>。让 C++ 第一次有<strong>跨平台、跨 ISA</strong>（跨指令集架构——同一份代码在 x86/ARM 都能生成各自的向量指令）的 SIMD 类型 — 不再写 <code>_mm256_*</code> intrinsics。</p>
 
     <h2>基本用法</h2>
 <pre><span class="kw">#include</span> <span class="str">&lt;simd&gt;</span>
@@ -4677,7 +4677,7 @@ floatv c = a + b * b;                <span class="cm">// 1 条 SIMD 指令</span
     <div class="slide-header"><span class="version-badge cpp26">C++26</span><span class="slide-meta"></span></div>
     <h1 class="slide-title">Contracts (P2900) — 函数契约：pre / post / assert</h1>
 
-    <p>断言机制大跃迁。比 <code>assert</code> 强：① 标准属性语法、② 可分离构建模式（生产可关）、③ 编译器优化提示、④ 工具链友好。</p>
+    <p>断言机制大跃迁（函数的"承诺条款"进入语言本身）。比 <code>assert</code> 强：① 标准属性语法、② 可分离构建模式（生产可关）、③ 编译器优化提示、④ 工具链友好。</p>
 
     <h2>三种契约</h2>
 <pre><span class="kw">int</span> <span class="fn">div</span>(<span class="kw">int</span> a, <span class="kw">int</span> b)
@@ -4729,8 +4729,8 @@ floatv c = a + b * b;                <span class="cm">// 1 条 SIMD 指令</span
 
     <p>C++23 给了 <code>std::mdspan</code>（视图）。C++26 补两个关键件：</p>
     <ul>
-      <li><code>std::mdarray</code> — <strong>拥有版</strong>多维数组（mdspan 之于 string_view，mdarray 之于 string）</li>
-      <li><code>std::linalg</code> — BLAS 风格的线性代数算法（dot, gemm, axpy, syrk ...），<strong>底层可对接厂商 BLAS</strong>（OpenBLAS / MKL / cuBLAS）</li>
+      <li><code>std::mdarray</code> — <strong>拥有版</strong>多维数组（mdspan 之于 string_view，mdarray 之于 string——一个只看不持有、一个自己持有数据）</li>
+      <li><code>std::linalg</code> — BLAS 风格的线性代数算法（dot, gemm, axpy, syrk ...——点积、矩阵乘这些经典运算的标准名），<strong>底层可对接厂商 BLAS</strong>（OpenBLAS / MKL / cuBLAS）</li>
     </ul>
 
     <h2>用法示例</h2>
@@ -4772,7 +4772,7 @@ std::linalg::<span class="fn">cholesky_factor</span>(M.<span class="fn">to_mdspa
     <div class="grid-2">
       <div class="panel accent">
         <h3>std::function_ref</h3>
-        <p>callable 的<strong>非拥有视图</strong>（类似 string_view 之于 string）。热路径传 callback 零分配。</p>
+        <p>callable 的<strong>非拥有视图</strong>（类似 string_view 之于 string——只借用可调用对象、不管它的生死）。热路径传 callback 零分配。</p>
         <pre><span class="kw">void</span> <span class="fn">forEach</span>(std::span&lt;<span class="kw">int</span>&gt; v, std::function_ref&lt;<span class="kw">void</span>(<span class="kw">int</span>)&gt; f);</pre>
       </div>
       <div class="panel green">
@@ -4783,7 +4783,7 @@ v.<span class="fn">push_back</span>(<span class="num">42</span>);            <sp
       </div>
       <div class="panel purple">
         <h3>std::submdspan</h3>
-        <p>从 mdspan 切出<strong>子视图</strong>（行/列/块）。零拷贝 numpy slicing。</p>
+        <p>从 mdspan 切出<strong>子视图</strong>（行/列/块）。零拷贝 numpy slicing（像 Python numpy 切片那样取子矩阵，但不复制任何数据）。</p>
       </div>
       <div class="panel orange">
         <h3>Structured bindings to packs</h3>
@@ -4791,11 +4791,11 @@ v.<span class="fn">push_back</span>(<span class="num">42</span>);            <sp
       </div>
       <div class="panel red">
         <h3>std::saturate_cast&lt;T&gt;</h3>
-        <p>整数饱和转换（超 INT_MAX 不溢出而是钳位）。图像处理常用。</p>
+        <p>整数饱和转换（超 INT_MAX 不溢出而是钳位——超出范围就"顶格"取边界值，不绕回负数）。图像处理常用。</p>
       </div>
       <div class="panel yellow">
         <h3>Erroneous behavior</h3>
-        <p>把"未初始化变量读取"从 UB 降级为 <strong>"erroneous"</strong>—— 编译器保证给确定值（通常 0）。少一类悄无声息的 bug。</p>
+        <p>把"未初始化变量读取"从 UB（未定义行为——编译器可以任意摆布、结果不可预测）降级为 <strong>"erroneous"</strong>—— 编译器保证给确定值（通常 0）。少一类悄无声息的 bug。</p>
       </div>
       <div class="panel accent">
         <h3>std::out_ptr / inout_ptr</h3>
@@ -4824,7 +4824,7 @@ v.<span class="fn">push_back</span>(<span class="num">42</span>);            <sp
         <h3>面试准备建议</h3>
         <ul>
           <li>每个特性能讲出：<strong>定义 / 引入原因 / 替代了什么 / 性能影响</strong></li>
-          <li>重点四个：<em>移动语义、智能指针、Lambda、并发原语</em></li>
+          <li>重点四个：<em>移动语义、智能指针、Lambda、并发原语</em>（并发原语——线程/锁/条件变量这类多线程基本工具）</li>
           <li>能现场写：thread pool、shared_ptr 控制块、生产者-消费者</li>
           <li>看得懂模板错误信息（concept / SFINAE / 引用折叠）</li>
         </ul>

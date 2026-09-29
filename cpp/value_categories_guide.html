@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 值类别 + 拷贝控制完全指南 — 面试硬通货</title>
-<meta name="description" content="C++ 值类别 + 拷贝控制完全指南 — 面试硬通货：从 左值 / 右值 / 将亡值（lvalue · prvalue · xvalue） 的值类别根基，到 移动语义 · 完美转发 · 引用折叠 · std::move / forward 的核心机制，再到 拷贝控制五法则">
+<meta name="description" content="大白话讲透 C++ 值类别与拷贝控制：左值、右值、将亡值怎么分，std::move、std::forward 到底做了什么，引用折叠、完美转发、Rule of 0/3/5、RVO、noexcept 一次讲清，面试实战都能用。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/value_categories_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/value_categories_guide.html">
 <meta property="og:title" content="C++ 值类别 + 拷贝控制完全指南 — 面试硬通货">
-<meta property="og:description" content="C++ 值类别 + 拷贝控制完全指南 — 面试硬通货：从 左值 / 右值 / 将亡值（lvalue · prvalue · xvalue） 的值类别根基，到 移动语义 · 完美转发 · 引用折叠 · std::move / forward 的核心机制，再到 拷贝控制五法则">
+<meta property="og:description" content="大白话讲透 C++ 值类别与拷贝控制：左值、右值、将亡值怎么分，std::move、std::forward 到底做了什么，引用折叠、完美转发、Rule of 0/3/5、RVO、noexcept 一次讲清，面试实战都能用。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 值类别 + 拷贝控制完全指南 — 面试硬通货">
-<meta name="twitter:description" content="C++ 值类别 + 拷贝控制完全指南 — 面试硬通货：从 左值 / 右值 / 将亡值（lvalue · prvalue · xvalue） 的值类别根基，到 移动语义 · 完美转发 · 引用折叠 · std::move / forward 的核心机制，再到 拷贝控制五法则">
+<meta name="twitter:description" content="大白话讲透 C++ 值类别与拷贝控制：左值、右值、将亡值怎么分，std::move、std::forward 到底做了什么，引用折叠、完美转发、Rule of 0/3/5、RVO、noexcept 一次讲清，面试实战都能用。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <style>
@@ -275,7 +275,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 40 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -410,7 +410,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★★</span>
     <span class="pill cyan">面试出现率 95%</span>
-    <span class="pill green">阅读时长 ~30 min</span>
+    <span class="pill green">阅读时长 ~40 min</span>
     <span class="pill amber">前置 现代特性基础</span>
   </div>
   <div class="meta">
@@ -434,11 +434,11 @@
     </div>
   </div>
 
-  <p>会写 <code>std::move(x)</code> 还不够。下面这些问题答不全，说明根基没钉死：</p>
+  <p>只会写 <code>std::move(x)</code> 这行代码还不够。如果下面这些问题你答不全，就说明根基还没钉死——不是记不住答案，而是概念之间还没连成一条线：</p>
 
   <div class="box q">
     <ol>
-      <li>下面这段代码，<code>std::move(x)</code> 之后再读 <code>x.size()</code> 是 UB 吗?</li>
+      <li>下面这段代码，<code>std::move(x)</code> 之后再读 <code>x.size()</code> 是 UB（undefined behavior，未定义行为——标准不再保证结果，程序可能崩、也可能看似正常）吗?</li>
       <li><code>std::vector&lt;std::string&gt; v;  v.push_back(s);</code> 触发了几次构造?</li>
       <li>函数返回局部对象，应该写 <code>return obj;</code> 还是 <code>return std::move(obj);</code>?</li>
       <li>下面这个类编译器会自动生成移动构造吗? <code>struct A { ~A(); };</code></li>
@@ -447,7 +447,7 @@
     </ol>
   </div>
 
-  <p>这些都是<strong>同一个知识体系</strong>下的问题：<span class="mark">值类别（value categories）</span>+ <span class="mark">拷贝控制（special member functions）</span>。掌握之后，移动语义、完美转发、RVO、异常安全这些主题<strong>会自然贯通</strong>。</p>
+  <p>这些问题看起来各不相同，其实都出自<strong>同一个知识体系</strong>：<span class="mark">值类别（value categories）</span>——给每个表达式贴标签的分类学，回答「这个表达式有没有名字、它的东西能不能被搬走」；再配上 <span class="mark">拷贝控制（special member functions）</span>——编译器替你的类自动生成的那六个特殊成员函数（构造、析构、拷贝、移动）。把这两块掌握之后，移动语义（把资源「搬」走而不是「抄」一份）、完美转发、RVO、异常安全这些主题<strong>会自然贯通</strong>，因为它们本来就是同一套规则的不同侧面。</p>
 
   <h3>本章目标</h3>
   <ul>
@@ -471,7 +471,7 @@
     </div>
   </div>
 
-  <p>C++03 只有 lvalue / rvalue。C++11 把 rvalue 拆开后，用<strong>有无身份 × 能否移动</strong>两维看：三个底层类别，两个聚合类别是它们的并集。</p>
+  <p>C++03 的世界很简单：表达式只分 lvalue（左值——有名字、有地址、之后还能反复用的东西，比如变量 <code>x</code>）和 rvalue（右值——用完即弃的临时值，比如字面量 <code>42</code>）两大类。C++11 为了给移动语义铺路，把 rvalue 进一步拆开了。此后任何表达式都可以放进「有无身份 × 能否移动」的两维表格里看：<strong>身份</strong>指「它有没有确定的地址、能不能对它取地址」；<strong>移动</strong>指「它持有的资源能不能被别人合法地搬走」。落到表格具体格子里的，是三个底层类别；两个聚合类别则是底层类别的并集，是从更高视角给的统称。</p>
 
   <h3 id="s2-1">2.1 文氏图：3 个底层 + 2 个聚合</h3>
 
@@ -630,7 +630,7 @@
 
   <h3 id="s2-4">2.4 实战识别</h3>
 
-  <p>一个函数里三种底层类别同时出现：</p>
+  <p>别光背定义，直接看代码。同一个函数体里，三种底层类别可以同时出现——下面每一行表达式都标了自己的类别：</p>
 <pre><span class="kw">void</span> <span class="fn">classify</span>(<span class="kw">int</span>&amp; lv) {
     lv;                    <span class="cm">// lvalue：有名、可取址</span>
     std::<span class="fn">move</span>(lv);         <span class="cm">// xvalue：有身份，标记为可偷</span>
@@ -640,11 +640,11 @@
 }</pre>
 
   <div class="box danger">
-    <b>易错点</b>：字符串字面量 <code>"hello"</code> 是 <strong>lvalue</strong>（类型 <code>const char[6]</code>），不是 prvalue！这是与其他字面量（int / true / nullptr）唯一的不同点 — 因为它们有静态存储，能取地址。
+    <b>易错点</b>：字符串字面量 <code>"hello"</code> 是 <strong>lvalue</strong>（类型 <code>const char[6]</code>），不是 prvalue！这是字符串与其他字面量（int / true / nullptr）唯一的不同点 — 原因是字符串内容被放进静态存储（程序整个运行期都存在的内存区），有固定地址、能取地址，所以它有身份；而 <code>42</code> 这类数值字面量没有这样的存储，算完就消失。
   </div>
 
   <div class="box star">
-    回答"什么是 xvalue?"时不要只说"std::move 的结果" — 标准定义是<strong>有身份且即将销毁、资源可被窃取的值</strong>。"将亡值" 是中文意译，要能讲出英文 eXpiring 的含义。
+    回答"什么是 xvalue?"时不要只说"std::move 的结果" — 标准定义是<strong>有身份且即将销毁、资源可被窃取的值</strong>。"将亡值" 是中文意译，要能讲出英文 eXpiring（即将过期）的含义。为什么强调「即将销毁」？因为只有确定原主人马上不要它了，别人把资源搬走才不算偷——这正是 xvalue 这个类别存在的理由。
   </div>
 </section>
 
@@ -690,7 +690,7 @@
   </div>
 
   <h4 id="s3-1-named">具名 <code>T&amp;&amp;</code> 只约束「怎么进来」，不改变「进去之后是左值」</h4>
-  <p>类型 <code>int&amp;&amp;</code> 只约束<strong>调用时必须传入右值</strong>。函数体内形参有名字 → 表达式是 lvalue → 重载决议走左值那条。</p>
+  <p>类型为 <code>int&amp;&amp;</code> 的形参只约束一件事：<strong>调用时必须传入右值</strong>，这是进门时的检查。可一旦进了函数体，形参就有了名字，于是这个表达式就变成了 lvalue；接下来发生重载决议（overload resolution——编译器根据实参的类型和值类别，从多个同名候选函数里挑出该调用哪一个的过程）时，走的就是左值那条路。一句话：右值引用只管「怎么进来」，管不了「进来之后被当成什么」。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 230" style="min-width:680px;height:auto" role="img" aria-label="返回值类别如何影响绑定：返回 T 引用是左值，返回 T 右值引用是将亡值，按值返回是纯右值；具名右值引用形参在函数体内仍是左值">
@@ -724,7 +724,7 @@
 
   <h3 id="s3-2">3.2 万能引用 (Universal / Forwarding Reference)</h3>
 
-  <p>仅当 <code>T&amp;&amp;</code> 出现在<strong>模板参数推导上下文</strong>，<code>T</code> 是要推导的模板参数，且<strong>不带 cv</strong>时，才是万能引用。</p>
+  <p><code>T&amp;&amp;</code> 长得都一样，但只有同时满足三个条件才是万能引用：<code>T&amp;&amp;</code> 出现在<strong>模板参数推导上下文</strong>（也就是编译器正在根据你传的实参反推 <code>T</code> 是什么的地方）、<code>T</code> 恰好是那个待推导的模板参数本身、且<strong>不带 cv</strong>（cv 指 const / volatile 这类限定符）。换句话说，同样写两个 <code>&amp;</code>：「T 是谁还在猜」的就是万能引用，「T 已经定了」的只是普通右值引用。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 220" style="min-width:680px;height:auto" role="img" aria-label="转发引用与右值引用外形都是 T 两个与号，差别在 T 是否被推导：模板参数 T 两个与号是转发引用，具体类型 int 两个与号或 const T 两个与号是普通右值引用">
@@ -747,7 +747,7 @@
 
   <h3 id="s3-3">3.3 引用折叠规则（Reference Collapsing）</h3>
 
-  <p>手写 <code>int&amp; &amp;</code> 非法。折叠只发生在推导 / <code>auto&amp;&amp;</code> / 别名 / <code>decltype</code> 内部：</p>
+  <p>你没法手写 <code>int&amp; &amp;</code>——对引用再套引用，在源代码层面是非法的。折叠（collapsing，把「引用的引用」压缩成一个引用）只发生在编译器内部的类型推导场景：模板推导、<code>auto&amp;&amp;</code>、类型别名、<code>decltype</code>。在这些场景里，「引用的引用」作为中间结果先出现，编译器再按下面的规则把它压成一个：</p>
 
   <table>
     <tr><th>原始</th><th>折叠后</th></tr>
@@ -756,7 +756,7 @@
     <tr><td><code>T&amp;&amp; &amp;</code></td><td><code>T&amp;</code></td></tr>
     <tr><td><code>T&amp;&amp; &amp;&amp;</code></td><td><code>T&amp;&amp;</code></td></tr>
   </table>
-  <p>口诀：<strong>出现过一次左值引用，结果就是左值引用；两个右值引用才是右值引用。</strong></p>
+  <p>口诀：<strong>出现过一次左值引用，结果就是左值引用；两个右值引用才是右值引用。</strong>好比一根链条上只要挂了一个「不许搬」的锁（左值引用），整条链就动不了；必须全程无锁（全是右值引用），东西才能搬走。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 200" style="min-width:680px;height:auto" role="img" aria-label="引用折叠四种：左值与左值、左值与右值、右值与左值都折成左值引用，只有右值与右值折成右值引用">
@@ -837,14 +837,14 @@
   </style>
 
   <h4>3.3.1 折叠从哪来 · 一条模板代替 2ⁿ 重载</h4>
-  <p>折叠不是给人手写 <code>int&amp; &amp;</code> 的，只出现在推导 / <code>auto&amp;&amp;</code> / 别名 / <code>decltype</code>。<code>emplace_back(Args&amp;&amp;...)</code> 一个函数覆盖所有左右值组合；没有折叠就没有 <code>make_unique</code> / <code>std::thread</code> 这类工厂。</p>
+  <p>折叠不是让人手写 <code>int&amp; &amp;</code> 的语法糖，它只在推导 / <code>auto&amp;&amp;</code> / 别名 / <code>decltype</code> 这些编译器内部场景发生。它的价值是：一个模板就能代替 2ⁿ 个重载。举个例子，<code>emplace_back(Args&amp;&amp;...)</code> 靠一个函数签名就覆盖了所有「左值 / 右值参数组合」的调用；要是没有折叠机制，<code>make_unique</code> / <code>std::thread</code> 这类需要原样转发所有参数的工厂函数根本写不出来。</p>
   <table>
     <tr><th>调用</th><th>T 推导为</th><th>折叠后形参</th><th>forward&lt;T&gt;</th></tr>
     <tr><td><code>f(x)</code> 左值</td><td><code>U&amp;</code></td><td><code>U&amp;</code></td><td>lvalue（不 move）</td></tr>
     <tr><td><code>f(42)</code> / <code>f(std::move(x))</code></td><td><code>U</code></td><td><code>U&amp;&amp;</code></td><td>xvalue</td></tr>
     <tr><td><code>f(std::move(cx))</code> const 右值</td><td><code>const U</code></td><td><code>const U&amp;&amp;</code></td><td>绑不到移动重载，静默拷贝</td></tr>
   </table>
-  <p>函数体里 <code>arg</code> 永远是 lvalue；线索只在 <code>T</code> 里，所以 <code>forward</code> 必须写 <code>&lt;T&gt;</code>。</p>
+  <p>在函数体里，<code>arg</code> 这个表达式永远有名字，所以永远是 lvalue——不管形参类型折成了什么。值类别的原始线索只剩一条：<code>T</code> 里带不带 <code>&amp;</code>。所以调用 <code>forward</code> 时必须显式写 <code>&lt;T&gt;</code>，把这条线索交还给它。</p>
 
   <h4>3.3.3 交互式：折叠 + 转发计算器</h4>
 
@@ -914,7 +914,7 @@
 
   <h3 id="s3-4">3.4 什么时候该用 <code>&amp;</code>、<code>&amp;&amp;</code>、<code>const&amp;</code>、还是按值 —— 接口设计决策</h3>
 
-  <p>前面讲的是「规则是什么」，这一节回答工程上真正要做的决定：<strong>写函数签名时到底选哪个</strong>。</p>
+  <p>前面讲的是「规则是什么」，这一节回答工程上真正要做的决定：<strong>写函数签名时到底选哪个</strong>。参数怎么传，本质上是在「拷贝的开销」和「所有权的交代」之间做取舍。</p>
 
   <div class="analogy">
     <div class="analogy-icon">📚</div>
@@ -993,7 +993,7 @@
 
   <h3 id="s4-1">4.1 std::move 不移动任何东西</h3>
 
-  <p>它<strong>只是 cast</strong>：无条件转成 xvalue。真正搬资源的是接收方的移动构造 / 赋值。</p>
+  <p>std::move <strong>只是 cast</strong>（类型转换）：它无条件把表达式转成 xvalue，也就是贴一张「我的资源可以被搬走」的标签，仅此而已。真正搬资源的，是接收方随后被选中执行的那段移动构造 / 移动赋值代码。</p>
 <pre><span class="kw">template</span>&lt;<span class="kw">class</span> T&gt;
 <span class="kw">constexpr</span> std::remove_reference_t&lt;T&gt;&amp;&amp; <span class="fn">move</span>(T&amp;&amp; x) <span class="kw">noexcept</span> {
     <span class="kw">return</span> <span class="kw">static_cast</span>&lt;std::remove_reference_t&lt;T&gt;&amp;&amp;&gt;(x);  <span class="cm">// 就是这一句</span>
@@ -1025,7 +1025,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <figcaption>丢掉 move 的结果 = 什么都没发生；标量没有外置资源，授权了也只是拷贝</figcaption>
   </div>
 
-  <p>真正的移动发生在<strong>移动构造函数体</strong>里。<code>std::move</code> 只让重载决议选中右边那条路：</p>
+  <p>真正的移动发生在<strong>移动构造函数体</strong>里——交换指针、把源置空，都是那里干的活。<code>std::move</code> 做的全部事情，是让重载决议在「拷贝构造」和「移动构造」两条路里选中右边那条：</p>
 
   <div class="fig">
     <svg viewBox="0 0 710 250" width="710" height="250" role="img" aria-label="拷贝与移动的内存差别">
@@ -1083,7 +1083,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </div>
 
   <h4 id="s4-1-int">对 <code>int</code> 写 <code>std::move</code> 几乎没意义</h4>
-  <p>丢掉结果则什么都不发生；<code>int</code> 没有外置资源，移动等于拷贝。</p>
+  <p>丢掉结果则什么都不发生；<code>int</code> 没有外置资源（它的值就存在自己身上，不在堆上另占一块内存），所以「移动」它无事可做，移动等于拷贝。</p>
   <table>
     <tr><th>类型</th><th>移动实际做什么</th><th>相对拷贝</th></tr>
     <tr><td><code>int</code> / 指针本身</td><td>按位复制；源不必清空</td><td>等于拷贝</td></tr>
@@ -1120,7 +1120,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td>取出成员</td><td>成员永远是 lvalue，会拷贝</td><td><code>return std::move(body_)</code>（仅右值 <code>*this</code>）</td></tr>
     <tr><td>swap / 扩容</td><td>C++03 三次深拷贝</td><td>三次 O(1) 搬指针；移动构造要 <code>noexcept</code></td></tr>
   </table>
-  <p><code>std::swap</code> 的收益真正来自「不碰 allocator」。漏一次 move 只是慢；错一次 move 是静默掏空。所以默认拷贝，移动必须显式授权。Rust 反过来：默认移动，借用检查器禁止再用移后源。</p>
+  <p><code>std::swap</code> 的收益真正来自「不碰 allocator」（不再向内存分配器要新内存）。要记住的取舍是：漏写一次 move，后果只是慢；写错一次 move，后果是对象被静默掏空——逻辑 bug。所以 C++ 选择默认拷贝，移动必须由你显式授权。Rust 把这个决定反过来做：默认就是移动，且借用检查器（编译期的安全检查机制）会禁止你再使用移后源，把错误挡在编译期。</p>
 
   <h3 id="s4-3">4.3 那为什么编译器不能替我们自动 move？</h3>
   <table>
@@ -1130,11 +1130,11 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td>能证明的地方已经自动了</td><td><code>return</code> 局部对象：隐式移动甚至 NRVO。C++20/23 还在放宽。所以 <code>return std::move(local)</code> 是反模式</td></tr>
   </table>
   <div class="box q">
-    「Rust 为什么不需要 <code>std::move</code>？」默认就是移动，借用检查器禁止再用移后源。C++ 默认拷贝 + 显式授权，是为了兼容任意别名。
+    「Rust 为什么不需要 <code>std::move</code>？」因为 Rust 的赋值默认就是移动，而且借用检查器（编译期检查内存使用的机制）会直接禁止你再使用移后源。C++ 历史上允许任意别名（多个名字指向同一对象），做不到这种全程序检查，只好选「默认拷贝 + 显式授权移动」。
   </div>
 
   <h3 id="s4-4">4.4 std::forward 完美转发</h3>
-  <p>按 <code>T</code> 带不带 <code>&amp;</code> 决定要不要转成右值。最短模板见 §3.3。口诀：<strong>move = 我确定要移动；forward = 别人怎么给我，我就怎么传出去。</strong></p>
+  <p>std::forward 按 <code>T</code> 带不带 <code>&amp;</code> 决定要不要把表达式转成右值：<code>T</code> 被推成了引用就保持左值，是裸类型就转成右值。最短模板见 §3.3。口诀：<strong>move = 我确定要移动；forward = 别人怎么给我，我就怎么传出去。</strong>好比快递中转站：move 是站长自己拍板「这箱拆了」；forward 是站长看寄件人怎么交来的——原封是什么样，转发出去就保持什么样。</p>
 
   <h3 id="s4-5">4.5 为什么需要 <code>std::forward</code>：包装函数的 5 种写法</h3>
   <table>
@@ -1145,10 +1145,10 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td>④ <code>T&amp;&amp;</code> + move</td><td>掏空调用方</td><td>移动</td><td>移动</td><td>正确性 BUG</td></tr>
     <tr><td>⑤ <code>T&amp;&amp;</code> + forward</td><td>拷贝</td><td>移动</td><td>移动</td><td>唯一正确</td></tr>
   </table>
-  <p>转发参数只能 <code>forward</code> 一次，且在最后一次使用点。若日志包装里对同一参数先 <code>move</code> 进 logger 再 <code>move</code> 进 transport，调用方的左值被掏空，线上只剩空串。延迟执行（线程池）必须把实参 <code>forward</code> 进闭包<strong>按值持有</strong>，不能把引用塞进队列——<code>submit</code> 返回后临时对象已经析构。这正是 <code>std::thread</code> 要对参数做 decay-copy、以及 <code>std::ref</code> 必须显式写出的原因。</p>
+  <p>为什么⑤是唯一正确的？因为转发参数只能 <code>forward</code> 一次，而且必须在最后一次使用点做。若日志包装里对同一参数先 <code>move</code> 进 logger 再 <code>move</code> 进 transport，第一次 move 就把内容掏空了，等传到 transport 时只剩空壳，调用方的左值被悄悄掏空，线上排查只剩空串。延迟执行（线程池）还有一个坑：必须把实参 <code>forward</code> 进闭包并<strong>按值持有</strong>，不能把引用塞进队列——因为 <code>submit</code> 返回后，调用方栈上的临时对象可能已经析构，队列里的引用就成了悬垂指针。这正是 <code>std::thread</code> 要对参数做 decay-copy（先拷贝/移动一份再存起来）、以及 <code>std::ref</code> 必须由你显式写出的原因：语言不猜你要哪个，要引用就自己声明。</p>
 
   <h3 id="s4-6">4.6 实现细节：为什么 <code>forward</code> 的 <code>&lt;T&gt;</code> 不能省</h3>
-  <p>形参写成 <code>remove_reference_t&lt;T&gt;&amp;</code>，让 <code>T</code> 处于非推导位置。若写成 <code>forward(T&amp;&amp;)</code>，实参 <code>arg</code> 永远是 lvalue → <code>T</code> 永远带 <code>&amp;</code> → 转发失效。<code>std::move</code> 则相反：它无条件转换，不需要知道调用方的值类别，所以可以推导。<code>forward</code> 的条件全在 <code>static_cast&lt;T&amp;&amp;&gt;</code> 的折叠里，自己一行运行时代码都没有。</p>
+  <p>实现上，<code>forward</code> 把形参写成 <code>remove_reference_t&lt;T&gt;&amp;</code>，让 <code>T</code> 处于非推导位置（也就是 <code>T</code> 只从显式写的 <code>&lt;T&gt;</code> 来，不从实参反推）。假如写成 <code>forward(T&amp;&amp;)</code> 会怎样？实参 <code>arg</code> 永远是 lvalue，于是 <code>T</code> 每次都被推成带 <code>&amp;</code> 的类型，每次都折回左值引用——转发就失效了。<code>std::move</code> 则相反：它无条件转换，根本不需要知道调用方的值类别，所以让编译器推导没关系。<code>forward</code> 的「条件判断」全藏在 <code>static_cast&lt;T&amp;&amp;&gt;</code> 的折叠里，它自己一行运行时代码都没有。</p>
   <table>
     <tr><th>写法</th><th>结论</th></tr>
     <tr><td><code>std::forward&lt;T&gt;(arg)</code></td><td>标准</td></tr>
@@ -1203,7 +1203,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     </div>
   </div>
 
-  <p>每个 C++ 类都"有"<strong>6 个特殊成员函数</strong>，编译器可能自动生成。</p>
+  <p>每个 C++ 类都「自带」<strong>6 个特殊成员函数</strong>：哪怕你一个都没写，编译器也会视情况替你生成默认版本。这份「自带清单」就是拷贝控制的全部地盘。</p>
 
   <table>
     <tr><th>#</th><th>函数</th><th>签名</th><th>作用</th></tr>
@@ -1215,7 +1215,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td>6</td><td>移动赋值 (C++11)</td><td><code>T&amp; operator=(T&amp;&amp;) noexcept</code></td><td>已存在对象间窃取资源</td></tr>
   </table>
 
-  <p>这六件套不是「每个类都要手写」，而是「每个类都有一份默认语义」。你声明其中一个，等于改写这份契约，编译器会按 §7 的表关掉另一些。面试里「写了析构还会生成移动吗」考的就是这份契约，不是背函数签名。</p>
+  <p>这六件套不是「每个类都要手写」的作业清单，而是「每个类都有一份默认语义」的契约。你一旦声明其中一个，就等于亲手改写了这份契约，编译器会按 §7 的表把另一些关掉。面试里问「写了析构还会生成移动吗」，考的就是你对这份契约的理解，不是让你背函数签名。</p>
 
   <h3 id="s5-1">5.1 三对成员的逻辑关系</h3>
 
@@ -1274,7 +1274,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </div>
 
   <h3 id="s6-1">6.1 Rule of 0 的好处（举例）</h3>
-  <p>Rule of 0 不是「这个类没有特殊成员」，而是「六个特殊成员全部交给编译器，且因为成员自己是 RAII，生成出来的拷贝 / 移动 / 析构都正确」。好处有三：改字段不用回头改五件套；异常安全跟着成员走；移动语义免费获得。一旦出现裸 <code>new</code>、fd、<code>mmap</code>，外层立刻掉进 Rule of 5——这时优先把裸资源封进 <code>unique_ptr</code> / 自定义 RAII，再让业务类回到 Rule of 0，而不是到处手写五件套。</p>
+  <p>Rule of 0 不是说「这个类没有特殊成员」，而是「六个特殊成员全部交给编译器，且因为成员自己就是 RAII（Resource Acquisition Is Initialization——资源获取即初始化，把资源生命周期绑定到对象生命周期，析构时自动归还），生成出来的拷贝 / 移动 / 析构都正确」。好处有三：改字段不用回头改五件套；异常安全跟着成员走；移动语义免费获得。一旦类里出现裸 <code>new</code>、fd（文件描述符）、<code>mmap</code> 这类裸资源，外层立刻掉进 Rule of 5——这时正确的做法是优先把裸资源封进 <code>unique_ptr</code> / 自定义 RAII 小类，再让业务类回到 Rule of 0，而不是到处手写五件套。</p>
 
   <h3 id="s6-2">6.2 Rule of 5 完整模板</h3>
   <div class="vs">
@@ -1306,8 +1306,8 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
 };</pre>
     </div>
   </div>
-  <p>copy-and-swap：<code>operator=(Buffer)</code> 按值收 + <code>swap</code> = 拷贝/移动赋值一份代码，且强异常安全。按值形参先完成拷贝或移动（失败时 <code>*this</code> 未动），再交换指针，自赋值也安全。</p>
-  <p>Rule of 0 的前提是成员已经管好资源（容器、智能指针）。一旦自己 <code>new</code> / 持 fd，就必须五件套对齐，否则析构释放、拷贝浅拷、移动没置空会叠出 double-free。</p>
+  <p>copy-and-swap 是个惯用法：<code>operator=(Buffer)</code> 按值收参 + <code>swap</code>，等于用一份代码同时实现拷贝赋值和移动赋值，还附加强异常安全。它的工作顺序是：按值形参先在函数外完成拷贝或移动（如果失败，<code>*this</code> 还没被动过），再交换指针，因此自赋值也天然安全。</p>
+  <p>Rule of 0 能成立的前提是成员已经管好自己的资源（容器、智能指针都做到了）。一旦你自己 <code>new</code> / 直接持有 fd，就必须五件套对齐；否则会出现析构正常释放、拷贝却只浅拷指针、移动又没把源置空的情况——三个错误叠起来就是 double-free（同一块内存被释放两次，直接崩溃或埋雷）。</p>
 </section>
 
 <!-- ================================================================
@@ -1323,7 +1323,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     </div>
   </div>
 
-  <p>编译器何时<strong>自动生成</strong>、何时<strong>= delete by default</strong>、何时<strong>不生成</strong>？这是面试爱挖的细节。</p>
+  <p>编译器何时<strong>自动生成</strong>这些函数、何时默认 <strong>= delete</strong>（直接禁用这个操作，调用就编译报错）、何时干脆不生成？这是面试爱挖的细节。</p>
 
   <h3 id="s7-1">7.1 自动生成规则总表</h3>
 
@@ -1341,7 +1341,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </div>
 
   <h3 id="s7-2">7.2 实战陷阱举例</h3>
-  <p>只写析构：<code>a2 = std::move(a1)</code> 走拷贝，<code>vector</code> 被深复制。<strong>修复</strong>：五个特殊成员一起 <code>= default</code>（移动加 <code>noexcept</code>）。</p>
+  <p>只写析构会怎样：<code>a2 = std::move(a1)</code> 看起来在移动，实际走的是拷贝，<code>vector</code> 被整个深复制一遍，白白付出 O(n)。<strong>修复</strong>：五个特殊成员一起 <code>= default</code>（移动那两个记得加 <code>noexcept</code>）。</p>
   <div class="box star">
     「声明了析构还会自动生成移动构造吗？」→ <strong>不会</strong>。你写析构 = 表达「这个类有特殊资源」，自动生成的拷贝/移动可能不安全，编译器宁可保守。
   </div>
@@ -1373,7 +1373,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <li>恢复被其它声明抑制掉的默认行为</li>
     <li>表达「请生成合成版本」，并可单独控制访问级别（例如 <code>protected</code> 的拷贝）</li>
   </ul>
-  <p>显式 <code>= default</code> 和「干脆不写」不是一回事。不写可能被别的声明抑制掉；写了是在告诉编译器和读者：我知道被抑制了，请按合成语义生成。注意：析构写 <code>= default</code> 仍算「声明了析构」，移动照样不生成——只 default 析构却忘了 default 移动，是把 Rule of 3 升级到 5 时最常见的漏项。</p>
+  <p>显式 <code>= default</code> 和「干脆不写」不是一回事。不写，默认行为可能被别的声明抑制掉；显式写了，是在告诉编译器和读者：我知道有抑制规则，请按合成语义生成。一个容易漏的细节：析构写 <code>= default</code> 仍算「声明了析构」，移动照样不生成——只 default 析构却忘了 default 移动，是把 Rule of 3 升级到 5 时最常见的漏项。</p>
 
   <h3 id="s8-2">8.2 = delete 的高级用法</h3>
   <table>
@@ -1382,7 +1382,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td>禁危险重载</td><td><code>void log(int) = delete;</code> 挡住隐式转换</td></tr>
     <tr><td>只接受指定类型</td><td><code>on(const string&amp;)</code> + 模板 <code>on(T&amp;&amp;) = delete</code></td></tr>
   </table>
-  <p>C++03 用「private 且不实现」禁拷贝，链接期才爆；新代码一律 <code>= delete</code>，编译期就能挡住，还能删掉普通函数和特定重载。</p>
+  <p>C++03 年代禁拷贝的写法是把拷贝构造声明成 private 且不实现——但错误要拖到链接期才爆。<code>= delete</code> 则在编译期就把调用挡住，而且不止能删成员函数，还能删普通函数和特定重载。新代码一律用 <code>= delete</code>。</p>
 </section>
 
 <!-- ================================================================
@@ -1434,7 +1434,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     </svg>
     <figcaption>局部对象写 return obj。参数和成员必须 move：NRVO 不适用，它们是 lvalue</figcaption>
   </div>
-  <p>C++17 起，<code>return</code> 一个 prvalue 时直接在调用方对象上构造，连移动构造都可以没有——所以不可移动类型也能按值返回临时。NRVO 面对的是具名对象：编译器要证明所有 <code>return</code> 路径返回同一个变量，因此不是强制优化。写 <code>return std::move(local)</code> 把表达式变成 xvalue，省略规则不再适用，于是亲手关掉可能的零次构造，只剩一次移动。参数和成员本来就不能 NRVO（它们不是这个函数的局部对象），那种情况才必须 <code>move</code>。</p>
+  <p>C++17 起，<code>return</code> 一个 prvalue 时，编译器直接在调用方的对象上构造，连移动构造都可以没有——所以不可移动的类型也能按值返回临时。NRVO 面对的是具名对象，情况更复杂：编译器要证明所有 <code>return</code> 路径返回的都是同一个变量，才敢做省略，因此它只是允许优化而非强制。如果你写 <code>return std::move(local)</code>，返回表达式就被变成了 xvalue，省略规则不再适用——等于亲手关掉了可能的零次构造，只剩一次移动。参数和成员本来就不能 NRVO（它们不是这个函数的局部对象），那种情况才必须 <code>move</code>。</p>
 
   <h3 id="s9-4">9.4 Copy Elision 的精确条件</h3>
   <ol>
@@ -1467,13 +1467,13 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
 
   <h3 id="s10-1">10.1 STL 容器的「强异常安全保证」</h3>
 
-  <p><code>std::vector::push_back</code> 在<strong>扩容</strong>时承诺：操作要么成功，要么 vector 状态完全不变（强保证）。</p>
+  <p><code>std::vector::push_back</code> 在<strong>扩容</strong>（内部数组装满、要换一块更大的内存）时承诺：操作要么成功，要么 vector 状态完全不变（强保证，strong exception safety——失败后你拿到的还是原来那个完好无损的 vector）。</p>
 
-  <p>问题：扩容要把元素<em>从旧 buffer 转到新 buffer</em>。如果 T 的<strong>移动构造可能抛异常</strong>，转移过程中失败 → 旧 buffer 数据已经被破坏 → 无法回滚。</p>
+  <p>问题来了：扩容要把元素<em>从旧 buffer 转到新 buffer</em>。如果 T 的<strong>移动构造可能抛异常</strong>，转移过程搬到一半失败了会怎样？旧 buffer 里已经搬走的元素被掏空、数据被破坏 → vector 既不完整也回不去 → 无法兑现强保证的承诺。</p>
 
   <h3 id="s10-2">10.2 解决方案：<code>std::move_if_noexcept</code></h3>
 
-  <p>STL 在扩容时检查：<code>noexcept(T(std::move(t)))</code> 是否为 true？这不是「快就用移动」的启发式，而是<strong>强保证下唯一安全的编译期分支</strong>。</p>
+  <p>STL 在扩容时做一个编译期检查：<code>noexcept(T(std::move(t)))</code> 是不是 true（即「这个类型的移动构造承诺不抛异常吗」）？这不是「哪个快就用哪个」的启发式猜测，而是<strong>强保证下唯一安全的编译期分支</strong>——编译器在编译时就必须定下走哪条路，运行时没有回头的余地。</p>
   <ul>
     <li><b>true</b>：用<strong>移动</strong>构造（快）</li>
     <li><b>false</b>：退化为<strong>拷贝</strong>构造（慢但安全；旧 buffer 可保留作回滚）</li>
@@ -1509,7 +1509,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   <p>扩容路径（<code>push_back</code> / <code>resize</code>）、<code>move_if_noexcept</code>、以及编译器少生成异常展开代码。</p>
 
   <h3 id="s10-5">10.5 例外：何时不能 noexcept</h3>
-  <p>移动构造里如果可能抛，就不要标 <code>noexcept</code> 去骗容器。典型是 pmr 容器跨 arena 搬元素时可能分配；分配失败抛 <code>bad_alloc</code>，若你标了 <code>noexcept</code>，<code>vector</code> 以为可以拆旧槽，失败就 <code>terminate</code>。只搬指针 / fd 的资源句柄类默认都该标。</p>
+  <p>如果移动构造里确实可能抛异常，就不要标 <code>noexcept</code> 去骗容器。典型场景是 pmr 容器（polymorphic memory allocator，运行时指定分配器的容器）跨 arena 搬元素时可能要分配内存；分配失败会抛 <code>bad_alloc</code>，可你若标了 <code>noexcept</code>，<code>vector</code> 会以为可以放心拆旧槽，一旦中途抛异常就只能 <code>terminate</code>（直接终止程序，连回滚的机会都没有）。反过来，只搬指针 / fd 的资源句柄类默认都该标。</p>
 </section>
 
 <!-- ================================================================
@@ -1525,7 +1525,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     </div>
   </div>
 
-  <p><strong>P0847R7</strong> 把 <code>this</code> 写成第一个显式参数：推导 <code>*this</code> 的值类别，一个函数代替四组重载。</p>
+  <p><strong>P0847R7</strong>（提案编号，这个特性最终写入标准的出处）把 <code>this</code> 写成第一个显式参数：编译器由此可以推导 <code>*this</code> 的值类别，一个函数就能代替过去的四组重载。</p>
 
   <h3 id="s10b-1">10b.1 老问题 — <code>*this</code> 的值类别要写 4 个重载</h3>
   <div class="fig">
@@ -1558,7 +1558,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </table>
 
   <h3>10b.4–10b.5 CRTP / 递归 lambda</h3>
-  <p>基类里 <code>self.compute_id()</code>，<code>Self</code> 已是派生类，不必 <code>static_cast</code>，CRTP 模板基类可以拿掉。递归 lambda：<code>[](this auto&amp; self, int n)</code> 调 <code>self(n-1)</code>，没有 <code>std::function</code> 的类型擦除和堆分配。Builder 的 setter 返回 <code>forward&lt;Self&gt;(self)</code>，临时链保持右值最终 move 进成品；具名对象走左值链，不会被掏空。</p>
+  <p>基类里写 <code>self.compute_id()</code> 就行，<code>Self</code> 已经是派生类，不必再 <code>static_cast</code>，CRTP（Curiously Recurring Template Pattern，让基类模板通过模板参数「认识」派生类的老技巧）模板基类可以整个拿掉。递归 lambda 也变简单了：<code>[](this auto&amp; self, int n)</code> 里直接调 <code>self(n-1)</code>，不用 <code>std::function</code>，也就没有它的类型擦除和堆分配开销。Builder 的 setter 返回 <code>forward&lt;Self&gt;(self)</code>，临时对象链保持右值、最终 move 进成品；具名对象走左值链，不会被掏空。</p>
 
   <h3 id="s10b-6">10b.6 杀手级应用 ③ — 流式 Builder</h3>
   <p>setter 返回 <code>forward&lt;Self&gt;(self)</code>，临时链保持右值最终 move 进成品；具名对象走左值链，不会被掏空。</p>
@@ -1567,7 +1567,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   <p><code>operator()(this Self&amp;&amp; self, i, j)</code> 一次写完 <code>T&amp;</code> / <code>const T&amp;</code> / <code>T&amp;&amp;</code>。</p>
 
   <h3 id="s10b-8">10b.8 性能与开销</h3>
-  <p>零运行时开销，特化数与手写四组相同，并不会多生模板实例。收益在维护：改一处函数体，四种值类别一起对。虚函数不能用，因为显式对象参数无法参与动态分派。</p>
+  <p>零运行时开销，实例化的模板特化数与手写四组完全相同，并不会多生成模板实例。真正的收益在维护：改一处函数体，四种值类别的行为一起更新、一起对。虚函数不能用，因为显式对象参数无法参与动态分派（运行时按对象实际类型选函数的机制）。</p>
 
   <h3 id="s10b-9">10b.9 编译器与库支持</h3>
   <p>GCC 14+ / Clang 18+ / MSVC 19.36+。<code>optional</code> / <code>expected</code> 正在迁。生产代码在 C++20 工具链上仍用手写四组 ref-qualifier，等全员升到 23 再收。</p>
@@ -1580,7 +1580,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
     <tr><td><code>move(obj).f()</code></td><td><code>T</code></td><td>xvalue</td></tr>
     <tr><td><code>move(as_const(obj)).f()</code></td><td><code>const T</code></td><td>const xvalue（仍不能移动）</td></tr>
   </table>
-  <p>这是值类别 + 引用折叠 + 模板推导 + 完美转发四件事叠在 <code>*this</code> 上。函数体内不能再用 <code>this</code> 指针；不能与同名的隐式对象参数重载共存；不能用于虚函数、构造、析构。</p>
+  <p>这是值类别 + 引用折叠 + 模板推导 + 完美转发四件事叠在 <code>*this</code> 上的组合应用。三个限制要记住：函数体内不能再用 <code>this</code> 指针；不能与同名的隐式对象参数重载共存；不能用于虚函数、构造、析构。</p>
 </section>
 
   <!-- ================================================================
@@ -1597,16 +1597,16 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </div>
 
   <h3 id="s11-1">11.1 FileHandle — POSIX 文件描述符 RAII</h3>
-  <p>POSIX fd 是整数句柄，拷贝等于两个对象关同一个 fd。必须：析构 <code>close</code>；拷贝 <code>= delete</code>；移动把 fd 转走并把源置成 -1（或一个不会被 close 的哨兵）。移后源仍要能析构。不要在移动赋值里先 close 再偷——自赋值会把自己关了。</p>
+  <p>POSIX fd 是个整数句柄，直接拷贝它，结果是两个对象都认为自己该在析构时关掉同一个 fd——同一扇门被关两次。所以必须：析构 <code>close</code>；拷贝 <code>= delete</code>；移动把 fd 转走并把源置成 -1（或一个不会被 close 的哨兵值）。注意移后源仍要能安全析构。还有一个坑：不要在移动赋值里先 close 再偷——遇到自赋值会把自己刚关掉的 fd 又当资源用。</p>
 
   <h3 id="s11-2">11.2 Buffer — 用 unique_ptr 实现 Rule of 0</h3>
-  <p>堆内存交给 <code>unique_ptr&lt;char[]&gt;</code>，析构 / 移动自动正确。若还要拷贝，就显式深拷一份，或干脆拷贝 <code>= delete</code>。这是「Rule of 0 优先」的标准答案：业务类不碰 <code>new</code>。对照 §6.2 那个裸指针 <code>Buffer</code>——同样的语义，五件套可以整段删掉。</p>
+  <p>把堆内存交给 <code>unique_ptr&lt;char[]&gt;</code> 管，析构 / 移动就自动正确了。若还需要拷贝，就显式写一份深拷贝，或干脆把拷贝 <code>= delete</code> 掉。这是「Rule of 0 优先」的标准答案：业务类自己不碰 <code>new</code>。对照 §6.2 那个裸指针 <code>Buffer</code>——同样的语义，这里的五件套可以整段删掉。</p>
 
   <h3 id="s11-3">11.3 Connection — 持有 fd + Buffer + 状态</h3>
-  <p>同时持有 fd、缓冲区和 <code>atomic</code> 状态时，成员里只要有一个不可移动（<code>atomic</code>），整个类的移动就被删除。不要强行手写移动去搬 <code>atomic</code>——地址稳定性才是连接对象的不变量。外包一层 <code>unique_ptr&lt;Connection&gt;</code> 再放进容器。</p>
+  <p>同时持有 fd、缓冲区和 <code>atomic</code> 状态时，规则是「一票否决」：成员里只要有一个不可移动（<code>atomic</code> 就是），整个类的移动就被删除。不要强行手写移动去搬 <code>atomic</code>——对连接对象来说，地址稳定（别的线程还指着这个地址访问它）才是真正的不变量。解决办法是外包一层 <code>unique_ptr&lt;Connection&gt;</code> 再放进容器：容器里搬的是指针，对象原地不动。</p>
 
   <h3 id="s11-4">11.4 Session — 含锁，不可移动的"门面"</h3>
-  <p>含锁 / atomic 的类不可移动是常态。<strong>策略</strong>：对象用 <code>unique_ptr&lt;T&gt;</code> 包起来——让指针可移动，对象本身保持稳定地址。把 <code>Session</code> 直接推进 <code>vector</code> 会编不过，这是特性不是缺陷：锁不能搬，门面必须钉在固定地址上。</p>
+  <p>含锁 / atomic 的类不可移动是常态，不是设计失误。<strong>策略</strong>：对象用 <code>unique_ptr&lt;T&gt;</code> 包起来——让指针可移动，对象本身保持稳定地址。把 <code>Session</code> 直接推进 <code>vector</code> 会编不过，这是特性不是缺陷：锁不能搬，门面必须钉在固定地址上，别的代码才能安心持有指向它的指针或引用。</p>
   <table>
     <tr><th>场景</th><th>要写哪些</th><th>原因</th></tr>
     <tr><td>FileHandle（独占 fd）</td><td>析构 close；拷贝 delete；移动转 fd、源置 -1</td><td>fd 不能双关</td></tr>
@@ -1949,7 +1949,7 @@ s = <span class="str">"ok"</span>;                       <span class="cm">// ✅
   </table>
 
   <h3 id="s14-5">14.5 模板里写转发的最简模板</h3>
-  <p>见 §3.3：<code>wrapper(T&amp;&amp; arg) { backend(std::forward&lt;T&gt;(arg)); }</code>。变参同理：<code>Args&amp;&amp;... </code> + <code>forward&lt;Args&gt;(args)...</code>。</p>
+  <p>见 §3.3：<code>wrapper(T&amp;&amp; arg) { backend(std::forward&lt;T&gt;(arg)); }</code>。变参同理：<code>Args&amp;&amp;... </code> + <code>forward&lt;Args&gt;(args)...</code>——后面那串省略号表示「对每个参数逐一做同样的转发」。</p>
 </section>
 
 <section class="chapter" id="s15">

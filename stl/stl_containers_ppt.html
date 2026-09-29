@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ STL 容器深度剖析 PPT — 面试硬通货</title>
-<meta name="description" content="C++ STL 容器深度剖析 PPT — 面试硬通货：面试硬通货 · 每张 slide 一个考点 · 涵盖 内部数据结构 / 复杂度 / 迭代器失效 / 选型决策 / 真实工程示例">
+<meta name="description" content="C++ STL 容器通俗讲解 PPT：vector 扩容与三指针、string SSO、deque 分段结构、红黑树 map/set、unordered_map 哈希表逐一拆开讲透，术语配白话解释，附迭代器失效总表、选型决策树与 15 道高频面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/stl/stl_containers_ppt.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/stl/stl_containers_ppt.html">
 <meta property="og:title" content="C++ STL 容器深度剖析 PPT — 面试硬通货">
-<meta property="og:description" content="C++ STL 容器深度剖析 PPT — 面试硬通货：面试硬通货 · 每张 slide 一个考点 · 涵盖 内部数据结构 / 复杂度 / 迭代器失效 / 选型决策 / 真实工程示例">
+<meta property="og:description" content="C++ STL 容器通俗讲解 PPT：vector 扩容与三指针、string SSO、deque 分段结构、红黑树 map/set、unordered_map 哈希表逐一拆开讲透，术语配白话解释，附迭代器失效总表、选型决策树与 15 道高频面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ STL 容器深度剖析 PPT — 面试硬通货">
-<meta name="twitter:description" content="C++ STL 容器深度剖析 PPT — 面试硬通货：面试硬通货 · 每张 slide 一个考点 · 涵盖 内部数据结构 / 复杂度 / 迭代器失效 / 选型决策 / 真实工程示例">
+<meta name="twitter:description" content="C++ STL 容器通俗讲解 PPT：vector 扩容与三指针、string SSO、deque 分段结构、红黑树 map/set、unordered_map 哈希表逐一拆开讲透，术语配白话解释，附迭代器失效总表、选型决策树与 15 道高频面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -337,7 +337,7 @@ body { overflow-x: hidden; }
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="../cpp/modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -386,7 +386,7 @@ body { overflow-x: hidden; }
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">面试出现率 极高</span>
-    <span class="pill green">阅读时长 ~30 min</span>
+    <span class="pill green">阅读时长 ~35 min</span>
     <span class="pill amber">前置 指针 · 复杂度分析</span>
   </div>
   <div class="meta">
@@ -404,11 +404,11 @@ body { overflow-x: hidden; }
     <div class="panel accent">
       <h4>① 序列容器 (Sequence)</h4>
       <ul>
-        <li><b>vector</b> — 动态数组 (push_back O(1) 摊销)</li>
+        <li><b>vector</b> — 动态数组 (push_back O(1) 摊销——平均下来每次近似常数时间：偶尔扩容搬一次家，摊到每次插入上可忽略)</li>
         <li><b>array</b> (C++11) — 编译期固定大小</li>
-        <li><b>deque</b> — 双端队列 (分段连续)</li>
-        <li><b>list</b> — 双向链表</li>
-        <li><b>forward_list</b> (C++11) — 单向链表</li>
+        <li><b>deque</b> — 双端队列（两头都能进出；分段连续）</li>
+        <li><b>list</b> — 双向链表（每个元素附带前向、后向两个指针，串成一串）</li>
+        <li><b>forward_list</b> (C++11) — 单向链表（只有后向指针，只能往前走）</li>
         <li><b>string</b> — 实质上是 vector&lt;char&gt; 的特化（含 SSO）</li>
       </ul>
     </div>
@@ -417,8 +417,8 @@ body { overflow-x: hidden; }
       <ul>
         <li><b>set / multiset</b> — 元素本身有序</li>
         <li><b>map / multimap</b> — key→value 有序</li>
-        <li>底层：红黑树（自平衡 BST）</li>
-        <li>所有操作 <b>O(log n)</b>，迭代有序</li>
+        <li>底层：红黑树（自平衡 BST——二叉搜索树：左小右大；"自平衡"指树会自己旋转调整、不许长歪成一条线）</li>
+        <li>所有操作 <b>O(log n)</b>，迭代有序（从头遍历到尾，元素自动按键从小到大出来）</li>
       </ul>
     </div>
     <div class="panel green">
@@ -426,22 +426,22 @@ body { overflow-x: hidden; }
       <ul>
         <li><b>unordered_set / unordered_multiset</b></li>
         <li><b>unordered_map / unordered_multimap</b></li>
-        <li>底层：拉链法哈希表（vector&lt;list&lt;...&gt;&gt;）</li>
-        <li>平均 <b>O(1)</b>，最坏 O(n)；不保序</li>
+        <li>底层：拉链法哈希表（hash——把任意 key 算成一个数字下标，像给每个元素发储物柜号；vector&lt;list&lt;...&gt;&gt;）</li>
+        <li>平均 <b>O(1)</b>，最坏 O(n)（所有人挤同一个柜子时只能挨个翻）；不保序</li>
       </ul>
     </div>
     <div class="panel orange">
       <h4>④ 容器适配器 (Adapter)</h4>
       <ul>
-        <li><b>stack</b> — 默认底层 deque（LIFO）</li>
-        <li><b>queue</b> — 默认底层 deque（FIFO）</li>
-        <li><b>priority_queue</b> — 底层 vector + heap 算法</li>
+        <li><b>stack</b> — 默认底层 deque（LIFO——后进先出，像摞盘子，只能从顶上放/取）</li>
+        <li><b>queue</b> — 默认底层 deque（FIFO——先进先出，像排队，先来的先走）</li>
+        <li><b>priority_queue</b> — 底层 vector + heap 算法（每次取的不是最早/最晚，而是"最重要"的）</li>
         <li>不提供 begin/end 迭代器！</li>
       </ul>
     </div>
   </div>
 
-  <div class="star">面试常问 "vector 和 list 怎么选?" 这是最基础的考察点 — 不要只答「随机访问 vs 插入快」，要说<strong>缓存友好性 + 链表节点开销 + 现代 CPU 上 vector 几乎全胜</strong>。</div>
+  <div class="star">面试常问 "vector 和 list 怎么选?" 这是最基础的考察点 — 不要只答「随机访问 vs 插入快」，要说<strong>缓存友好性（vector 数据连续，CPU 缓存一读一大片）+ 链表节点开销（每存一个元素还要搭上前后指针的内存）+ 现代 CPU 上 vector 几乎全胜</strong>。</div>
 </section>
 
 <section class="chapter" id="slide-02">
@@ -463,10 +463,10 @@ body { overflow-x: hidden; }
     <div class="panel yellow">
       <h4>扩容（关键面试点）</h4>
       <ul>
-        <li>容量不够 → 分配新一段 → 把旧元素<strong>移动/拷贝</strong>过去 → 释放旧的</li>
+        <li>容量不够 → 分配新一段 → 把旧元素<strong>移动/拷贝</strong>过去 → 释放旧的（像搬家：先租更大的房子，把东西搬过去，再退旧房）</li>
         <li>增长因子：<b>libstdc++ = 2x</b>，<b>libc++ / MSVC = 1.5x</b></li>
         <li>2x 简单但内存利用率差；1.5x 让<em>新空间可能复用旧释放的内存</em>（黄金分割理论）</li>
-        <li>复杂度：单次最坏 O(n)，<strong>摊销 O(1)</strong>（几何级数）</li>
+        <li>复杂度：单次最坏 O(n)，<strong>摊销 O(1)</strong>（几何级数——扩容代价 1+2+4+8… 加起来也就约 2n，平摊到每次 push_back 上近似常数）</li>
       </ul>
     </div>
   </div>
@@ -499,9 +499,9 @@ body { overflow-x: hidden; }
     </svg>
   </div>
 
-  <div class="tip"><b>关键</b>：<code>resize(n)</code> 改变 size（构造或析构元素）；<code>reserve(n)</code> 只改变 capacity（仅分配，不构造）。<code>capacity</code> 永远只增不减，除非调用 <code>shrink_to_fit()</code>（非强制）。</div>
+  <div class="tip"><b>关键</b>：<code>resize(n)</code> 改变 size（真实元素个数——多了会构造新元素、少了会析构多余元素）；<code>reserve(n)</code> 只改变 capacity（容量——只是提前把仓库租好，不往里放东西，不构造元素）。<code>capacity</code> 永远只增不减，除非调用 <code>shrink_to_fit()</code>（非强制）。</div>
 
-  <div class="star">面试问"为什么 1.5 优于 2"：<br>2x 时新分配 = 之前所有累计容量之和 + 1，<strong>无法复用</strong>之前释放的内存（连续分配的内存地址递增）；1.5x 在 N 次扩容后<em>新需要的容量 ≤ 之前累计释放的容量</em>，allocator 可能把它们合并复用 → 内存利用率更好。</div>
+  <div class="star">面试问"为什么 1.5 优于 2"：<br>2x 时新分配 = 之前所有累计容量之和 + 1，<strong>无法复用</strong>之前释放的内存（连续分配的内存地址递增，旧的空缺凑不齐新需求）；1.5x 在 N 次扩容后<em>新需要的容量 ≤ 之前累计释放的容量</em>，allocator（内存分配器——替容器向系统要内存的中间人）可能把它们合并复用 → 内存利用率更好。</div>
 </section>
 
 <section class="chapter" id="slide-03">
@@ -525,8 +525,8 @@ body { overflow-x: hidden; }
   <div class="grid-2">
     <div class="panel green">
       <h4>区别本质</h4>
-      <p><code>push_back(x)</code>：要求 <code>x</code> 已经是 T；可能拷贝或移动。</p>
-      <p><code>emplace_back(args...)</code>：在原地<strong>转发</strong>构造 — 直接在 vector 内存上 placement new T(args...)，<strong>避免临时对象</strong>。</p>
+      <p><code>push_back(x)</code>：要求 <code>x</code> 已经是 T（对象先在外面造好，再装进容器）；可能拷贝或移动。</p>
+      <p><code>emplace_back(args...)</code>：在原地<strong>转发</strong>构造 — 把"造对象的原料"直接送进 vector 的内存，在那儿 placement new T(args...)（在指定地址上就地构造），<strong>避免临时对象</strong>。</p>
     </div>
     <div class="panel yellow">
       <h4>什么时候真的有差别</h4>
@@ -550,7 +550,7 @@ v2.<span class="fn">push_back</span>(<span class="kw">std::move</span>(c));     
 v2.<span class="fn">emplace_back</span>(<span class="kw">std::move</span>(c));         <span class="cm">// 也是移动构造 1 次（无差别）</span></pre>
 
   <h3 id="slide-03-traps">两坑：<code>explicit</code> 与 <code>initializer_list</code></h3>
-  <p>已有对象用 <code>push_back(std::move(x))</code> 即可，不必为了「显得现代」改成 emplace。下面两个坑才是 emplace 真正要记住的语义差。</p>
+  <p>已有对象用 <code>push_back(std::move(x))</code> 即可，不必为了「显得现代」改成 emplace。下面两个坑才是 emplace 真正要记住的语义差（explicit——"只许明写类型，不许偷偷隐式转换"的构造函数限定词；initializer_list——花括号 <code>{1,2,3}</code> 列表参数）。</p>
   <table>
     <tr><th>场景</th><th><code>push_back</code></th><th><code>emplace_back</code></th><th>取舍</th></tr>
     <tr>
@@ -615,7 +615,7 @@ vv.<span class="fn">emplace_back</span>(std::vector&lt;<span class="kw">int</spa
 v.<span class="fn">erase</span>(std::<span class="fn">remove_if</span>(v.<span class="fn">begin</span>(), v.<span class="fn">end</span>(), [](<span class="kw">int</span> x){ <span class="kw">return</span> x &lt; 0; }), v.<span class="fn">end</span>());
 std::<span class="fn">erase_if</span>(v, [](<span class="kw">int</span> x){ <span class="kw">return</span> x &lt; 0; });           <span class="cm">// C++20</span></pre>
 
-  <div class="danger"><b>记忆口诀</b>：vector 一旦<strong>容量变化</strong> → 全部失效；<strong>位置变化</strong>（insert/erase）→ 改动点之后失效。</div>
+  <div class="danger"><b>记忆口诀</b>：vector 一旦<strong>容量变化</strong>（搬家了，旧地址全部作废）→ 全部失效；<strong>位置变化</strong>（insert/erase 挪动了元素）→ 改动点之后失效。这里的"失效"指迭代器（iterator——指向元素的"遥控器"）指向的内存不再是原来的元素，继续用它就是未定义行为。</div>
 </section>
 
 <section class="chapter" id="slide-05">
@@ -624,9 +624,9 @@ std::<span class="fn">erase_if</span>(v, [](<span class="kw">int</span> x){ <spa
 <div class="grid-2">
     <div class="panel accent">
       <h4>核心概念</h4>
-      <p><b>SSO (Small String Optimization)</b>：短字符串直接存在 string 对象内部 buffer，<strong>不分配堆内存</strong>。</p>
+      <p><b>SSO (Small String Optimization)</b>：短字符串直接存在 string 对象内部 buffer，<strong>不分配堆内存</strong>——好比随身口袋里揣着零钱，不用每次都去银行取。</p>
       <p>避免大量短字符串场景的频繁 malloc/free，性能巨大提升。</p>
-      <p>历史上：g++ 5 之前 string 是 <strong>COW（写时复用）</strong>，但与 C++11 多线程冲突 → 改为 SSO。</p>
+      <p>历史上：g++ 5 之前 string 是 <strong>COW（写时复用）</strong>（copy-on-write——多个字符串共享一份数据，谁要改谁才真正复制一份），但与 C++11 多线程冲突 → 改为 SSO。</p>
     </div>
     <div class="panel yellow">
       <h4>各实现的阈值</h4>
@@ -699,10 +699,10 @@ std::cout &lt;&lt; (<span class="kw">void</span>*)s.<span class="fn">data</span>
     <div class="panel green">
       <h4>std::span&lt;T&gt;</h4>
       <ul>
-        <li>{T*, size_t} 的非拥有视图（"轻引用"）</li>
+        <li>{T*, size_t} 的非拥有视图（"轻引用"——只记"从哪开始、有几个"，不负责管理那段内存的生死）</li>
         <li>统一接受：C 数组、std::array、std::vector、子段</li>
         <li>替代 C 风格 <code>(T* p, size_t n)</code> 双参</li>
-        <li>不延长生命周期，<strong>调用方负责</strong></li>
+        <li>不延长生命周期，<strong>调用方负责</strong>（span 不会让底层多活一秒，底层没了 span 就成悬空引用）</li>
       </ul>
     </div>
   </div>
@@ -739,10 +739,10 @@ std::array&lt;<span class="type">uint8_t</span>, 64&gt; small;
 <div class="grid-2">
     <div class="panel accent">
       <h4>核心结构</h4>
-      <p>不是单一连续内存，而是<strong>「中央 map（指针数组）+ 多段固定大小 chunk」</strong>。</p>
+      <p>不是单一连续内存，而是<strong>「中央 map（指针数组）+ 多段固定大小 chunk」</strong>——好比一列火车：车厢（chunk）内部座位连续，但车厢之间要靠车头目录（map）来挂钩定位。</p>
       <p>每个 chunk 通常 4KB（一页），里面元素连续；chunk 之间不连续。</p>
-      <p>支持<b>O(1)</b> 双端 push/pop；<b>O(1)</b> 随机访问（要算两次跳转）。</p>
-      <p>但<strong>中部 insert/erase 是 O(n)</strong>（与 vector 类似）。</p>
+      <p>支持<b>O(1)</b> 双端 push/pop；<b>O(1)</b> 随机访问（要算两次跳转：先查 map 找到 chunk，再在 chunk 内定位）。</p>
+      <p>但<strong>中部 insert/erase 是 O(n)</strong>（与 vector 类似，要把半边的元素挨个挪）。</p>
     </div>
     <div class="panel yellow">
       <h4>什么时候用</h4>
@@ -808,14 +808,14 @@ std::array&lt;<span class="type">uint8_t</span>, 64&gt; small;
       <ul>
         <li><b>list</b>：双向链表，每节点有 prev/next/T 三部分</li>
         <li><b>forward_list</b>(C++11)：单向链表，每节点 next/T</li>
-        <li>每节点单独 malloc → 内存不连续，缓存极不友好</li>
+        <li>每节点单独 malloc → 内存不连续，缓存极不友好（CPU 缓存猜不到下一个节点在哪，几乎每跳一步都是 cache miss）</li>
       </ul>
     </div>
     <div class="panel red">
       <h4>为什么"几乎不该用"</h4>
       <ul>
         <li>每个 int 节点开销 = 24 字节（vs vector 的 4 字节）</li>
-        <li>遍历比 vector 慢 <strong>10~50 倍</strong>（cache miss）</li>
+        <li>遍历比 vector 慢 <strong>10~50 倍</strong>（cache miss——缓存未命中：数据不在 CPU 手边，得去内存现取，一等几十上百个时钟周期）</li>
         <li>insert/erase O(1) 的优势在<strong>已知位置</strong>下才生效；查找仍是 O(n)</li>
         <li>Bjarne Stroustrup 著名实验：1 万元素插入排序，vector 全胜 list</li>
       </ul>
@@ -825,9 +825,9 @@ std::array&lt;<span class="type">uint8_t</span>, 64&gt; small;
   <h3>仍然合适的场景（少而具体）</h3>
   <ul>
     <li><b>稳定的迭代器/指针</b>：节点不会因为其他元素 insert/erase 而失效（除了被删除的节点本身）</li>
-    <li><b>splice O(1)</b>：把一个 list 的子段直接接到另一个，<em>不拷贝节点内容</em></li>
+    <li><b>splice O(1)</b>：把一个 list 的子段直接接到另一个，<em>不拷贝节点内容</em>（只改几个指针的指向，像把一节车厢直接挂到另一列火车上）</li>
     <li>大型对象（移动昂贵）的链表式调度队列（极少）</li>
-    <li>侵入式链表（intrusive list）— 但那一般是手写</li>
+    <li>侵入式链表（intrusive list——链接指针直接长在业务对象身上的链表）— 但那一般是手写</li>
   </ul>
 
 <pre><span class="cm">// list 唯一显著优势：splice — O(1) 不拷贝</span>
@@ -839,7 +839,7 @@ std::list&lt;<span class="type">int</span>&gt; l{1,2,3};
 <span class="kw">auto</span> it1 = std::<span class="fn">next</span>(l.<span class="fn">begin</span>());           <span class="cm">// 指向 2</span>
 l.<span class="fn">push_front</span>(0); l.<span class="fn">push_back</span>(99);             <span class="cm">// it1 仍指向 2</span></pre>
 
-  <div class="star">面试问"vector 和 list 怎么选?"答：<strong>默认 vector</strong>，仅当需要稳定迭代器/splice/超大元素的链表式调度时考虑 list。"链表查找 O(1)" 是错觉 — 必须先 O(n) 找到位置才能 O(1) 插。</div>
+  <div class="star">面试问"vector 和 list 怎么选?"答：<strong>默认 vector</strong>，仅当需要稳定迭代器/splice/超大元素的链表式调度时考虑 list。"链表查找 O(1)" 是错觉 — 插入确实 O(1)，但前提是已经站在插入位置上；先要找到那个位置仍得 O(n) 挨个跳。</div>
 </section>
 
 <section class="chapter" id="slide-09">
@@ -848,13 +848,13 @@ l.<span class="fn">push_front</span>(0); l.<span class="fn">push_back</span>(99)
 <div class="grid-2">
     <div class="panel purple">
       <h4>核心概念</h4>
-      <p>底层都是<strong>红黑树（Red-Black Tree）</strong>，一种自平衡 BST。</p>
+      <p>底层都是<strong>红黑树（Red-Black Tree）</strong>——一种自平衡 BST（二叉搜索树：每个节点左边的都比它小、右边的都比它大，查找就是一路二选一往下走；红黑树给节点标红黑色并配旋转规则，保证树不会长歪）。</p>
       <p>所有操作 <b>严格 O(log n)</b>，元素按 key 自然有序。</p>
       <p>map: key → value 映射；set: 仅 key（去重）。</p>
       <p>multimap/multiset：允许相同 key。</p>
     </div>
     <div class="panel yellow">
-      <h4>红黑树性质（5 条，面试可能让背）</h4>
+      <p>红黑树性质（5 条，面试可能让背）。前 4 条是"涂色规矩"，第 5 条"黑高相同"配合起来，效果是：没有一条路径会比最短路径长过两倍。</p>
       <ol>
         <li>每个节点是红或黑</li>
         <li>根节点是黑</li>
@@ -892,7 +892,7 @@ m.<span class="fn">insert_or_assign</span>(<span class="str">"a"</span>, 999);
     <tr><td><code>clear</code></td><td>全部</td></tr>
   </table>
 
-  <div class="danger"><b>陷阱</b>：<code>m["key"]</code> 在 key 不存在时<strong>会插入默认构造的 value</strong>，统计场景极易踩坑。只读检查请用 <code>find</code> 或 <code>contains</code>(C++20)。</div>
+  <div class="danger"><b>陷阱</b>：<code>m["key"]</code> 在 key 不存在时<strong>会插入默认构造的 value</strong>（下标访问不光是"查"，查不到就当场造一个），统计场景极易踩坑。只读检查请用 <code>find</code> 或 <code>contains</code>(C++20)。</div>
 </section>
 
 <section class="chapter" id="slide-10">
@@ -901,15 +901,15 @@ m.<span class="fn">insert_or_assign</span>(<span class="str">"a"</span>, 999);
 <div class="grid-2">
     <div class="panel green">
       <h4>底层结构</h4>
-      <p>STL 标准要求<strong>拉链法（separate chaining）</strong>：<code>vector&lt;forward_list&gt;</code> 风格。</p>
-      <p>每个 bucket 是一个链表，hash 冲突的元素挂在同一个 bucket 链表上。</p>
-      <p>这意味着：<strong>元素地址稳定</strong>（rehash 时迭代器失效，但指针/引用<em>仍有效</em>）— 这是与多数语言（如 Java HashMap）不同的关键点。</p>
+      <p>STL 标准要求<strong>拉链法（separate chaining，开链）</strong>——hash 到同一个下标的元素，用一条链表串起来挂在那个桶上——<code>vector&lt;forward_list&gt;</code> 风格。</p>
+      <p>每个 bucket（桶——哈希表里的一个"格子"）是一个链表，hash 冲突的元素挂在同一个 bucket 链表上。</p>
+      <p>这意味着：<strong>元素地址稳定</strong>（rehash 时迭代器失效，但指针/引用<em>仍有效</em>——元素本体没搬家，只是换了个桶挂）— 这是与多数语言（如 Java HashMap）不同的关键点。</p>
     </div>
     <div class="panel yellow">
       <h4>关键参数</h4>
       <ul>
-        <li><b>load_factor()</b> = size / bucket_count</li>
-        <li><b>max_load_factor()</b> 默认 1.0；超过即<strong>rehash</strong></li>
+        <li><b>load_factor()</b> = size / bucket_count（平均每个桶挤了几个元素，即"拥挤程度"）</li>
+        <li><b>max_load_factor()</b> 默认 1.0；超过即<strong>rehash</strong>（重新散列——多租一批桶，把所有元素按新桶数重新分一遍）</li>
         <li><b>rehash(n)</b>：手动指定至少 n 个 bucket</li>
         <li><b>reserve(n)</b>：保证容纳 n 个元素不 rehash</li>
       </ul>
@@ -951,7 +951,7 @@ m.<span class="fn">insert_or_assign</span>(<span class="str">"a"</span>, 999);
     <tr><td>rehash (load_factor 超阈值)</td><td>O(n) — 重新分配 bucket，重新 hash 所有元素</td></tr>
   </table>
 
-  <div class="danger"><b>面试陷阱</b>：①「unordered_map 比 map 一定快」是错的 — 元素少（&lt; 100）时 map 因为缓存友好可能更快；② string key 的 hash 可能很慢（要遍历全字符串）；③ STL 的 unordered_map 因为<strong>稳定地址保证</strong>不能用 open addressing，性能不如 absl/flat_hash_map。</div>
+  <div class="danger"><b>面试陷阱</b>：①「unordered_map 比 map 一定快」是错的 — 元素少（&lt; 100）时 map 因为缓存友好可能更快；② string key 的 hash 可能很慢（要遍历全字符串）；③ STL 的 unordered_map 因为<strong>稳定地址保证</strong>不能用 open addressing（开放寻址——元素直接存在桶里、挤了就向后探位的方案；它可能挪动元素，违反地址稳定承诺），性能不如 absl/flat_hash_map。</div>
   <div class="star">高级答法："如果性能敏感，用 <strong>absl::flat_hash_map</strong> 或 robin-hood-hashing；STL unordered_map 的实现因 ABI 历史包袱（指针稳定性 + bucket 接口）注定无法极致快。"</div>
 </section>
 
@@ -965,13 +965,13 @@ m.<span class="fn">insert_or_assign</span>(<span class="str">"a"</span>, 999);
         <li><b>operator==</b> 或独立 KeyEqual：判等</li>
         <li><b>std::hash&lt;T&gt;</b> 特化 或 自定义 Hasher：算 hash 值</li>
       </ol>
-      <p>关键约束：<code>a == b</code> ⇒ <code>hash(a) == hash(b)</code></p>
+      <p>关键约束：<code>a == b</code> ⇒ <code>hash(a) == hash(b)</code>（两个"相等"的东西必须算出同一个柜号，否则相等的 key 会被分到两个桶，永远找不到）</p>
     </div>
     <div class="panel yellow">
       <h4>常见 hash 组合错误</h4>
       <ul>
-        <li>简单 XOR 多个字段：<code>hash(a) ^ hash(b)</code> — 字段相等时退化为 0</li>
-        <li>正确做法：boost::hash_combine 风格，混入位移</li>
+        <li>简单 XOR 多个字段：<code>hash(a) ^ hash(b)</code> — 字段相等时退化为 0（两个字段 hash 值相同，异或直接抵消成 0，所有这类 key 全撞进同一个桶）</li>
+        <li>正确做法：boost::hash_combine 风格，混入位移（让每一位都参与搅拌，打乱规律）</li>
       </ul>
     </div>
   </div>
@@ -1002,7 +1002,7 @@ std::unordered_map&lt;<span class="type">Endpoint</span>, <span class="type">Con
 };
 std::unordered_map&lt;<span class="type">Endpoint</span>, <span class="type">Connection</span>*, <span class="type">EndpointHash</span>&gt; t;</pre>
 
-  <div class="tip"><b>C++14 异构查找</b>：透明 hasher (<code>std::hash&lt;void&gt;</code>) + 透明比较器允许用 <code>string_view</code> 查找 <code>string</code> key 的 unordered_map（C++20 才完整支持，需要 hasher 提供 <code>is_transparent</code>）。</div>
+  <div class="tip"><b>C++14 异构查找</b>（用别的类型当钥匙查门——比如拿 string_view 去查 string 的表，不用先造一个临时 string）：透明 hasher (<code>std::hash&lt;void&gt;</code>) + 透明比较器允许用 <code>string_view</code> 查找 <code>string</code> key 的 unordered_map（C++20 才完整支持，需要 hasher 提供 <code>is_transparent</code>）。</div>
 </section>
 
 <section class="chapter" id="slide-12">
@@ -1013,8 +1013,8 @@ std::unordered_map&lt;<span class="type">Endpoint</span>, <span class="type">Con
       <h4>与 map/set 的差别</h4>
       <ul>
         <li>允许多个相同 key</li>
-        <li>无 <code>operator[]</code>（因为不知该返哪个）</li>
-        <li>查找用 <code>equal_range</code> 拿到所有匹配</li>
+        <li>无 <code>operator[]</code>（因为不知该返哪个——同一个 key 挂了好几条值，下标访问没法挑）</li>
+        <li>查找用 <code>equal_range</code> 拿到所有匹配（一次把同 key 的那一段全端出来）</li>
         <li><code>count(k)</code> 返回 k 的实际个数</li>
         <li>插入按红黑树规则维持有序</li>
       </ul>
@@ -1047,7 +1047,7 @@ std::unordered_map&lt;<span class="type">Endpoint</span>, <span class="type">Con
             it = queue_.<span class="fn">erase</span>(it).first;             <span class="cm">// run + erase</span>
     }
 };</pre>
-  <div class="tip">高性能版本会用 <strong>四级时间轮 (hierarchical timing wheel)</strong>，把 multimap 替换为环形 bucket 数组。但对中低 QPS 场景，multimap 简单可靠。</div>
+  <div class="tip">高性能版本会用 <strong>四级时间轮 (hierarchical timing wheel)</strong>（把到期时间按"天/小时/分/秒"分层摊到环形格子，像钟表的时针分针秒针各转各的圈），把 multimap 替换为环形 bucket 数组。但对中低 QPS 场景，multimap 简单可靠。</div>
 </section>
 
 <section class="chapter" id="slide-13">
@@ -1057,7 +1057,7 @@ std::unordered_map&lt;<span class="type">Endpoint</span>, <span class="type">Con
     <div class="panel orange">
       <h4>共同点</h4>
       <ul>
-        <li>不是新数据结构 — 是<strong>对底层容器的限制接口包装</strong></li>
+        <li>不是新数据结构 — 是<strong>对底层容器的限制接口包装</strong>（好比同一台货车，封死侧门只留尾门就成了"流水线传送带"）</li>
         <li>没有 begin()/end() 迭代器（不能遍历）</li>
         <li>底层容器可通过模板参数指定</li>
       </ul>
@@ -1104,7 +1104,7 @@ std::priority_queue&lt;<span class="type">int</span>, std::vector&lt;<span class
 <span class="kw">auto</span> cmp = [](<span class="kw">const</span> <span class="type">Task</span>&amp; a, <span class="kw">const</span> <span class="type">Task</span>&amp; b){ <span class="kw">return</span> a.priority &lt; b.priority; };  <span class="cm">// 大顶</span>
 std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span class="type">Task</span>&gt;, <span class="kw">decltype</span>(cmp)&gt; tq(cmp);</pre>
 
-  <div class="star">能讲出"priority_queue 不是新数据结构，是 vector + std::push_heap/pop_heap 包装"= 加分；能写出 <em>用 vector 自己跑 std::heap 算法（更灵活，能批量 build_heap）</em> = 高分。</div>
+  <div class="star">能讲出"priority_queue 不是新数据结构，是 vector + std::push_heap/pop_heap 包装（堆 heap——把数组当成二叉树用，父节点总不小于/不大于子节点，所以堆顶永远是极值）"= 加分；能写出 <em>用 vector 自己跑 std::heap 算法（更灵活，能批量 build_heap）</em> = 高分。</div>
 </section>
 
 <section class="chapter" id="slide-14">
@@ -1121,6 +1121,7 @@ std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span clas
   </table>
 
   <h3>iterator_traits — 模板访问迭代器属性</h3>
+  <p>iterator_traits（迭代器"档案袋"——模板代码从这里统一查到某类迭代器的能力等级、元素类型等信息）让算法代码能按迭代器能力选择更快的路径：</p>
 <pre><span class="kw">template</span>&lt;<span class="kw">class</span> Iter&gt;
 <span class="kw">void</span> <span class="fn">algo</span>(Iter b, Iter e) {
     <span class="kw">using</span> Cat = <span class="kw">typename</span> std::iterator_traits&lt;Iter&gt;::iterator_category;
@@ -1134,7 +1135,7 @@ std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span clas
 <span class="cm">// 经典分发：std::distance / std::advance 内部用 traits</span>
 <span class="kw">auto</span> n = std::<span class="fn">distance</span>(v.<span class="fn">begin</span>(), v.<span class="fn">end</span>());     <span class="cm">// vector: O(1); list: O(n)</span></pre>
 
-  <div class="star">能解释「为什么 std::sort 不能作用于 std::list?」= 加分。<strong>答</strong>：std::sort 要求随机访问迭代器（O(1) 跳转），list 是双向迭代器；list 自己提供 <code>list::sort</code>（O(n log n) 归并排序）。</div>
+  <div class="star">能解释「为什么 std::sort 不能作用于 std::list?」= 加分。<strong>答</strong>：std::sort 要求随机访问迭代器（O(1) 跳转到任意位置），list 是双向迭代器（只能 ++/-- 一步步挪，跳不过去）；list 自己提供 <code>list::sort</code>（O(n log n) 归并排序）。</div>
 </section>
 
 <section class="chapter" id="slide-15">
@@ -1161,6 +1162,7 @@ std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span clas
     </div>
     <div class="panel yellow">
       <h4>「指针 vs 迭代器」失效不同</h4>
+      <p>两者不是一回事：迭代器失效不等于指针失效。迭代器（尤其哈希表的迭代器）内部记着"走遍路线"，桶一重排路线就作废；而指针只认"元素住在哪"，元素没搬家指针就还有效。</p>
       <ul>
         <li>deque 头尾 push → <strong>迭代器失效，指针/引用不失效</strong></li>
         <li>unordered_* rehash → <strong>迭代器失效，指针/引用不失效</strong>（节点内存没动，bucket 索引变了）</li>
@@ -1170,7 +1172,7 @@ std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span clas
 
   <div class="danger"><b>典型问</b>："std::vector::push_back 会让所有迭代器失效吗?" — <strong>不一定</strong>，取决于是否触发扩容。这种"看似简单实则有陷阱"的问题最容易区分新手和资深。</div>
 
-  <div class="star">资深加分：<strong>vector::end() 任何修改大小的操作都会失效</strong>（因为 end 永远指向 size 的下一个位置）。这是为什么 <code>for (auto it=v.begin(); it!=v.end(); )</code> 中循环体若改 size 必须重新取 end。</div>
+  <div class="star">资深加分：<strong>vector::end() 任何修改大小的操作都会失效</strong>（因为 end 永远指向 size 的下一个位置——size 一变，end 就得挪窝）。这是为什么 <code>for (auto it=v.begin(); it!=v.end(); )</code> 中循环体若改 size 必须重新取 end。</div>
 </section>
 
 <section class="chapter" id="slide-16">
@@ -1199,7 +1201,7 @@ std::priority_queue&lt;<span class="type">Task</span>, std::vector&lt;<span clas
       <ul>
         <li>「element 频繁插入中部」→ 别用 vector？<strong>错</strong> — 即便如此 vector 通常仍胜出（前提：n 不太大），缓存友好性碾压</li>
         <li>「需要快速查找」→ 别用 vector？<strong>错</strong> — 已排序 vector + binary_search 在 n &lt; 1000 时常优于 set</li>
-        <li>「字符串场景必用 string」→ 函数参数应该用 <strong>string_view</strong></li>
+        <li>「字符串场景必用 string」→ 函数参数应该用 <strong>string_view</strong>（字符串"窗口"——只记指针和长度、不拥有内容，传参零拷贝）</li>
       </ul>
     </div>
     <div class="panel orange">
@@ -1261,17 +1263,17 @@ m.<span class="fn">find</span>(std::string_view{<span class="str">"abc"</span>})
 <div class="grid-2">
     <div class="panel accent">
       <h4>STL 的「强异常安全保证」</h4>
-      <p>vector 扩容时承诺：操作要么成功，要么 vector 状态完全不变（强保证）。</p>
-      <p>问题：扩容要把元素从旧 buffer 转到新 buffer。如果<strong>移动构造可能抛异常</strong>，转移过程中失败 → 旧 buffer 被破坏，无法回滚。</p>
+      <p>vector 扩容时承诺：操作要么成功，要么 vector 状态完全不变（强保证——像可以整单退货的交易：失败就当无事发生）。</p>
+      <p>问题：扩容要把元素从旧 buffer 转到新 buffer。如果<strong>移动构造可能抛异常</strong>（搬到一半失败，旧的已经被搬空的搬空、新的没建完），转移过程中失败 → 旧 buffer 被破坏，无法回滚。</p>
     </div>
     <div class="panel yellow">
       <h4>解决方案</h4>
       <p>STL 在扩容时检查：
-        <code>noexcept(T(std::move(t)))</code> 是否为 true？
+        <code>noexcept(T(std::move(t)))</code> 是否为 true？（noexcept——"此函数承诺不抛异常"的标注，编译器据此决定敢不敢用快捷路径）
       </p>
       <ul>
-        <li><b>true</b>：用<strong>移动</strong>构造（快）</li>
-        <li><b>false</b>：用<strong>拷贝</strong>构造（慢但安全；旧 buffer 可保留作回滚）</li>
+        <li><b>true</b>：用<strong>移动</strong>构造（快——把源对象的资源直接接管过来）</li>
+        <li><b>false</b>：用<strong>拷贝</strong>构造（慢但安全；旧 buffer 原样保留，失败可回滚）</li>
       </ul>
     </div>
   </div>
@@ -1295,7 +1297,7 @@ std::vector&lt;<span class="type">B</span>&gt; vb; vb.<span class="fn">reserve</
 <span class="kw">for</span> (<span class="kw">int</span> i=0; i&lt;<span class="num">1000000</span>; ++i) vb.<span class="fn">emplace_back</span>(<span class="str">"hello world"</span>);
 <span class="cm">// ↑ 走移动路径 → 快几个数量级</span></pre>
 
-  <div class="star">面试经典问："为什么自定义类的移动构造一定要标 <code>noexcept</code>?" — 答：① <strong>STL 容器扩容性能</strong>退化成拷贝；② 多线程并发原语（如 std::lock_guard）期待 noexcept；③ 析构函数也应 noexcept（C++11 起默认就是）。</div>
+  <div class="star">面试经典问："为什么自定义类的移动构造一定要标 <code>noexcept</code>?" — 答：① 不标的话 <strong>STL 容器扩容性能</strong>退化成拷贝（容器不敢用移动，怕你半路抛异常没法回滚）；② 多线程并发原语（如 std::lock_guard）期待 noexcept；③ 析构函数也应 noexcept（C++11 起默认就是）。</div>
 </section>
 
 <section class="chapter" id="slide-19">
@@ -1342,7 +1344,7 @@ std::unordered_map&lt;std::string, <span class="type">Handler</span>&gt; routes_
     <span class="cm">// list 提供 O(1) 移到头部，unordered_map 提供 O(1) 查找</span>
 };</pre>
 
-  <div class="ok">这张 slide 是<strong>面试万能模板</strong>："给我讲一个你做过的项目，告诉我你怎么选择容器" — 任何回答能引用以上 9 个具体场景就比"嗯…就是 vector 和 map" 强 10 倍。</div>
+  <div class="ok">这张 slide 是<strong>面试万能模板</strong>："给我讲一个你做过的项目，告诉我你怎么选择容器" — 任何回答能引用以上 9 个具体场景就比"嗯…就是 vector 和 map" 强 10 倍。LRU（Least Recently Used 最近最少使用——淘汰最久没被用过的那条）这类组合结构尤其值得记：list 管"最近用过排前面"，unordered_map 管"按 key 秒查"。</div>
 </section>
 
 <section class="chapter" id="slide-20">
@@ -1361,8 +1363,8 @@ std::unordered_map&lt;std::string, <span class="type">Handler</span>&gt; routes_
   <li><details class="qa">
     <summary><span class="lvl basic">基础</span>vector 的 size 和 capacity 区别?</summary>
     <div class="ans">
-      <p><b>答</b>：<code>size()</code> = 已构造的元素个数；<code>capacity()</code> = 已分配但未必构造的容量上限，恒有 <code>capacity ≥ size</code>。<code>push_back</code> 只在 <code>size == capacity</code> 时触发扩容（重分配 + 移动/拷贝旧元素 + 析构旧元素 + 迭代器全失效）。</p>
-      <p><code>reserve(n)</code> 预分配 capacity 不动 size；<code>resize(n)</code> 改 size（少了析构、多了默认构造）；<code>shrink_to_fit()</code> 请求把 capacity 降到 size（非强制）。</p>
+      <p><b>答</b>：<code>size()</code> = 已构造的元素个数；<code>capacity()</code> = 已分配但未必构造的容量上限（仓库面积 vs 实际存货量），恒有 <code>capacity ≥ size</code>。<code>push_back</code> 只在 <code>size == capacity</code> 时触发扩容（重分配 + 移动/拷贝旧元素 + 析构旧元素 + 迭代器全失效）。</p>
+      <p><code>reserve(n)</code> 预分配 capacity 不动 size；<code>resize(n)</code> 改 size（少了析构、多了默认构造）；<code>shrink_to_fit()</code> 请求把 capacity 降到 size（非强制——标准只说"请求"，实现可以不理）。</p>
     </div>
   </details></li>
   <li><details class="qa">
@@ -1497,7 +1499,7 @@ m.<span class="fn">find</span>(<span class="str">"abc"</span>);                 
     <p><b>答</b>：<strong>introsort</strong>（内省排序）— 开始用 quicksort，递归深度超过 <code>2*log2(n)</code> 时切换到 <strong>heapsort</strong> 防止最坏 O(n²)；分段规模小（&lt;16）用 <strong>insertion sort</strong>。这样保证最坏 O(n log n) 且常数因子小。</p>
   </div>
 
-  <div class="star">背完 15 题 + 能即兴讲 1 个真实工程例子 → C++ 容器章节面试 95% 安全。完整 15 题速答详解见下一张 slide。</div>
+  <div class="star">背完 15 题 + 能即兴讲 1 个真实工程例子 → C++ 容器章节面试 95% 安全。完整 15 题速答详解见下一张 slide。上面的 details（可折叠块——点击题面展开答案）里每题都按「关键词 + 原理 + 复杂度 + 加分点」组织，适合先自测再对照。</div>
 </section>
 
 <section class="chapter" id="end">
@@ -1518,9 +1520,9 @@ m.<span class="fn">find</span>(<span class="str">"abc"</span>);                 
       <ul>
         <li>实现一个简化版 vector（含扩容 + 异常安全）</li>
         <li>实现一个 LRU Cache（list + unordered_map）</li>
-        <li>用 <code>godbolt.org</code> 看 vector::push_back 的汇编</li>
+        <li>用 <code>godbolt.org</code>（在线编译器，能直接看生成的汇编）看 vector::push_back 的汇编</li>
         <li>对比测试 std::unordered_map vs absl::flat_hash_map</li>
-        <li>为自定义 struct 写 std::hash 特化 + benchmarks</li>
+        <li>为自定义 struct 写 std::hash 特化（specialization——针对特定类型"定制"模板的版本）+ benchmarks</li>
       </ul>
     </div>
   </div>

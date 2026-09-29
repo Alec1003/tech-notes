@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges</title>
-<meta name="description" content="C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges：「容器只是仓库， 算法 才是工具」 — 系统掌握 std 算法 + 函数对象 + C++20 ranges，覆盖 90% 工程场景与面试题">
+<meta name="description" content="C++ STL 算法通俗讲解 PPT：sort 内省排序、lower_bound 二分查找、堆算法、accumulate 数值计算、C++20 Ranges 与并行策略逐一拆开讲透，术语配白话解释，附复杂度速查表与 15 道高频面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/stl/stl_algorithms_ppt.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/stl/stl_algorithms_ppt.html">
 <meta property="og:title" content="C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges">
-<meta property="og:description" content="C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges：「容器只是仓库， 算法 才是工具」 — 系统掌握 std 算法 + 函数对象 + C++20 ranges，覆盖 90% 工程场景与面试题">
+<meta property="og:description" content="C++ STL 算法通俗讲解 PPT：sort 内省排序、lower_bound 二分查找、堆算法、accumulate 数值计算、C++20 Ranges 与并行策略逐一拆开讲透，术语配白话解释，附复杂度速查表与 15 道高频面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges">
-<meta name="twitter:description" content="C++ STL 算法深度 PPT — 排序 / 二分 / 堆 / 数值 / Ranges：「容器只是仓库， 算法 才是工具」 — 系统掌握 std 算法 + 函数对象 + C++20 ranges，覆盖 90% 工程场景与面试题">
+<meta name="twitter:description" content="C++ STL 算法通俗讲解 PPT：sort 内省排序、lower_bound 二分查找、堆算法、accumulate 数值计算、C++20 Ranges 与并行策略逐一拆开讲透，术语配白话解释，附复杂度速查表与 15 道高频面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -321,7 +321,7 @@ body { overflow-x: hidden; }
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="../cpp/modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -362,7 +362,7 @@ body { overflow-x: hidden; }
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">面试出现率 高</span>
-    <span class="pill green">阅读时长 ~30 min</span>
+    <span class="pill green">阅读时长 ~35 min</span>
     <span class="pill amber">前置 STL 容器 · 迭代器</span>
   </div>
   <div class="meta">
@@ -380,14 +380,14 @@ body { overflow-x: hidden; }
     <div class="panel accent">
       <h4>① 八大算法族</h4>
       <ul>
-        <li><b>非修改型</b>：find / count / for_each / all_of / any_of / mismatch</li>
-        <li><b>修改型</b>：copy / move / transform / replace / fill / generate / reverse / rotate</li>
-        <li><b>划分型</b>：partition / stable_partition / partition_point</li>
+        <li><b>非修改型</b>（只看不改：遍历、查找、统计，不动容器里的内容）：find / count / for_each / all_of / any_of / mismatch</li>
+        <li><b>修改型</b>（会把元素搬走、改值或换个位置）：copy / move / transform / replace / fill / generate / reverse / rotate</li>
+        <li><b>划分型</b>（按条件把元素分成前后两段）：partition / stable_partition / partition_point</li>
         <li><b>排序</b>：sort / stable_sort / partial_sort / nth_element / is_sorted</li>
-        <li><b>二分查找</b>：binary_search / lower_bound / upper_bound / equal_range</li>
-        <li><b>合并/集合</b>：merge / inplace_merge / set_union / set_intersection / set_difference</li>
-        <li><b>堆</b>：make_heap / push_heap / pop_heap / sort_heap</li>
-        <li><b>数值</b>：accumulate / reduce(C++17) / inner_product / partial_sum / iota</li>
+        <li><b>二分查找</b>（在有序序列里每次砍一半地找）：binary_search / lower_bound / upper_bound / equal_range</li>
+        <li><b>合并/集合</b>（把两个有序序列并成一个，或求交集、差集）：merge / inplace_merge / set_union / set_intersection / set_difference</li>
+        <li><b>堆</b>（一种随时能取出当前最大/最小值的结构）：make_heap / push_heap / pop_heap / sort_heap</li>
+        <li><b>数值</b>（求和、点积、前缀和这类算术）：accumulate / reduce(C++17) / inner_product / partial_sum / iota</li>
       </ul>
     </div>
     <div class="panel yellow">
@@ -413,7 +413,7 @@ std::<span class="fn">copy_if</span>(b, e, dst, pred);        <span class="cm">/
 std::<span class="fn">copy_n</span>(b, n, dst);              <span class="cm">// 拷贝前 n 个</span>
 std::<span class="fn">remove_copy</span>(b, e, dst, v);       <span class="cm">// 拷贝过程中跳过 == v 的</span></pre>
 
-  <div class="star">面试可问"如果想统计 v 中大于 0 的元素个数有几种写法?" — 答 <code>count_if(v.begin(), v.end(), [](int x){return x>0;})</code> 或 <code>std::ranges::count_if(v, [](int x){return x>0;})</code> 或 <code>std::accumulate(v.begin(), v.end(), 0, [](int s, int x){return x>0?s+1:s;})</code>。能讲出哪种「最清晰、最快、最通用」即加分。</div>
+  <div class="star">面试可问"如果想统计 v 中大于 0 的元素个数有几种写法?" — 答 <code>count_if(v.begin(), v.end(), [](int x){return x>0;})</code> 或 <code>std::ranges::count_if(v, [](int x){return x>0;})</code> 或 <code>std::accumulate(v.begin(), v.end(), 0, [](int s, int x){return x>0?s+1:s;})</code>（上面这些 <code>[](int x){return x>0;}</code> 小函数叫谓词 predicate——收一个元素、返回 true/false 的判断条件）。能讲出哪种「最清晰、最快、最通用」即加分。</div>
 </section>
 
 <section class="chapter" id="slide-02">
@@ -424,18 +424,18 @@ std::<span class="fn">remove_copy</span>(b, e, dst, v);       <span class="cm">/
       <h4>std::sort 用什么算法?</h4>
       <p>不是单一算法 — 是 <b>introsort（内省排序）</b>：3 个算法的混合体。</p>
       <ol>
-        <li>开始：<b>quicksort</b>（分治 + pivot）</li>
-        <li>递归深度 &gt; <code>2 * log2(N)</code>：切到 <b>heapsort</b>（防最坏 O(n²)）</li>
-        <li>分段 &lt; 16 元素：用 <b>insertion sort</b>（小数组缓存友好）</li>
+        <li>开始：<b>quicksort</b>（快速排序——分治 + pivot 基准值：挑一个数当 pivot，把比它小的都挪到左边、大的挪到右边，再对左右两段递归做同样的事）</li>
+        <li>递归深度 &gt; <code>2 * log2(N)</code>：切到 <b>heapsort</b>（堆排序——最坏也只有 O(n log n)，用来兜底，防止快排退化成 O(n²)）</li>
+        <li>分段 &lt; 16 元素：用 <b>insertion sort</b>（插入排序——像整理扑克牌，把新牌逐张插到前面已排好的位置；小数组缓存友好——数据都在附近，CPU 缓存命中率高）</li>
       </ol>
       <p>结果：最坏 <span class="complex-box">O(n log n)</span>，常数因子小，几乎是「最优通用排序」。</p>
     </div>
     <div class="panel yellow">
       <h4>关键约束</h4>
       <ul>
-        <li>需要<strong>随机访问迭代器</strong>（vector/array/deque/string）</li>
-        <li><strong>不稳定</strong>（等价元素的相对顺序可能改变）</li>
-        <li>比较器必须满足<strong>严格弱序</strong>（strict weak ordering）—— 违反就是 UB</li>
+        <li>需要<strong>随机访问迭代器</strong>（iterator——能一步跳到任意下标的"智能指针"；只有 vector/array/deque/string 这类连续存储的容器提供，list/map 只能一步步挪，所以不能直接 sort）</li>
+        <li><strong>不稳定</strong>（stable）——两个"算相等"的元素，排完序后谁前谁后可能对调；要保顺序就用 stable_sort</li>
+        <li>比较器必须满足<strong>严格弱序</strong>（strict weak ordering——一套规矩：你写的比较函数必须像 <code>&lt;</code> 一样自洽）—— 违反就是 UB（Undefined Behavior 未定义行为——标准不再保证程序做什么，可能死循环也可能崩溃）</li>
       </ul>
     </div>
   </div>
@@ -464,7 +464,7 @@ std::<span class="fn">sort</span>(v.<span class="fn">begin</span>(), v.<span cla
 <span class="cm">// ✅ 正确：必须是 &lt;</span>
 std::<span class="fn">sort</span>(v.<span class="fn">begin</span>(), v.<span class="fn">end</span>(), [](<span class="kw">int</span> a, <span class="kw">int</span> b){ <span class="kw">return</span> a &lt; b; });</pre>
 
-  <div class="danger"><b>严格弱序的 4 条规则</b>（comp(a,b) 表示比较结果）：① <b>反自反</b>：comp(a,a) 必为 false；② <b>非对称</b>：comp(a,b) 与 comp(b,a) 不能同时 true；③ <b>传递</b>：comp(a,b) ∧ comp(b,c) ⇒ comp(a,c)；④ <b>等价传递</b>：!comp(a,b) ∧ !comp(b,a) 视作等价，等价关系传递。违反任一条都是 UB（部分 libstdc++ 版本会真的崩溃）。</div>
+  <div class="danger"><b>严格弱序的 4 条规则</b>（comp(a,b) 表示你写的比较函数的返回结果）：① <b>反自反</b>：自己不能排在"小于自己"的位置，comp(a,a) 必为 false；② <b>非对称</b>：comp(a,b) 与 comp(b,a) 不能同时为 true（不能 a&lt;b 的同时又有 b&lt;a）；③ <b>传递</b>：comp(a,b) ∧ comp(b,c) ⇒ comp(a,c)（a&lt;b 且 b&lt;c 就必须 a&lt;c）；④ <b>等价传递</b>：!comp(a,b) ∧ !comp(b,a)（互不小于对方）视作等价，且这个"等价"关系也要能传递——a 等价 b、b 等价 c，则 a 必须等价 c。违反任一条都是 UB（部分 libstdc++ 版本会真的崩溃）。</div>
   <div class="star">面试题"为什么 sort 是 introsort 而不是纯 quicksort?" — 答：纯 quicksort 最坏 O(n²)，恶意输入或已排序数据触发；introsort 用递归深度阈值检测后切换 heapsort 防御，<strong>合并三种算法的优点</strong>。</div>
 </section>
 
@@ -512,7 +512,7 @@ std::<span class="fn">nth_element</span>(v.<span class="fn">begin</span>(), v.<s
 }
 <span class="kw">double</span> p99 = <span class="fn">percentile</span>(latency_us, 0.99);   <span class="cm">// 100M 样本: ~80ms vs sort ~1500ms</span></pre>
 
-  <div class="star">"如果只想要 Top-100 元素，怎么最快?" — 答：① <code>partial_sort</code>（O(n log 100)）；② 维护大小为 100 的<strong>最小堆</strong>遍历输入（O(n log 100) 但常数更小）；③ <code>nth_element</code> 找出第 100 大再 sort 前 100（O(n + 100 log 100)，最快）。三种各有适用。</div>
+  <div class="star">"如果只想要 Top-100 元素，怎么最快?" — 答：① <code>partial_sort</code>（部分排序——只认真排前 100 名，后面的不管，O(n log 100)）；② 维护大小为 100 的<strong>最小堆</strong>（小顶堆——堆顶永远是堆里最小的那个，正好当"第 100 名守门员"：新元素比堆顶大就踢掉堆顶换进来）遍历输入（O(n log 100) 但常数更小）；③ <code>nth_element</code> 找出第 100 大再 sort 前 100（O(n + 100 log 100)，最快）。三种各有适用。</div>
 </section>
 
 <section class="chapter" id="slide-04">
@@ -565,8 +565,8 @@ v.<span class="fn">insert</span>(pos, 4);
 <span class="kw">auto</span> [lo, hi] = std::<span class="fn">equal_range</span>(v.<span class="fn">begin</span>(), v.<span class="fn">end</span>(), 3);
 <span class="kw">auto</span> count = hi - lo;            <span class="cm">// O(log n)，比 std::count O(n) 快</span></pre>
 
-  <div class="danger"><b>陷阱</b>：① <code>lower_bound</code> 返回的是<strong>插入位置</strong>，不一定指向 v；要先判断 <code>it != end &amp;&amp; *it == v</code> 才算找到；② 在 <code>std::list</code> 上调用是 O(n)（迭代器只能 ++/--，二分跳转退化成线性扫描）；③ <code>std::set::find()</code> 自动 O(log n)，<strong>不要</strong>对 set 用 <code>std::find</code>（O(n)）。</div>
-  <div class="star">面试问"map 和 lower_bound 哪个查找快?" — 答：都是 O(log n)；实际差异是 <strong>vector + lower_bound 缓存友好得多</strong>，N 不太大（&lt; 10^5）时常优于 std::map。</div>
+  <div class="danger"><b>陷阱</b>：① <code>lower_bound</code> 返回的是<strong>插入位置</strong>（第一个 ≥ v 的位置），不一定指向 v——v 不存在时它指向的是下一个更大的元素；所以要先判断 <code>it != end &amp;&amp; *it == v</code> 才算找到；② 在 <code>std::list</code> 上调用是 O(n)（list 的迭代器只能 ++/-- 一步步挪，做不了"一步跳到中点"，二分因此退化成线性扫描）；③ <code>std::set::find()</code> 自动 O(log n)，<strong>不要</strong>对 set 用 <code>std::find</code>（那是从头到尾挨个比对，O(n)）。</div>
+  <div class="star">面试问"map 和 lower_bound 哪个查找快?" — 答：都是 O(log n)；实际差异是 <strong>vector + lower_bound 缓存友好得多</strong>（vector 元素连续存放在一段内存里，CPU 一读就能顺带带出一批；map 的节点散落在堆上，得一个个跳）,N 不太大（&lt; 10^5）时常优于 std::map。</div>
 </section>
 
 <section class="chapter" id="slide-05">
@@ -577,17 +577,18 @@ v.<span class="fn">insert</span>(pos, 4);
       <h4>API</h4>
       <ul>
         <li><code>make_heap(b, e)</code> — 把 [b,e) 整体调整为堆 (O(n))</li>
-        <li><code>push_heap(b, e)</code> — 调用前已 push_back 新元素到末尾，调整上浮 (O(log n))</li>
-        <li><code>pop_heap(b, e)</code> — 把堆顶 swap 到末尾，调整下沉 (O(log n))</li>
+        <li><code>push_heap(b, e)</code> — 调用前已 push_back 新元素到末尾，调整上浮 (O(log n))（新元素从末尾一路和父节点比、比赢就换位，直到待不住为止）</li>
+        <li><code>pop_heap(b, e)</code> — 把堆顶 swap 到末尾，调整下沉 (O(log n))（末尾元素顶替堆顶后，一路和较大的孩子换下去，直到待稳）</li>
         <li><code>sort_heap(b, e)</code> — 把堆变成升序数组 (O(n log n))</li>
         <li><code>is_heap(b, e)</code> — 校验</li>
       </ul>
-      <p>默认<strong>大顶堆</strong>，传 <code>std::greater&lt;&gt;{}</code> 变小顶堆。</p>
+      <p>默认<strong>大顶堆</strong>（堆顶是当前最大值，好比一直把冠军顶在最上面），传 <code>std::greater&lt;&gt;{}</code> 变小顶堆。</p>
     </div>
     <div class="panel yellow">
       <h4>为什么不直接用 priority_queue?</h4>
+      <p>priority_queue（优先队列——封装好"自动按优先级取最大/最小"的队列适配器）有两个限制：</p>
       <ul>
-        <li>priority_queue <strong>没有迭代器</strong>，无法遍历或随机访问</li>
+        <li>priority_queue <strong>没有迭代器</strong>，无法遍历或随机访问（只能看见堆顶一个）</li>
         <li>priority_queue 只能 push 单元素，<strong>不能批量 build</strong></li>
         <li>用 vector + std::*_heap 你能：<br>
           ① 一次性 <code>make_heap</code> O(n)（vs N 次 push 是 O(n log n)）<br>
@@ -631,7 +632,7 @@ v.<span class="fn">pop_back</span>();                                <span class
 
 <span class="cm">// 100M 流入，K=100：复杂度 O(n log k)，内存 O(k)</span></pre>
 
-  <div class="star">"为什么 make_heap 是 O(n) 而 N 次 push_heap 是 O(n log n)?" — 答：从底向上 sift-down 时，大多数节点接近叶子（高度小），按 Σ h*N(h) 求和 = O(n)；而 push_heap 是从叶子向上 sift-up，每次都到根 O(log n)。这是经典分析题。</div>
+  <div class="star">"为什么 make_heap 是 O(n) 而 N 次 push_heap 是 O(n log n)?" — 答：make_heap 从底向上逐层做 sift-down（下沉调整），大多数节点靠近叶子（下沉路径很短），把"每层节点数 × 该层下沉代价"加起来 Σ h*N(h) = O(n)；而 push_heap 是从叶子向上 sift-up（上浮调整），每个新元素最坏要一路浮到堆顶，每次都是 O(log n)。这是经典分析题。</div>
 </section>
 
 <section class="chapter" id="slide-06">
@@ -642,19 +643,19 @@ v.<span class="fn">pop_back</span>();                                <span class
       <h4>常用修改型算法</h4>
       <ul>
         <li><code>copy / copy_if / copy_n / copy_backward</code></li>
-        <li><code>move / move_backward</code> — 用移动语义版本</li>
-        <li><code>transform</code> — 一对一/二对一映射</li>
+        <li><code>move / move_backward</code> — 用移动语义版本（move——把源对象的资源"搬走"而不是复制一份，源对象变空壳，省一次深拷贝）</li>
+        <li><code>transform</code> — 一对一/二对一映射（对每个（或每对）元素套一个函数，把结果写到目标位置）</li>
         <li><code>fill / fill_n / generate / generate_n</code></li>
         <li><code>replace / replace_if</code></li>
         <li><code>remove / remove_if</code> — <strong>不真正删除</strong>，要配 erase</li>
-        <li><code>unique</code> — 去除<strong>相邻</strong>重复（先 sort 才能全去重）</li>
+        <li><code>unique</code> — 去除<strong>相邻</strong>重复（只合并紧挨着的重复值，所以先 sort 让相同元素聚在一起，才能全去重）</li>
         <li><code>reverse / rotate / shuffle</code></li>
       </ul>
     </div>
     <div class="panel yellow">
       <h4>关键陷阱：remove 不删除！</h4>
-      <p><code>std::remove</code> 把"要删的元素"的位置覆盖为后续的非删元素，<strong>返回新逻辑末尾</strong>。容器实际 size 不变。</p>
-      <p>必须配合 <code>container.erase(new_end, container.end())</code> 才真正缩小。</p>
+      <p><code>std::remove</code> 把"要删的元素"的位置覆盖为后续的非删元素——好比把一排座位里该走的人的位子，让后面留下的人依次往前坐——最后<strong>返回新逻辑末尾</strong>（新末尾之后的元素是残留的旧值，不算数）。容器实际 size 不变。</p>
+      <p>必须配合 <code>container.erase(new_end, container.end())</code> 把逻辑末尾之后的尾巴真正砍掉，容器才真正缩小。</p>
     </div>
   </div>
 
@@ -704,9 +705,9 @@ std::<span class="fn">transform</span>(a.<span class="fn">begin</span>(), a.<spa
     <div class="panel green">
       <h4>API</h4>
       <ul>
-        <li><code>partition(b, e, pred)</code> — 把满足谓词的放前面，<strong>不稳定</strong> O(n)</li>
-        <li><code>stable_partition</code> — 同上但保持相对顺序，O(n) 若额外内存够</li>
-        <li><code>partition_point(b, e, pred)</code> — 在已划分序列中找分界点（O(log n)）</li>
+        <li><code>partition(b, e, pred)</code> — 把满足谓词的元素放前面、不满足的放后面，<strong>不稳定</strong> O(n)（两段内部各自的顺序会打乱）</li>
+        <li><code>stable_partition</code> — 同上但保持相对顺序（满足的一段的先后、不满足的一段的先后都保持原样），O(n) 若额外内存够</li>
+        <li><code>partition_point(b, e, pred)</code> — 在已划分序列中找分界点（前半段结束、后半段开始的位置，O(log n)）</li>
         <li><code>is_partitioned</code> — 检查是否已划分</li>
       </ul>
     </div>
@@ -748,7 +749,7 @@ std::<span class="fn">for_each</span>(idle_begin, conns.<span class="fn">end</sp
     [](<span class="type">Connection</span>* c){ c-&gt;<span class="fn">close</span>(); });
 conns.<span class="fn">erase</span>(idle_begin, conns.<span class="fn">end</span>());</pre>
 
-  <div class="tip"><b>partition_point</b> 之于 partitioned 序列 = <b>lower_bound</b> 之于 sorted 序列：都是 O(log n) 找分界点。</div>
+  <div class="tip"><b>partition_point</b> 之于 partitioned 序列 = <b>lower_bound</b> 之于 sorted 序列：都是 O(log n) 找分界点——好比一本按"及格/不及格"分好类的名册，二分几跳就能翻到分界线那页。</div>
 </section>
 
 <section class="chapter" id="slide-08">
@@ -758,22 +759,22 @@ conns.<span class="fn">erase</span>(idle_begin, conns.<span class="fn">end</span
     <div class="panel pink">
       <h4>API</h4>
       <ul>
-        <li><code>merge(a1,a2,b1,b2,dst)</code> — 合并两个已排序序列</li>
-        <li><code>inplace_merge(b, mid, e)</code> — 把 [b,mid) 与 [mid,e) 合并为有序（原地）</li>
-        <li><code>set_union</code> — 并集</li>
-        <li><code>set_intersection</code> — 交集</li>
-        <li><code>set_difference</code> — 差集 (A \ B)</li>
-        <li><code>set_symmetric_difference</code> — 对称差 (A △ B)</li>
-        <li><code>includes</code> — A ⊇ B 子集判定</li>
+        <li><code>merge(a1,a2,b1,b2,dst)</code> — 合并两个已排序序列（像合并两叠已经排好序的试卷：每次比较两叠最上面那份，小的先放）</li>
+        <li><code>inplace_merge(b, mid, e)</code> — 把 [b,mid) 与 [mid,e) 合并为有序（原地，不额外开数组）</li>
+        <li><code>set_union</code> — 并集（A 和 B 合在一起、重复的只留一份）</li>
+        <li><code>set_intersection</code> — 交集（两边都有的元素）</li>
+        <li><code>set_difference</code> — 差集 (A \ B)（A 有、B 没有的）</li>
+        <li><code>set_symmetric_difference</code> — 对称差 (A △ B)（只在其中一边出现过的）</li>
+        <li><code>includes</code> — A ⊇ B 子集判定（B 里的每个元素 A 是否都有）</li>
       </ul>
     </div>
     <div class="panel yellow">
       <h4>共同前提</h4>
       <ul>
-        <li>所有输入都<strong>必须按同一比较器排序</strong></li>
+        <li>所有输入都<strong>必须按同一比较器排序</strong>（两边排序规则不一致，算法一步就找不着北）</li>
         <li>结果也按该比较器有序</li>
-        <li>都是 <b>O(n + m)</b> 线性</li>
-        <li>不要求输入是 set 容器，<strong>排序好的 vector 也行</strong></li>
+        <li>都是 <b>O(n + m)</b> 线性（元素总数翻几倍，耗时大致翻几倍）</li>
+        <li>不要求输入是 set 容器，<strong>排序好的 vector 也行</strong>（这族算法认的是"有序区间"，不是容器牌子）</li>
       </ul>
     </div>
   </div>
@@ -807,7 +808,7 @@ std::<span class="fn">set_difference</span>(old_paths.<span class="fn">begin</sp
                     std::back_inserter(removed));  <span class="cm">// 删除的</span>
 
 <span class="cm">// O(n+m) 替代两层循环 O(n*m) 的 diff</span></pre>
-  <div class="star">能讲出"set_* 算法不要求容器是 std::set，已排序 vector 也能用 — 而且更快（缓存友好）" 即加分。</div>
+  <div class="star">能讲出"set_* 算法不要求容器是 std::set，已排序 vector 也能用 — 而且更快（缓存友好——vector 内存连续，CPU 缓存一读一大片）" 即加分。</div>
 </section>
 
 <section class="chapter" id="slide-09">
@@ -834,8 +835,8 @@ std::<span class="fn">set_difference</span>(old_paths.<span class="fn">begin</sp
                           v.<span class="fn">begin</span>(), v.<span class="fn">end</span>(), 0.0);
 <span class="cm">// 浮点 reduce 结果可能与 accumulate 略有不同（求和顺序不同）</span></pre>
 
-  <div class="danger"><b>陷阱</b>：<code>accumulate</code> 默认 init 类型决定结果类型！<br>
-    <code>std::accumulate(v.begin(), v.end(), <strong>0</strong>)</code> 结果是 <code>int</code>，浮点数会被截断！<br>
+  <div class="danger"><b>陷阱</b>：<code>accumulate</code> 默认 init 类型决定结果类型！好比量筒刻度选错了，倒再多也读不准。<br>
+    <code>std::accumulate(v.begin(), v.end(), <strong>0</strong>)</code> 结果是 <code>int</code>——init 是 int，累加就全程按 int 算，浮点数会被截断！<br>
     必须 <code>std::accumulate(v.begin(), v.end(), <strong>0.0</strong>)</code> 或 <code>0LL</code>。</div>
 
   <h3>实用模式</h3>
@@ -879,7 +880,7 @@ std::<span class="fn">iota</span>(idx.<span class="fn">begin</span>(), idx.<span
 <div class="grid-2">
     <div class="panel yellow">
       <h4>什么是函数对象</h4>
-      <p>定义了 <code>operator()</code> 的类型。可<strong>带状态</strong>，可被模板内联，性能往往优于 <code>std::function</code> 包装。</p>
+      <p>定义了 <code>operator()</code> 的类型——即一个类的对象可以像函数一样"被调用"（所以也叫 functor 仿函数）。它可<strong>带状态</strong>（成员变量能记住东西），可被模板内联（编译器看得见全部代码，直接展开，没有函数调用开销），性能往往优于 <code>std::function</code> 包装（std::function 是个"万能函数袋"，什么可调用对象都能装，但装进去时类型信息被抹掉，调用多一层转发）。</p>
       <p>STL 算法接受任意可调用对象：函数指针、lambda、bind 结果、自定义 functor。</p>
     </div>
     <div class="panel accent">
@@ -925,7 +926,7 @@ std::set&lt;<span class="type">User</span>, <span class="type">UserCompareByScor
     <span class="kw">bool</span> <span class="fn">operator</span>()(<span class="kw">int</span> x) <span class="kw">const</span> <span class="kw">override</span> { <span class="kw">return</span> x % 2 == 0; }
 };</pre>
 
-  <div class="star">"lambda 与 functor 谁性能好?" — 答：通常<strong>等价</strong>（lambda 实质是匿名 functor）。但 lambda 类型不可写出，无法用于需要类型名的 API（map 比较器、模板特化）。</div>
+  <div class="star">"lambda 与 functor 谁性能好?" — 答：通常<strong>等价</strong>（lambda 实质是编译器替你生成的匿名 functor——你写 <code>[](int x){...}</code>，编译器就造一个带 operator() 的类）。但 lambda 类型不可写出（每个 lambda 都是独一无二的匿名类型，你没法定义一个变量类型是它），无法用于需要类型名的 API（map 比较器、模板特化）。</div>
 </section>
 
 <section class="chapter" id="slide-11">
@@ -936,13 +937,13 @@ std::set&lt;<span class="type">User</span>, <span class="type">UserCompareByScor
       <h4>三大改进</h4>
       <ol>
         <li><b>不必传 begin/end</b> — 直接传容器（<code>std::ranges::sort(v)</code>）</li>
-        <li><b>投影 (projection)</b> — 排序/查找时指定对象的某个字段</li>
-        <li><b>视图组合（view）</b> — 用 <code>|</code> 管道惰性变换</li>
+        <li><b>投影 (projection)</b> — 排序/查找时指定对象的某个字段（好比考试排名只看"总分"这一列，projection 就是告诉算法"看哪一列"）</li>
+        <li><b>视图组合（view）</b> — 用 <code>|</code> 管道惰性变换（像 Unix 管道 <code>cat x | grep y | head</code>，一段接一段，每段做一件事）</li>
       </ol>
     </div>
     <div class="panel yellow">
       <h4>错误信息变好</h4>
-      <p>每个算法附带 concepts 约束 → 类型不匹配立刻一行报错（vs 旧 STL 几屏 SFINAE 噩梦）。</p>
+      <p>每个算法附带 concepts 约束（concept——给模板参数定的"上岗资格证"，不满足就在报错第一行直接点名）→ 类型不匹配立刻一行报错（vs 旧 STL 几屏 SFINAE 噩梦——SFINAE 是老式模板技巧，报错时把整条模板推导链都吐给你，一刷好几屏）。</p>
     </div>
   </div>
 
@@ -982,7 +983,7 @@ std::ranges::<span class="fn">sort</span>(users, std::greater&lt;&gt;{}, &amp;<s
     <tr><td><code>views::zip(a, b)</code> (C++23)</td><td>两序列配对</td></tr>
   </table>
 
-  <div class="tip">所有 views <strong>惰性</strong>：不消耗 CPU/内存直到真正遍历；filter+transform+take 编译器可优化为单次循环（zero-overhead）。</div>
+  <div class="tip">所有 views <strong>惰性</strong>（lazy——链子搭好时不干活，等真正开始遍历才逐个元素算，要几个算几个）：不消耗 CPU/内存直到真正遍历；filter+transform+take 编译器可优化为单次循环（zero-overhead 零开销）。</div>
 </section>
 
 <section class="chapter" id="slide-12">
@@ -1006,7 +1007,7 @@ std::<span class="fn">transform</span>(std::execution::par_unseq, src.<span clas
 <span class="kw">double</span> sum = std::<span class="fn">reduce</span>(std::execution::par_unseq,
     v.<span class="fn">begin</span>(), v.<span class="fn">end</span>(), 0.0);</pre>
 
-  <div class="danger"><b>陷阱</b>：① par_unseq 中<strong>不能</strong>有锁、I/O、std::cout（不可重入）；② libstdc++ 需链接 <code>-ltbb</code>；③ 数据量小时并行反而更慢（线程调度开销）；④ 浮点 reduce 顺序不确定 → 结果可能与 accumulate 略不同。</div>
+  <div class="danger"><b>陷阱</b>：① par_unseq 中<strong>不能</strong>有锁、I/O、std::cout（不可重入——同一段代码可能被同时"叠着"执行，锁还没放就被自己再次抢，直接卡死）；② libstdc++ 需链接 <code>-ltbb</code>（并行底层靠 Intel TBB 线程库）；③ 数据量小时并行反而更慢（线程调度的开销比省下的计算还多）；④ 浮点 reduce 顺序不确定 → 结果可能与 accumulate 略不同。</div>
 
   <h3><span class="real-tag">REAL</span>实战：日志统计加速</h3>
 <pre><span class="cm">// 1000 万条日志的错误数</span>
@@ -1019,7 +1020,7 @@ std::<span class="fn">transform</span>(std::execution::par_unseq, src.<span clas
     buf.<span class="fn">begin</span>(), buf.<span class="fn">end</span>(), <span class="type">uint32_t</span>{0xFFFFFFFF},
     [](<span class="type">uint32_t</span> a, <span class="type">uint32_t</span> b){ <span class="kw">return</span> a ^ b; },
     [](<span class="type">uint8_t</span> b){ <span class="kw">return</span> kCrcTable[b]; });</pre>
-  <div class="tip">真实工程更多用 TBB / OpenMP / 业务自有线程池（更多控制）。STL 并行算法适合「快速给一段循环加并行」的轻量场景。</div>
+  <div class="tip">真实工程更多用 TBB / OpenMP / 业务自有线程池（更多控制）。STL 并行算法适合「快速给一段循环加并行」的轻量场景——好比短途代步用共享单车，长途货运还得靠专业车队。</div>
 </section>
 
 <section class="chapter" id="slide-13">
@@ -1065,7 +1066,7 @@ std::<span class="fn">transform</span>(std::execution::par_unseq, src.<span clas
 <span class="cm">// equal - 比较两段（C++14 起 4 参数版本更安全）</span>
 <span class="kw">if</span> (std::<span class="fn">equal</span>(a.<span class="fn">begin</span>(), a.<span class="fn">end</span>(), b.<span class="fn">begin</span>(), b.<span class="fn">end</span>())) {}    <span class="cm">// ✅ 检查长度</span></pre>
 
-  <div class="danger">3 参数 <code>equal(a_begin, a_end, b_begin)</code> 假设 b 至少有同样长度，<strong>不检查越界</strong>。永远用 4 参数版本。</div>
+  <div class="danger">3 参数 <code>equal(a_begin, a_end, b_begin)</code> 假设 b 至少有同样长度，<strong>不检查越界</strong>——b 比 a 短时它会一路读到 b 的内存边界之外去。永远用 4 参数版本（多传一个 b_end，长度不够当场发现）。</div>
 </section>
 
 <section class="chapter" id="slide-14">
@@ -1091,7 +1092,7 @@ std::<span class="fn">transform</span>(std::execution::par_unseq, src.<span clas
     <tr><td><b>partial_sum / scan</b></td><td>O(n)</td><td>O(1)</td><td>—</td><td>否（输出）</td></tr>
   </table>
 
-  <div class="star">面试可问"sort 和 stable_sort 有什么区别? 哪个更慢?" — 答：① 稳定性不同；② stable_sort 通常使用归并，需要 O(n) 临时内存；③ 内存不足时退化为 O(n log² n)；④ 单测速度通常 sort 略快（常数因子小）。</div>
+  <div class="star">面试可问"sort 和 stable_sort 有什么区别? 哪个更慢?" — 答：① 稳定性不同（stable_sort 保证相等元素先后顺序不变）；② stable_sort 通常使用归并，需要 O(n) 临时内存（归并排序 mergesort——把序列对半拆、两边各自排好再合到一起）；③ 内存不足时退化为 O(n log² n)；④ 单测速度通常 sort 略快（常数因子小——同样的大 O，每步干的活更少）。</div>
 </section>
 
 <section class="chapter" id="slide-15">
@@ -1350,7 +1351,7 @@ m.<span class="fn">find</span>(<span class="str">"abc"</span>);                 
       <h4>建议练习</h4>
       <ul>
         <li>用 <code>nth_element</code> + <code>partial_sort</code> 实现 K 个最大 + 排序</li>
-        <li>用 STL 算法实现 LRU "move-to-front"（list::splice）</li>
+        <li>用 STL 算法实现 LRU "move-to-front"（list::splice——把链表节点从原位置摘下接到另一个位置，指针改接而已，O(1)）</li>
         <li>对比 accumulate / reduce / par_unseq 的性能差</li>
         <li>用 ranges 重写一个真实业务的 filter+map+reduce 链</li>
         <li>godbolt 看看 <code>std::sort + lambda</code> 编译出的汇编</li>
