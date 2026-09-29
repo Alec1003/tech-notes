@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO</title>
-<meta name="description" content="C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO：从 promise_type · coroutine_handle">
+<meta name="description" content="用白话讲透 C++20 协程：co_await 挂起时到底发生了什么，promise_type、coroutine_handle、awaiter 各管什么，手写 Task 与 Generator，对称转移和 HALO 为什么零开销，附调试与泄漏排查。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/coroutines_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/coroutines_deep_dive.html">
 <meta property="og:title" content="C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO">
-<meta property="og:description" content="C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO：从 promise_type · coroutine_handle">
+<meta property="og:description" content="用白话讲透 C++20 协程：co_await 挂起时到底发生了什么，promise_type、coroutine_handle、awaiter 各管什么，手写 Task 与 Generator，对称转移和 HALO 为什么零开销，附调试与泄漏排查。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO">
-<meta name="twitter:description" content="C++20/23 协程完全深度指南 — promise_type / awaiter / Task / Generator / Symmetric Transfer / HALO：从 promise_type · coroutine_handle">
+<meta name="twitter:description" content="用白话讲透 C++20 协程：co_await 挂起时到底发生了什么，promise_type、coroutine_handle、awaiter 各管什么，手写 Task 与 Generator，对称转移和 HALO 为什么零开销，附调试与泄漏排查。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <style>
@@ -371,7 +371,7 @@
     <header class="hero">
   <div class="badge">L6 Async · C++20/23 Coroutines · 2026</div>
   <h1>C++20/23 协程完全深度指南</h1>
-  <p class="sub">标准只给机制、不给 <code>Task</code>。把 <strong>promise / handle / awaiter</strong> 画清楚，再落到对称转移、HALO 和泄漏。</p>
+  <p class="sub">标准只给机制、不直接给 <code>Task</code>。这篇先把 <strong>promise / handle / awaiter</strong> 三件套的关系画清楚，再落到对称转移、HALO 和帧泄漏这些工程细节。</p>
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★★</span>
     <span class="pill cyan">面试出现率 中高</span>
@@ -398,7 +398,7 @@
   </div>
 
   <h3 id="s1-1">1.1 异步代码的"四代演进"</h3>
-  <p>回调嵌套、future 链式 <code>.then</code>、协程线性 <code>co_await</code>、C++26 Sender/Receiver 代数 —— 四代解决的是同一件事：<strong>别把异步控制流写成回调地狱</strong>。协程这一代的卖点只有一句：异步代码长得像同步，<code>try/catch</code> 和局部变量寿命都按顺序走。</p>
+  <p>异步代码写过四代：回调嵌套、future 链式 <code>.then</code>、协程线性 <code>co_await</code>、C++26 Sender/Receiver 代数——这四代解决的是同一件事：<strong>别把异步控制流写成回调地狱</strong>。协程这一代的卖点只有一句：异步代码长得像同步代码，<code>try/catch</code> 和局部变量的寿命都按书写顺序正常走。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="线程、future、协程三列对比：线程内核抢占有独立栈；future 类型擦除加堆分配；协程是用户态无栈状态机">
@@ -427,7 +427,7 @@
   </div>
 
   <h3 id="s1-2">1.2 协程的"标准只提供机制"特性</h3>
-  <p>C++20 只给三样：三个关键字、状态机模板、<code>coroutine_handle</code> + <code>promise_type</code> 钩子。<strong>不给</strong>可用的 Task / Generator —— hello world 要先写几十行框架，各家 Task 互不 <code>co_await</code>。这是「零开销 + 不绑死调度模型」的代价。C++23 补了 <code>std::generator</code>，标准化 Task 要等到 C++26 <code>std::execution</code>。</p>
+  <p>C++20 只给了三样东西：三个关键字、把函数体改写成状态机的模板、<code>coroutine_handle</code>（协程句柄——攥在调用者手里、能把暂停的协程拽回来继续跑的把手）加 <code>promise_type</code>（承诺类型——协程 frame 里那本记录「结果怎么存、何时暂停」规则的账本）钩子。但它<strong>不给</strong>能直接用的 Task / Generator——想跑 hello world 得先手写几十行框架，而且各家库的 Task 互相 <code>co_await</code> 不了。这是「零开销 + 不绑死调度模型」换来的代价。C++23 补上了 <code>std::generator</code>，标准化的 Task 要等 C++26 的 <code>std::execution</code>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 220" style="min-width:720px;height:auto" role="img" aria-label="C++20 三个关键字 co_await、co_yield、co_return，函数体出现任一即被编译成协程；普通 return 即使返回 Task 也不是协程">
@@ -451,7 +451,7 @@
   </div>
 
   <h3 id="s1-3">1.3 本指南的覆盖范围</h3>
-  <p>三件套（promise / handle / awaiter）讲到能画关系图；Task 一次性 vs Generator 惰性；对称转移和 HALO 为什么能称「零开销」；调度、异常、泄漏的工程坑。生产 IO 协程写法见 <a href="../system/async_networking_guide.html#s4-2">异步网络 §4.2</a>。</p>
+  <p>本指南要讲清四件事：三件套（promise / handle / awaiter）讲到能亲手画关系图；Task 一次性与 Generator 惰性的区别；对称转移和 HALO 凭什么敢称「零开销」；调度、异常、泄漏这三类工程坑。生产级 IO 协程的写法见 <a href="../system/async_networking_guide.html#s4-2">异步网络 §4.2</a>。</p>
 
   <h3 id="s1-4">1.4 与其他章节的关系</h3>
   <ul>
@@ -473,7 +473,7 @@
   </div>
 
   <h3 id="s2-1">2.1 "什么样的函数是协程"</h3>
-  <p>函数体出现 <code>co_await</code> / <code>co_yield</code> / <code>co_return</code> 任一，整个函数就是协程。返回类型叫 <code>Task</code> 但体内是普通 <code>return</code> 的，仍是普通函数。见 §1.2 那张三关键字图。</p>
+  <p>判断标准只有一条：函数体里出现 <code>co_await</code> / <code>co_yield</code> / <code>co_return</code> 任何一个，整个函数就是协程。反过来，返回类型哪怕叫 <code>Task</code>，只要体内是普通 <code>return</code>，它仍是普通函数。见 §1.2 那张三关键字图。</p>
 
   <h3 id="s2-2">2.2 协程的 5 个阶段</h3>
   <div class="fig">
@@ -506,7 +506,7 @@
   </div>
 
   <h3 id="s2-3">2.3 协程帧 (coroutine frame) — 协程的"栈"</h3>
-  <p>普通函数的局部变量在<strong>调用栈</strong>上，返回即释放。协程能挂起后再恢复，状态必须放进<strong>帧</strong>——默认在堆上（HALO 见 §10）。</p>
+  <p>普通函数的局部变量放在<strong>调用栈</strong>上，函数一返回就释放。协程要挂起之后再恢复，那些状态必须搬进一个不会随返回消失的<strong>帧</strong>（frame）里——默认分配在堆上（HALO 优化见 §10）。</p>
   <table>
     <tr><th>字段</th><th>说明</th></tr>
     <tr><td><code>promise_type promise</code></td><td>用户定义的行为对象</td></tr>
@@ -516,11 +516,11 @@
     <tr><td>resume / destroy 入口</td><td>编译器生成</td></tr>
   </table>
   <div class="box danger">
-    引用参数不会被拷进帧。临时对象作实参、协程一挂起就悬空 —— 最常见的 UB。见 §15。
+    引用参数不会被拷进帧——帧里存的只是引用本身。如果实参是临时对象，协程一挂起、临时对象析构，这个引用就悬空了——这是最常见的 UB。见 §15。
   </div>
 
   <h3 id="s2-4">2.4 状态机翻译 —— 协程的"灵魂"</h3>
-  <p>编译器把函数改写成带 PC 的 <code>switch</code>：挂起 = 写 state 后 return；恢复 = 进对应 case 接着跑。这就是<strong>无栈协程</strong>。</p>
+  <p>编译器把整个函数改写成一台带 PC（Program Counter，程序计数器——记录「当前执行到哪一行」的游标）的 <code>switch</code> 状态机：挂起 = 把当前 state 写进帧然后 return 回调用方；恢复 = 重新进入函数，跳到对应 case 接着跑。这就是<strong>无栈协程</strong>（stackless coroutine）——它没有自己的独立调用栈，只靠帧里的状态记住进度。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 300" style="min-width:720px;height:auto" role="img" aria-label="带两个 co_await 的函数被编译成 switch 状态机，局部变量和 PC 放进堆上的协程帧">
@@ -667,7 +667,7 @@
     </div>
   </div>
 
-  <p><strong>promise_type</strong> 定义协程的全部行为：何时挂起、<code>co_return</code> 怎么收、异常怎么记。编译器通过 <code>Task::promise_type</code> 找到它。</p>
+  <p><strong>promise_type</strong> 定义了协程的全部行为：什么时候挂起、<code>co_return</code> 的结果怎么收、抛了异常怎么记。编译器拿到你的返回类型后，就通过 <code>Task::promise_type</code> 这个内嵌类型找到它。</p>
 
   <h3 id="s3-1">3.1 promise_type 的 6 个必需钩子</h3>
   <table>
@@ -681,7 +681,7 @@
   </table>
 
   <h3 id="s3-2">3.2 一个最小 promise_type</h3>
-  <p>句柄没有析构函数：<code>final_suspend = always</code> 时必须由 Task 析构 <code>destroy()</code>，否则帧泄漏。</p>
+  <p>注意：句柄本身没有析构函数。当 <code>final_suspend = always</code> 时，必须由 Task 的析构去调 <code>destroy()</code>，否则协程帧就一直漏在堆上。</p>
 <pre><span class="kw">#include</span> <span class="str">&lt;coroutine&gt;</span>
 
 <span class="kw">struct</span> <span class="type">SimpleTask</span> {
@@ -718,7 +718,7 @@
   <p><code>Task&lt;T&gt;</code> 定义 <code>return_value(T)</code>；<code>Task&lt;void&gt;</code> 定义 <code>return_void()</code>。<strong>不能同时有</strong>，否则编译失败。</p>
 
   <h3 id="s3-5">3.5 unhandled_exception —— 必须实现</h3>
-  <p>主体未捕获异常<strong>不会</strong>弹回调用方，只调这个钩子。标准做法：存 <code>exception_ptr</code>，等待者 <code>await_resume</code> 时 <code>rethrow</code>。图见 §11。</p>
+  <p>协程主体里没被捕获的异常<strong>不会</strong>自动弹回调用方，编译器只会调这个钩子。标准做法是：把异常存进 <code>exception_ptr</code>（可以装下任何异常的「异常快递盒」），等等待者在 <code>await_resume</code> 时再 <code>rethrow</code> 重新抛出。图见 §11。</p>
 
   <h3 id="s3-6">3.6 进阶钩子（可选）</h3>
   <table>
@@ -729,7 +729,7 @@
   </table>
 
   <h3 id="s3-7">3.7 await_transform 的妙用 —— 强制类型化</h3>
-  <p>只给允许的 awaitable 写 overload，其它类型没有匹配就会编译失败。libunifex / stdexec 用它把 sender 翻成 awaiter。</p>
+  <p>做法是只给允许 await 的类型写 overload（重载版本），其它类型一进来就找不到匹配、直接编译失败。libunifex / stdexec 就用它把 sender 翻译成 awaiter。</p>
 </section>
 
 <!-- =============================== §4 =============================== -->
@@ -744,7 +744,7 @@
   </div>
 
   <h3 id="s4-1">4.1 它是什么</h3>
-  <p><code>std::coroutine_handle&lt;P&gt;</code> 是指向帧的类型擦除指针：<code>resume()</code> / <code>destroy()</code> / <code>done()</code> / <code>promise()</code>（仅 typed）/<code>from_promise</code> / <code>from_address</code>。</p>
+  <p><code>std::coroutine_handle&lt;P&gt;</code> 是一个指向协程帧的类型擦除指针（类型擦除——外面包一层统一的壳，让不同 P 的句柄能按同一种方式传递）：提供 <code>resume()</code>（恢复执行）/ <code>destroy()</code>（销毁帧）/ <code>done()</code> / <code>promise()</code>（仅 typed 版可调）/ <code>from_promise</code> / <code>from_address</code> 一组操作。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 280" style="min-width:720px;height:auto" role="img" aria-label="调用方、promise、handle 三角关系：get_return_object 把 handle 包进 Task 交给调用方；from_promise 从 promise 反查 handle；resume 和 destroy 走 handle">
@@ -775,14 +775,14 @@
   </div>
 
   <h3 id="s4-2">4.2 typed vs untyped (void)</h3>
-  <p>typed 能 <code>promise()</code>；隐式转成 <code>coroutine_handle&lt;&gt;</code> 后只能 resume / destroy / done。awaiter 常接 untyped，需要字段时用 <code>from_address</code> 转回 typed。</p>
+  <p>typed（带模板参数、知道 promise 类型）的句柄能调 <code>promise()</code>；一旦隐式转成 <code>coroutine_handle&lt;&gt;</code>（untyped，忘了 promise 类型），就只剩 resume / destroy / done 可用。awaiter 里常收 untyped，需要读字段时再用 <code>from_address</code> 转回 typed。</p>
 
   <h3 id="s4-3">4.3 from_promise — 在 promise 里反向拿到自己的 handle</h3>
-  <p><code>get_return_object</code> 里 <code>from_promise(*this)</code> 是约定：promise 在帧开头，反向偏移算出帧地址。骨架见 §3.2。</p>
+  <p>在 <code>get_return_object</code> 里调 <code>from_promise(*this)</code> 是一套固定约定：因为 promise 被安排在帧的开头，库就能从 promise 地址反向偏移算出整块帧的地址。骨架见 §3.2。</p>
 
   <h3 id="s4-4">4.4 资源管理 — handle 是 raw owner</h3>
   <div class="box danger">
-    handle <strong>没有析构</strong>。未 resume 的懒 Task 若丢掉且不 <code>destroy</code>，帧在堆上永生。§3.2 的析构就是在堵这个洞。
+    handle <strong>没有析构函数</strong>，它是个 raw owner（裸所有者——只攥着资源、不管释放）。一个还没 resume 的懒 Task 如果被丢掉又没人调 <code>destroy</code>，它的帧就永远躺在堆上。§3.2 的析构函数就是在堵这个洞。
   </div>
 </section>
 
@@ -798,7 +798,7 @@
   </div>
 
   <h3 id="s5-1">5.1 awaiter / awaitable 区别</h3>
-  <p><strong>awaitable</strong> 是能被 <code>co_await</code> 的表达式；<strong>awaiter</strong> 才真正定义「等什么」，必须有三方法。解析顺序：promise 的 <code>await_transform</code> → 对象自身 → <code>operator co_await</code> → 否则它就是 awaiter。</p>
+  <p><strong>awaitable</strong>（可等待物）是能放在 <code>co_await</code> 右边的表达式；<strong>awaiter</strong>（等待器——真正定义「等什么、等的时候干嘛」的那个对象）必须带三个方法。编译器找 awaiter 的顺序是：先问 promise 的 <code>await_transform</code> → 再看对象自身的 <code>operator co_await</code> → 都没有就把对象本身当 awaiter 用。</p>
 
   <h3 id="s5-2">5.2 awaiter 的三个方法</h3>
 <pre><span class="kw">struct</span> <span class="type">MyAwaiter</span> {
@@ -830,10 +830,10 @@
   </div>
 
   <h3 id="s5-3">5.3 标准库提供的两个 trivial awaiter</h3>
-  <p><code>suspend_never</code>：<code>ready=true</code>。<code>suspend_always</code>：<code>ready=false</code>，suspend 空实现。promise 的 initial/final 几乎只用这两个。</p>
+  <p>标准库给了两个最简单的 awaiter：<code>suspend_never</code>（<code>ready=true</code>，从不挂起）和 <code>suspend_always</code>（<code>ready=false</code>，必挂起，suspend 是空实现）。promise 的 initial/final 两个挂起点几乎只搭配这两个用。</p>
 
   <h3 id="s5-4">5.4 第一个真实 awaiter：等定时器</h3>
-  <p><code>ready</code> 看延时是否已到零；<code>suspend</code> 把 <code>h.resume</code> 交给调度器的 timer；<code>resume</code> 返回 void。IO 完成 awaiter 同一骨架：把 handle 塞进完成队列，CQE 回调里 resume。</p>
+  <p>三个方法这样分工：<code>ready</code> 检查延时是否已经归零；<code>suspend</code> 把 <code>h.resume</code> 登记交给调度器的 timer；<code>resume</code> 返回 void。IO 完成的 awaiter 也是同一副骨架：把 handle 塞进完成队列，等 CQE（完成队列事件）回调里再 resume。</p>
 
   <h3 id="s5-5">5.5 await_suspend 的三种返回类型</h3>
   <table>
@@ -844,10 +844,10 @@
   </table>
 
   <h3 id="s5-6">5.6 await_resume 的返回值就是 co_await 的"值"</h3>
-  <p>返回 <code>int</code> 则 <code>int x = co_await e</code>；返回 void 则单独一条 <code>co_await e</code>。</p>
+  <p>返回什么类型，<code>co_await</code> 就拿到什么：返回 <code>int</code> 就能写 <code>int x = co_await e</code>；返回 void 就只能单独一条 <code>co_await e</code>。</p>
 
   <h3 id="s5-7">5.7 让任意类型可 await：operator co_await</h3>
-  <p>给类型写 <code>Awaiter operator co_await()</code>，<code>co_await fut</code> 就变成 <code>co_await fut.operator co_await()</code>。Asio 的 <code>use_awaitable</code> 走的是同一条路。</p>
+  <p>给类型写一个 <code>Awaiter operator co_await()</code>，<code>co_await fut</code> 就等价于 <code>co_await fut.operator co_await()</code>。Asio 的 <code>use_awaitable</code> 走的就是同一条路。</p>
 </section>
 
 <!-- =============================== §6 =============================== -->
@@ -861,7 +861,7 @@
     </div>
   </div>
 
-  <p><code>auto val = co_await expr;</code> 被编译成五步。伪代码墙见过一次就够，这里只留控制流。</p>
+  <p>编译器会把 <code>auto val = co_await expr;</code> 展开成五步。伪代码那种大墙看过一次就够，这里只留控制流。</p>
   <table>
     <tr><th>步骤</th><th>做什么</th></tr>
     <tr><td>1 找 awaiter</td><td><code>await_transform</code> 或 <code>operator co_await</code> 或 expr 自身</td></tr>
@@ -893,7 +893,7 @@
     </div>
   </div>
 
-  <p>生产 Task 要：懒启动、异常进 promise、链式 await 用对称转移、RAII destroy。完整 70 行实现各库都长得一样，这里只留骨架图；钩子代码见 §3.2，转移见 §9。</p>
+  <p>一个能上生产的 Task 要做到四件事：懒启动、异常存进 promise、链式 await 走对称转移、用 RAII 管 destroy。完整 70 行实现在各家库里长得都一样，这里只留骨架图；钩子代码见 §3.2，转移见 §9。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 280" style="min-width:720px;height:auto" role="img" aria-label="Task 是一次性：创建后只能被 co_await 一次，值写进 promise，消费后销毁；不能像 generator 那样反复拉取">
@@ -926,7 +926,7 @@
     <figcaption>Task 不是序列。想多次产出用 Generator / co_yield</figcaption>
   </div>
   <div class="box ok">
-    顶层同步等结果：<code>h.resume()</code> 后转一圈调度器直到 <code>done()</code>，再 <code>await_resume()</code>。生产里这一步交给 executor，不要自己空转。
+    顶层想同步等结果的做法：<code>h.resume()</code> 之后让调度器转一圈，直到 <code>done()</code> 为真，再调 <code>await_resume()</code> 取值。生产代码里这一步应交给 executor，不要自己写忙等空转。
   </div>
 </section>
 
@@ -941,7 +941,7 @@
     </div>
   </div>
 
-  <p>Generator 是 <code>co_yield</code> 的接收端：每次 yield 挂起，外部 <code>++</code> 再 resume。比 Task 简单——没有 continuation 链。</p>
+  <p>Generator 是 <code>co_yield</code> 的接收端：每次 yield 就挂起，等外部 <code>++</code> 迭代器时再 resume 接着跑。它比 Task 简单——没有那条 continuation（续延——「跑完之后接下来执行谁」的接力链）链要维护。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 240" style="min-width:720px;height:auto" role="img" aria-label="Generator 惰性：创建时一个数都还没算；每次 ++it 才 resume 到下一个 co_yield">
@@ -978,7 +978,7 @@
 <span class="kw">for</span> (<span class="kw">int</span> x : <span class="fn">naturals</span>(<span class="num">5</span>)) std::<span class="fn">print</span>(<span class="str">"{} "</span>, x);   <span class="cm">// 0 1 2 3 4</span></pre>
 
   <h3 id="s8-1">8.1 比较 std::generator (C++23 标准化版)</h3>
-  <p>用户视角与上例相同，实现多了递归 yield 和 range 协议。详见 §16。</p>
+  <p>用户视角与上例完全相同，标准版实现上多给了递归 yield 和 range 协议。详见 §16。</p>
 </section>
 
 <!-- =============================== §9 =============================== -->
@@ -993,7 +993,7 @@
   </div>
 
   <h3 id="s9-1">9.1 问题：朴素实现导致栈无限增长</h3>
-  <p>A await B await C … 若 <code>await_suspend</code> 里直接 <code>other.resume()</code>，每次都是普通函数调用，链一深就爆栈。</p>
+  <p>A await B await C……如果 <code>await_suspend</code> 里直接写 <code>other.resume()</code>，每次恢复都是一次普通函数调用，调用栈上就多压一层——链一深就爆栈。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 280" style="min-width:720px;height:auto" role="img" aria-label="朴素 resume 嵌套让栈每层加一帧会溢出；对称转移把恢复做成尾调用，栈深度恒定">
@@ -1023,13 +1023,13 @@
     <span class="kw">auto</span> a = me.<span class="fn">promise</span>().awaiter_;
     <span class="kw">return</span> a ? a : std::<span class="fn">noop_coroutine</span>();
 }</pre>
-  <p>编译器对返回的 handle 做<strong>尾调用 resume</strong>：当前协程栈帧释放，新协程顶上来。</p>
+  <p>编译器拿到返回的 handle 后做<strong>尾调用 resume</strong>（tail call——当前函数的最后一步直接跳去下一个函数，自己的栈帧先释放）：当前协程的栈帧立刻释放，新协程顶上同一个位置。</p>
 
   <h3 id="s9-3">9.3 std::noop_coroutine — "空协程"哨兵</h3>
-  <p>顶层 Task 没有等待者。返回空 handle 会崩；<code>noop_coroutine()</code> 的 resume 是空操作。</p>
+  <p>顶层 Task 往往没有等待者。这时返回空 handle 再 resume 会崩；换成 <code>noop_coroutine()</code>（空协程哨兵——它的 resume 是空操作，调了等于没调），安全返回即可。</p>
 
   <h3 id="s9-4">9.4 为什么这是"零开销"的关键</h3>
-  <p>没有它就必须把恢复塞进队列、靠外部循环 dispatch，无法 inline。有了它，<code>A→B→C</code> 像普通调用链，还能尾调用消除。</p>
+  <p>没有对称转移，就必须把「恢复谁」塞进队列、靠外部循环逐个 dispatch，恢复路径没法 inline。有了它，<code>A→B→C</code> 的接力就像普通调用链一样直来直去，还能吃到尾调用消除的红利。</p>
 </section>
 
 <!-- =============================== §10 =============================== -->
@@ -1044,10 +1044,10 @@
   </div>
 
   <h3 id="s10-1">10.1 协程帧的"默认"分配</h3>
-  <p>每次创建协程默认 <code>operator new</code> 分配帧 —— 这是主开销，大约一次 alloc + free。</p>
+  <p>每创建一个协程，默认都会走一次 <code>operator new</code> 在堆上分配帧——这是协程的主要开销，大约等于一次 alloc + free。</p>
 
   <h3 id="s10-2">10.2 HALO 的优化条件</h3>
-  <p>Heap Allocation eLision：把帧提升到<strong>调用者栈</strong>上。要同时满足：生命周期被调用者包含、帧大小静态可知、handle 不逃逸。</p>
+  <p>HALO = Heap Allocation eLision（堆分配消除——把帧从堆上搬到<strong>调用者的栈</strong>上，省掉那一次 new）。要同时满足三个条件：协程的生命周期被调用者完全包住、帧大小编译期可知、handle 不逃逸（没被存起来或传出去）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 260" style="min-width:720px;height:auto" role="img" aria-label="协程帧三种分配：默认堆 new、HALO 提到调用者栈、promise 自定义 operator new 走内存池">
@@ -1076,13 +1076,13 @@
   </div>
 
   <h3 id="s10-3">10.3 典型可以 HALO 的场景</h3>
-  <p><code>co_return co_await inner()</code> 这种立刻消费，编译器看得到寿命。把 Task 存变量再 <code>submit_to_queue</code> 则必须堆分配。</p>
+  <p><code>co_return co_await inner()</code> 这种「造出来立刻消费」的写法，编译器能看全它的寿命，可以 HALO。反过来，把 Task 存进变量再 <code>submit_to_queue</code>，寿命看不透，就必须堆分配。</p>
 
   <h3 id="s10-4">10.4 验证 HALO 是否生效</h3>
-  <p>看 IR 里的 <code>new</code> 调用，或反汇编里 inner 是否被 inline 到 outer 的栈上。O0/O1 基本没有 HALO。</p>
+  <p>验证办法：看生成的 IR 里还有没有 <code>new</code> 调用，或看反汇编里 inner 是否被 inline 叠到 outer 的栈上。O0/O1 优化级别下基本不会有 HALO。</p>
 
   <h3 id="s10-5">10.5 自定义 frame 分配器（避免堆分配）</h3>
-  <p>在 promise 里写 <code>operator new/delete</code> 走 thread-local 池。编译器创建帧时会调它们，不依赖 HALO。</p>
+  <p>在 promise 里自定义 <code>operator new/delete</code>，让帧从 thread-local 池里出。编译器创建帧时会自动调它们——这条路不依赖 HALO，一定生效。</p>
 </section>
 
 <!-- =============================== §11 =============================== -->
@@ -1097,7 +1097,7 @@
   </div>
 
   <h3 id="s11-1">11.1 协程主体抛异常会怎样</h3>
-  <p>未捕获异常走 <code>promise.unhandled_exception()</code>，<strong>不会</strong>弹到启动协程的那个调用栈。必须自己接住。</p>
+  <p>主体里没被捕获的异常会走 <code>promise.unhandled_exception()</code>，它<strong>不会</strong>自己弹回启动协程的那条调用栈——调用方早已走远。异常必须由 promise 接住存好。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="协程体内 throw 进入 promise.unhandled_exception 存 exception_ptr，等待者 await_resume 时 rethrow；无人 await 则异常消失或 terminate">
@@ -1125,14 +1125,14 @@
   </div>
 
   <h3 id="s11-2">11.2 标准范式：保存到 exception_ptr，await 时 rethrow</h3>
-  <p>钩子存指针；等待者取值前检查。骨架已在 §3.2 / §7 图里。</p>
+  <p>范式是：钩子负责存 <code>exception_ptr</code> 指针；等待者取值前先检查有没有异常、有就重抛。骨架已在 §3.2 / §7 图里。</p>
 
   <h3 id="s11-3">11.3 跨协程异常链</h3>
   <p><code>C await B await A</code>，A throw 仍能在 <code>C.get()</code> 的 catch 里拿到原始 <code>runtime_error</code>。</p>
 
   <h3 id="s11-4">11.4 fire-and-forget 协程的异常</h3>
   <div class="box danger">
-    无人 await 则异常无处可去。至少在 <code>unhandled_exception</code> 里 log / 交错误队列，禁止裸 spawn。
+    没人 await 的协程，异常就无处可去。至少要在 <code>unhandled_exception</code> 里打 log 或交给错误队列，禁止裸 spawn（起了就不管）。
   </div>
 
   <h3 id="s11-5">11.5 协程的"两阶段"异常</h3>
@@ -1156,7 +1156,7 @@
   </div>
 
   <h3 id="s12-1">12.1 协程的"调度"问题</h3>
-  <p>协程不知道 1 秒后谁来 resume。<code>co_await</code> 只负责挂起；定时器、IO 完成、线程池都是用户提供的 executor。</p>
+  <p>协程自己不知道 1 秒后谁来 resume 它。<code>co_await</code> 只管挂起这一下；定时器、IO 完成、线程池这些「到点叫醒」的服务，全靠用户接上自己的 executor（执行器——决定代码跑在哪个线程、什么时机跑的组件）。</p>
 
   <h3 id="s12-2">12.2 三个抽象</h3>
   <table>
@@ -1167,7 +1167,7 @@
   </table>
 
   <h3 id="s12-3">12.3 让协程跑在指定 executor 上 — schedule awaiter</h3>
-  <p><code>await_ready=false</code>，<code>suspend</code> 里 <code>ex.post([h]{ h.resume(); })</code>。恢复点之后的代码跑在目标线程。</p>
+  <p>写法是：<code>await_ready=false</code>，然后在 <code>suspend</code> 里 <code>ex.post([h]{ h.resume(); })</code>（把恢复动作投递到目标执行器）。于是恢复点之后的代码就跑在目标线程上。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="线程1持锁后 co_await，恢复可能落在线程2：锁不属于新线程，TLS 也换了">
@@ -1193,10 +1193,10 @@
   </div>
 
   <h3 id="s12-4">12.4 IO 完成 awaiter（与 io_uring 对接）</h3>
-  <p>suspend 时把 handle 地址塞进 SQE user_data；CQE 回调取出并 <code>resume()</code>。<code>await_resume</code> 返回字节数。面试骨架在 §17。完整 Reactor 见 <a href="../system/async_networking_guide.html#s2-4">异步网络 §2.4</a>。</p>
+  <p>对接方式：suspend 时把 handle 地址塞进 SQE（提交队列条目）的 user_data；等 CQE（完成队列条目）回调到达时取出来 <code>resume()</code>。<code>await_resume</code> 返回读写的字节数。面试骨架在 §17。完整 Reactor 见 <a href="../system/async_networking_guide.html#s2-4">异步网络 §2.4</a>。</p>
 
   <h3 id="s12-5">12.5 Asio coroutine 支持</h3>
-  <p>不要在本页再抄一份 echo。<code>asio::awaitable</code> + <code>use_awaitable</code> + <code>co_spawn</code> 的线性读写见 <a href="../system/async_networking_guide.html#s4-2">异步网络 §4.2</a> 和 <a href="../system/async_networking_guide.html#s5-1">§5.1</a>。生产网络服务用 Asio，不要手撸 awaiter。</p>
+  <p>本页不再抄一份 echo 例子。<code>asio::awaitable</code> + <code>use_awaitable</code> + <code>co_spawn</code> 的线性读写见 <a href="../system/async_networking_guide.html#s4-2">异步网络 §4.2</a> 和 <a href="../system/async_networking_guide.html#s5-1">§5.1</a>。结论：生产网络服务直接用 Asio，不要手撸 awaiter。</p>
 </section>
 
 <!-- =============================== §13 =============================== -->
@@ -1243,7 +1243,7 @@
   </div>
 
   <h3 id="s14-1">14.1 协程帧不在栈上的痛苦</h3>
-  <p><code>gdb bt</code> 只看见当前状态机那一帧。谁 await 谁散落在各帧的 <code>awaiter_</code> 里，不在调用栈上。</p>
+  <p><code>gdb bt</code> 只能看到当前状态机所在的那一帧。至于「谁 await 谁」这条逻辑链，散落在各个帧的 <code>awaiter_</code> 字段里，根本不在调用栈上。</p>
 
   <h3 id="s14-2">14.2 GDB / LLDB 的协程支持现状</h3>
   <ul>
@@ -1256,10 +1256,10 @@
   <p>promise 里留 <code>awaiter_</code> + <code>source_location</code>，从当前 handle 沿等待者走下去打印文件:行。typed handle 才能碰 promise。</p>
 
   <h3 id="s14-4">14.4 用 std::source_location 自动标记协程函数名</h3>
-  <p>promise 构造函数默认参数 <code>source_location::current()</code>，每个协程帧自动带上创建点。</p>
+  <p>做法：给 promise 构造函数加一个默认参数 <code>source_location::current()</code>，这样每个协程帧都自动记下自己是哪行代码创建的。</p>
 
   <h3 id="s14-5">14.5 抓 fire-and-forget 协程</h3>
-  <p>自定义 <code>operator new/delete</code> 统计活帧，定期 dump「活着但很久没 resume」的。配合 ASan 看泄漏栈。</p>
+  <p>用自定义 <code>operator new/delete</code> 统计当前活着的帧，定期 dump 出「活着但很久没被 resume」的那些。再配合 ASan 看泄漏时的分配栈。</p>
 </section>
 
 <!-- =============================== §15 =============================== -->
@@ -1303,13 +1303,13 @@
   </div>
 
   <h3 id="s15-2">15.2 案例 1：引用参数 + 临时对象 → UB</h3>
-  <p>形参是 <code>const string&amp;</code> 时，帧里只有引用。临时实参在第一次挂起后销毁。面试题 §17 有完整 UB 示例。修复：按值传。</p>
+  <p>当形参是 <code>const string&amp;</code> 时，帧里拷进去的只是引用本身。如果实参是个临时对象，它在协程第一次挂起后就被销毁了——引用随之悬空。面试题 §17 有完整 UB 示例。修复办法：参数按值传。</p>
 
   <h3 id="s15-3">15.3 案例 2：fire-and-forget 丢 handle</h3>
-  <p>用 supervisor 管寿命，或专用类型：<code>final_suspend=never</code> + <code>unhandled_exception</code> 必处理。记录所有 spawn 到全局表。</p>
+  <p>用 supervisor（管家对象——统一看管一批子协程寿命）兜底，或改用专用类型：<code>final_suspend=never</code> 让帧自毁，配 <code>unhandled_exception</code> 强制处理异常。再把所有 spawn 记到一张全局表里。</p>
 
   <h3 id="s15-4">15.4 排查工具</h3>
-  <p>heaptrack / jemalloc 按固定帧大小聚合；自定义分配器 dump 长期不动的活帧。详见 <a href="../perf-debug/memory_leak_guide.html">内存泄漏指南</a>。</p>
+  <p>heaptrack / jemalloc 能按固定帧大小把分配聚合起来看；再配合自定义分配器 dump 长期不动的活帧。详见 <a href="../perf-debug/memory_leak_guide.html">内存泄漏指南</a>。</p>
 </section>
 
 <!-- =============================== §16 =============================== -->
@@ -1323,19 +1323,19 @@
     </div>
   </div>
 
-  <p>C++23 把 Generator 放进 <code>&lt;generator&gt;</code>，避免人人造轮子。用法与 §8 短例相同，下面只补标准库多出来的能力。</p>
+  <p>C++23 把 Generator 收进了 <code>&lt;generator&gt;</code> 头，从此不用人人手造轮子。用法与 §8 短例完全相同，下面只补标准库版本多出来的能力。</p>
 
   <h3 id="s16-1">16.1 基本用法</h3>
-  <p><code>std::generator&lt;int&gt; fib()</code> 里 <code>co_yield</code>，再 <code>fib() | views::take(10)</code>。创建时一个数都还没算，见 §8 惰性图。</p>
+  <p>在 <code>std::generator&lt;int&gt; fib()</code> 里写 <code>co_yield</code>，然后像管道一样接 <code>fib() | views::take(10)</code>。创建时一个数都还没算——见 §8 惰性图。</p>
 
   <h3 id="s16-2">16.2 递归 yield —— std::generator 的杀手特性</h3>
-  <p><code>co_yield std::ranges::elements_of(walk(child))</code> 展开子生成器，每元素 O(1)，手写转发是 O(depth)。</p>
+  <p>写 <code>co_yield std::ranges::elements_of(walk(child))</code> 就能把子生成器递归展开，每产出一个元素只要 O(1)；手写转发做同样的事是 O(depth)。</p>
 
   <h3 id="s16-3">16.3 与 ranges 互通</h3>
-  <p>它是 input_range，可直接 <code>fold_left</code> / <code>take</code> / <code>filter</code>。</p>
+  <p>它本身就是 input_range（单遍输入范围），可以直接接 <code>fold_left</code> / <code>take</code> / <code>filter</code>。</p>
 
   <h3 id="s16-4">16.4 性能</h3>
-  <p>每次 yield 约 10–20 ns。比填 vector 慢，但内存恒定 O(1)，无限序列只能走这条路。</p>
+  <p>每次 yield 大约花 10–20 ns。虽然比先填满一个 vector 慢，但内存恒定 O(1)——而且无限序列只有这条路能走。</p>
 </section>
 
 <!-- =============================== §17 =============================== -->
@@ -1559,7 +1559,7 @@
   </table>
 
   <h3 id="s18-3">18.3 编译器视角的 co_await 翻译</h3>
-  <p>找 awaiter → ready? → 否则保存 PC 并 suspend（void / bool / 尾调用 handle）→ <code>await_resume</code> 取值。细节表见 §6。</p>
+  <p>流程一串：找 awaiter → 问 ready? → 不 ready 就保存 PC 并 suspend（返回 void / bool / 尾调用 handle 三种）→ 最后 <code>await_resume</code> 取值。细节表见 §6。</p>
 
   <h3 id="s18-4">18.4 协程"不要做"清单</h3>
   <ul>
@@ -1591,7 +1591,7 @@
     <tr><td>挂起 + 对称转移</td><td>~10–30 ns</td></tr>
     <tr><td>co_yield</td><td>~10–20 ns</td></tr>
   </table>
-  <div class="box ok">happy path 接近函数调用；没有 Go 那种 M:N 调度器税。不保证 HALO。</div>
+  <div class="box ok">顺利路径的开销接近一次函数调用；也没有 Go 那种 M:N 调度器的固定税。但别指望 HALO 一定生效。</div>
 </section>
 
     <div class="footer-nav">

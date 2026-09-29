@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 并发深入 · 线程 / mutex / cv / future / 死锁</title>
-<meta name="description" content="C++ 并发深入：线程与协程的分工、数据竞争是 UB、mutex 锁的是数据、cv 必须 while 谓词、future/async 陷阱、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 如何落到 futex。内存序六档见内存模型篇。">
+<meta name="description" content="C++ 并发通俗入门：线程和协程差在哪、数据竞争为什么是 UB、mutex 该锁数据、condition_variable 为什么要 while 判断、future/async 的坑、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 底层的 futex。内存序见内存模型篇。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/concurrency_deep.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/concurrency_deep.html">
 <meta property="og:title" content="C++ 并发深入 · 线程 / mutex / cv / future / 死锁">
-<meta property="og:description" content="C++ 并发深入：线程与协程的分工、数据竞争是 UB、mutex 锁的是数据、cv 必须 while 谓词、future/async 陷阱、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 如何落到 futex。内存序六档见内存模型篇。">
+<meta property="og:description" content="C++ 并发通俗入门：线程和协程差在哪、数据竞争为什么是 UB、mutex 该锁数据、condition_variable 为什么要 while 判断、future/async 的坑、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 底层的 futex。内存序见内存模型篇。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 并发深入 · 线程 / mutex / cv / future / 死锁">
-<meta name="twitter:description" content="C++ 并发深入：线程与协程的分工、数据竞争是 UB、mutex 锁的是数据、cv 必须 while 谓词、future/async 陷阱、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 如何落到 futex。内存序六档见内存模型篇。">
+<meta name="twitter:description" content="C++ 并发通俗入门：线程和协程差在哪、数据竞争为什么是 UB、mutex 该锁数据、condition_variable 为什么要 while 判断、future/async 的坑、死锁四条件、读写锁、thread_local、stop_token，以及 mutex 底层的 futex。内存序见内存模型篇。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/page-shell.css">
@@ -128,8 +128,8 @@
     </div>
   </div>
 
-  <p>操作系统线程有独立栈，由内核调度、可被抢占；C++20 协程是编译器生成的状态机，<code>co_await</code> 只切这台状态机，<strong>不进内核</strong>。不要把 <code>std::jthread</code> 和 coroutine 当成同一种「轻线程」。能并行的是核，不是你 <code>new</code> 出来的线程数。用户态调度见 <a href="./coroutines_deep_dive.html">协程</a>。</p>
-  <p>默认栈在 Linux 常是 8 MiB，按请求数 <code>new thread</code> 会先把虚拟地址和调度器打满。任务多就用线程池复用 worker。<code>std::thread</code> 若 <code>detach</code>，生命周期和栈上对象脱钩，bug 从析构 <code>terminate</code> 变成 use-after-return。需要用户态让出而不占核，才是协程的场景。</p>
+  <p>操作系统线程（thread，一条可以独立跑代码的执行流）有自己独立的栈，由内核（操作系统的核心层）调度、随时可以被抢占（强行暂停去跑别的）；C++20 协程（coroutine，编译器帮你把函数改写成「可以暂停再继续」的状态机）是编译器生成的状态机，<code>co_await</code> 只切这台状态机，<strong>不进内核</strong>。不要把 <code>std::jthread</code> 和 coroutine 当成同一种「轻线程」。能并行的是核，不是你 <code>new</code> 出来的线程数。用户态调度见 <a href="./coroutines_deep_dive.html">协程</a>。</p>
+  <p>默认栈在 Linux 常是 8 MiB，按请求数 <code>new thread</code> 会先把虚拟地址和调度器打满。任务多就用线程池（thread pool，固定几条线程反复领任务的池子）复用 worker。<code>std::thread</code> 若 <code>detach</code>（放手不管，让它自生自灭），生命周期和栈上对象脱钩，bug 从析构 <code>terminate</code> 变成 use-after-return（函数已返回、还在用它的局部变量）。需要用户态让出而不占核，才是协程的场景。</p>
 
   <div class="analogy">线程像<strong>雇来的工人</strong>：每人一套工具箱（栈），工头（内核）决定谁上工位（CPU）。协程像<strong>同一人手里的多份待办清单</strong>：做不下去就夹个书签换下一份，人没换、工位没换。</div>
 
@@ -176,7 +176,7 @@
     </svg>
   </div>
 
-  <p><code>std::thread</code> 析构时若仍 joinable，直接 <code>std::terminate</code>。C++20 <code>jthread</code> 把 join 做成 RAII，并带上停止通道：</p>
+  <p><code>std::thread</code> 析构时若仍 joinable（还没 join 也没 detach，线程还活着），直接 <code>std::terminate</code>（程序当场崩掉）。C++20 <code>jthread</code> 把 join 做成 RAII（对象析构时自动收尾的手法），并带上停止通道：</p>
 <pre><span class="kw">std</span>::jthread worker([](<span class="kw">std</span>::stop_token st) {
   <span class="kw">while</span> (!st.stop_requested()) do_work();
 });  <span class="cm">// 析构：request_stop() + join()，不再 terminate</span></pre>
@@ -196,7 +196,7 @@
   <p>判据：<strong>单个任务的执行时间要远大于一次上下文切换</strong>，经验上是百微秒量级。这就是「一请求一线程」在 QPS 上万时必崩的原因——请求本身只要 20 μs CPU，线程数却跟着请求数走。上界则看线程在等什么：CPU 密集取核数，阻塞 IO 密集可超配几倍，天花板是内存而不是 CPU。</p>
 
   <h3 id="s1-2">1.2 协程省掉的是哪一部分</h3>
-  <p>协程不是「更便宜的线程」，而是<strong>有选择地</strong>省掉上面几项。一次 <code>co_await</code> 挂起 = 把活跃变量存进 coroutine frame 加一次间接跳转，<strong>几十纳秒</strong>，不进内核、不切页表，cache 还是热的。</p>
+  <p>协程不是「更便宜的线程」，而是<strong>有选择地</strong>省掉上面几项。一次 <code>co_await</code> 挂起 = 把活跃变量存进 coroutine frame（协程帧，堆上的一小块内存，替协程保管暂停时的现场）加一次间接跳转，<strong>几十纳秒</strong>，不进内核、不切页表，cache 还是热的。</p>
   <table>
     <thead><tr><th>维度</th><th>OS 线程</th><th>C++20 协程</th></tr></thead>
     <tbody>
@@ -219,8 +219,8 @@
     </div>
   </div>
 
-  <p>数据竞争 = 两个线程访问同一内存、至少一个写、中间没有 happens-before。C++ 把它定义为 <strong>UB</strong>：优化器可以假设它永不发生，于是把后面的代码一并优化没。单核也会——抢占就够。闸门是 TSan，不是多跑几次单测。</p>
-  <p><code>x++</code> 看起来是一句话，机器上是 load-add-store 三步，中间任意点可被抢占。<code>volatile</code> 只挡编译器优化，不建立 happens-before，不能当锁。TSan 报的是「缺少同步关系」，不必真撞上那一拍——这是它比「多跑几次」值钱的原因。</p>
+  <p>数据竞争 = 两个线程访问同一内存、至少一个写、中间没有 happens-before（先行发生，一个「谁先谁后」的可见性保证：没建立这个关系，一方的写对另一方就可能像没发生过）。C++ 把它定义为 <strong>UB</strong>（Undefined Behavior，未定义行为——标准不再承诺程序做什么，编译器可以随意处置）：优化器可以假设它永不发生，于是把后面的代码一并优化没。单核也会——抢占就够。闸门是 TSan（ThreadSanitizer，编译器插桩的竞争检测器），不是多跑几次单测。</p>
+  <p><code>x++</code> 看起来是一句话，机器上是 load-add-store 三步（读出来、加一、写回去），中间任意点可被抢占。<code>volatile</code> 只挡编译器优化，不建立 happens-before，不能当锁。TSan 报的是「缺少同步关系」，不必真撞上那一拍——这是它比「多跑几次」值钱的原因。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="线程 T1 写 x、线程 T2 读 x，中间没有同步，构成数据竞争，结果是未定义行为而不是读到旧值">
@@ -241,7 +241,7 @@
     </svg>
   </div>
 
-  <p>内存序是「如何建立 happens-before」。六档语义、MESI、false sharing、CAS / ABA / RCU 见 <a href="./memory_model.html">内存模型</a>（从 <a href="./memory_model.html#s8-1">单核数据竞争</a>、<a href="./memory_model.html#s13-1">MESI</a>、<a href="./memory_model.html#s14">无锁回收</a> 进）。本页不贴 <code>memory_order_*</code> 代码墙。</p>
+  <p>内存序（memory order，规定「我写的值，别人什么时刻能看见」的规则集）是「如何建立 happens-before」。六档语义、MESI、false sharing、CAS / ABA / RCU 见 <a href="./memory_model.html">内存模型</a>（从 <a href="./memory_model.html#s8-1">单核数据竞争</a>、<a href="./memory_model.html#s13-1">MESI</a>、<a href="./memory_model.html#s14">无锁回收</a> 进）。本页不贴 <code>memory_order_*</code> 代码墙。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 170" style="min-width:720px;height:auto" role="img" aria-label="本页只覆盖阻塞同步原语；六档 memory_order、happens-before、MESI 与无锁结构全部链到内存模型篇">
@@ -292,8 +292,8 @@
     </div>
   </div>
 
-  <p>mutex 保护的是<strong>数据上的不变量</strong>，不是某段代码。同一对象的所有读写必须持<strong>同一把</strong>锁；两把锁锁两段函数、数据却共享，等于没锁。<code>lock</code> / <code>unlock</code> 在异常和早退上会漏；<code>lock_guard</code> 用析构保证释放。临界区只放碰共享状态的语句——持锁做 I/O 是把延迟摊给所有等待者。</p>
-  <p>需要中途手动释放才用 <code>unique_lock</code>；一次拿多把用 <code>scoped_lock</code>（内部有死锁避免）。<code>recursive_mutex</code> 把「谁持锁」从类型系统抹掉，优先拆对象或拆锁。锁的粒度跟对象走：一把锁罩整棵树，争用会把并行打回串行。</p>
+  <p>mutex 保护的是<strong>数据上的不变量</strong>（invariant，任何时刻都该成立的规则，比如「链表长度和节点数一致」），不是某段代码。同一对象的所有读写必须持<strong>同一把</strong>锁；两把锁锁两段函数、数据却共享，等于没锁。<code>lock</code> / <code>unlock</code> 在异常和早退上会漏；<code>lock_guard</code>（构造时上锁、析构时自动放锁的看护对象）用析构保证释放。临界区（critical section，持着锁的那段代码）只放碰共享状态的语句——持锁做 I/O 是把延迟摊给所有等待者。</p>
+  <p>需要中途手动释放才用 <code>unique_lock</code>（一把可以随时上锁/解锁、还能转移的 RAII 锁）；一次拿多把用 <code>scoped_lock</code>（内部有死锁避免）。<code>recursive_mutex</code>（允许同一线程重复加锁的互斥量）把「谁持锁」从类型系统抹掉，优先拆对象或拆锁。锁的粒度跟对象走：一把锁罩整棵树，争用（contention，多条线程抢同一把锁）会把并行打回串行。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="错误：foo 和 bar 各持一把锁却改同一份 x；正确：x 旁边只有一把锁，两处修改都持它">
@@ -390,7 +390,7 @@ mtx.unlock();
     </div>
   </div>
 
-  <p><code>condition_variable::wait</code> 会<strong>虚假唤醒</strong>（POSIX 允许），也会<strong>丢唤醒</strong>（<code>notify</code> 发生在对方进入 <code>wait</code> 之前）。唯一正确形态：持 <code>unique_lock</code>，<strong>while 谓词为假才 wait</strong>。<code>wait(lock, pred)</code> 就是这层循环的语法糖。谓词读的条件必须由同一把锁保护，否则谓词本身就是数据竞争。</p>
+  <p><code>condition_variable::wait</code>（条件变量的等待接口。condition_variable 就是线程的「叫号器」——等到条件的线程先睡着，条件满足时被唤醒）会<strong>虚假唤醒</strong>（spurious wakeup，没人按铃它也可能自己醒，POSIX 允许），也会<strong>丢唤醒</strong>（<code>notify</code> 发生在对方进入 <code>wait</code> 之前，通知打了空）。唯一正确形态：持 <code>unique_lock</code>，<strong>while 谓词为假才 wait</strong>（谓词 predicate 就是你等的具体条件，比如「队列非空」）。<code>wait(lock, pred)</code> 就是这层循环的语法糖。谓词读的条件必须由同一把锁保护，否则谓词本身就是数据竞争。</p>
   <p><code>wait</code> 的前置条件是已经持锁。它睡之前 unlock、醒之后再 lock，所以谓词求值始终在锁内——「看纸条」和「改纸条」互斥。<code>notify</code> 可以不持锁，但持着发能避免「更新谓词」和「通知」被拆开。普通 <code>condition_variable</code> 只接受 <code>unique_lock&lt;mutex&gt;</code>；要跟 <code>stop_token</code> 一起等，换 <code>condition_variable_any</code>。</p>
 
   <div class="analogy">条件变量像<strong>门铃 + 门口的纸条</strong>。门铃会误响（假醒），也可能在你贴纸条「有货了」之后客人才趴到门上（丢唤醒）。所以每次被叫醒都要先看纸条：货还没有，继续等。</div>
@@ -454,8 +454,8 @@ mtx.unlock();
     </div>
   </div>
 
-  <p><code>promise</code> 是写端，<code>future</code> 是读端，中间一块 shared state。<code>set_value</code> happens-before <code>get</code> 返回，结果传递不必再加锁。<code>get</code> 只能一次；多人等用 <code>shared_future</code>。<code>std::async</code> 的默认 launch 是 <code>async | deferred</code>——实现可以选<strong>延后</strong>：看起来起了任务，其实 <code>get()</code> 才在调用者线程跑。要真有工作线程，写 <code>launch::async</code>。async 的 <code>future</code> 析构会 join，容易在意料外的地方卡住。</p>
-  <p><code>promise</code> 析构时还没 set，shared state 会留下 <code>broken_promise</code>，<code>get</code> 抛异常。async 造出的 future 带「这是 async」标志，析构即 join；<code>packaged_task</code> 或手写 promise 没有这层隐式等待。不要丢弃 <code>std::async</code> 的返回值——那等于在这条语句上同步等完。</p>
+  <p><code>promise</code> 是写端，<code>future</code> 是读端，中间一块 shared state（共享状态，存放结果的一块公共内存）。<code>set_value</code> happens-before <code>get</code> 返回，所以结果传递不必再加锁。<code>get</code> 只能调一次；多人等用 <code>shared_future</code>。<code>std::async</code> 的默认 launch（启动策略）是 <code>async | deferred</code>——实现可以选<strong>延后</strong>：看起来起了任务，其实 <code>get()</code> 才在调用者线程跑。要真有工作线程，写 <code>launch::async</code>。async 的 <code>future</code> 析构会 join（等线程干完活），容易在意料外的地方卡住。</p>
+  <p><code>promise</code> 析构时还没 set，shared state 会留下 <code>broken_promise</code>（「对方失约了」的标记），<code>get</code> 抛异常。async 造出的 future 带「这是 async」标志，析构即 join；<code>packaged_task</code>（把可调用物打包成能产出 future 的任务壳）或手写 promise 没有这层隐式等待。不要丢弃 <code>std::async</code> 的返回值——那等于在这条语句上同步等完。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 180" style="min-width:720px;height:auto" role="img" aria-label="生产者 promise 把值写入共享状态，消费者 future.get 阻塞直到该状态就绪">
@@ -538,8 +538,8 @@ use(fa.get(), fb.get());</pre>
     </div>
   </div>
 
-  <p>死锁不是「锁太多」，是四条同时成立：互斥、持有并等待、不可剥夺、环路等待。工程上破「环路」最便宜——多把锁按固定地址序，或一次 <code>scoped_lock(m1, m2)</code>。持锁调别人的回调，等于把未知锁序引进来。排查见 <a href="../perf-debug/deadlock_debugging_guide.html">死锁调试</a>。</p>
-  <p>活锁是大家都在让，看起来有进展，谁也完不成。锁顺序要用对象身份（地址）而不是业务名字——两个模块会把「先 A 后 B」写成反的。<code>try_lock</code> 超时退避能破环，但会把死锁变成延迟，要有预算。持锁做日志 / RPC 是把四条件里的「持有并等待」主动延长。</p>
+  <p>死锁（deadlock，几条线程互相等对方手里的锁，全体卡死）不是「锁太多」，是四条同时成立：互斥、持有并等待、不可剥夺、环路等待。工程上破「环路」最便宜——多把锁按固定地址序，或一次 <code>scoped_lock(m1, m2)</code>。持锁调别人的回调，等于把未知锁序引进来。排查见 <a href="../perf-debug/deadlock_debugging_guide.html">死锁调试</a>。</p>
+  <p>活锁（livelock，大家都在动、都在互相让，却谁也干不成活）是大家都在让，看起来有进展，谁也完不成。锁顺序要用对象身份（地址）而不是业务名字——两个模块会把「先 A 后 B」写成反的。<code>try_lock</code>（试一下锁，拿不到不硬等）超时退避能破环，但会把死锁变成延迟，要有预算。持锁做日志 / RPC 是把四条件里的「持有并等待」主动延长。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="死锁四个必要条件：互斥、持有并等待、不可剥夺、环路等待，以及 T1 持 A 等 B、T2 持 B 等 A 的环">
@@ -597,8 +597,8 @@ use(fa.get(), fb.get());</pre>
     </div>
   </div>
 
-  <p><code>shared_mutex</code>：读者共享、写者独占。读多写少且临界区短才值得；写者可能饿死在一串读者后面。没有「持 shared 再升级 unique」的合法 API，自己写容易死锁。多数业务一把普通 <code>mutex</code> 更简单。</p>
-  <p>读多写少的典型是配置快照、路由表。写很少却延迟敏感时，双缓冲或 RCU 可能比读写锁更合适，那是 <a href="./memory_model.html#s14">内存模型 §14</a> 的领地。<code>shared_lock</code> 不要试图升级成独占——没有合法升级路径，自己写就是死锁。</p>
+  <p><code>shared_mutex</code>（读写锁：允许多个读者同时进，写者必须独占）：读者共享、写者独占。读多写少且临界区短才值得；写者可能饿死在一串读者后面。没有「持 shared 再升级 unique」的合法 API，自己写容易死锁。多数业务一把普通 <code>mutex</code> 更简单。</p>
+  <p>读多写少的典型是配置快照、路由表。写很少却延迟敏感时，双缓冲或 RCU（Read-Copy-Update，写时先拷一份改，再原子换指针，读者无锁）可能比读写锁更合适，那是 <a href="./memory_model.html#s14">内存模型 §14</a> 的领地。<code>shared_lock</code> 不要试图升级成独占——没有合法升级路径，自己写就是死锁。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="多个读者同时持有共享锁；写者必须独占，在读者离开前等在门外">
@@ -638,7 +638,7 @@ use(fa.get(), fb.get());</pre>
     </div>
   </div>
 
-  <p><code>thread_local</code> 每线程一份，适合 errno、随机数状态、per-thread 缓存。把该对象的指针交给别的线程，原线程退出后就是悬空。构造发生在该线程首次 odr-use，不要假设 <code>main</code> 里已经构造完。</p>
+  <p><code>thread_local</code>（线程局部存储：同一个变量名，每条线程各有自己的一份）每线程一份，适合 errno、随机数状态、per-thread 缓存。把该对象的指针交给别的线程，原线程退出后就是悬空（指向已销毁的内存）。构造发生在该线程首次 odr-use（真正用到它的那次访问），不要假设 <code>main</code> 里已经构造完。</p>
   <p>函数里的 <code>thread_local</code> 静态对象按线程惰性初始化：该线程第一次 odr-use 才构造，析构在线程退出时。它不是「带锁的全局变量」。用它缓存指向共享堆的裸指针，等于把所有权藏进你看不见的地方。</p>
 
   <div class="fig">
@@ -720,7 +720,7 @@ use(fa.get(), fb.get());</pre>
     </div>
   </div>
 
-  <p>停线程必须合作。<code>jthread</code> 析构 <code>request_stop()</code> 再 <code>join</code>。工作循环要自己查 <code>stop_requested()</code>，或把 token 下传到 <code>condition_variable_any</code>。只设 <code>atomic&lt;bool&gt;</code> 也可以，但别忘了 join——主线程退出时 worker 还在碰已销毁的栈对象。§1 的 <code>jthread</code> 短例就是这条通道。</p>
+  <p>停线程必须合作（cooperative，线程自己定期看「该不该停」，而不是被外人强杀）。<code>jthread</code> 析构 <code>request_stop()</code> 再 <code>join</code>。工作循环要自己查 <code>stop_requested()</code>，或把 token（停止令牌，传递「要停了」这个信号的对象）下传到 <code>condition_variable_any</code>。只设 <code>atomic&lt;bool&gt;</code> 也可以，但别忘了 join——主线程退出时 worker 还在碰已销毁的栈对象。§1 的 <code>jthread</code> 短例就是这条通道。</p>
   <p>循环里只查 token 不够：线程若卡在 <code>cv.wait</code> 或阻塞 syscall 里，token 置位也看不见。要么用带 <code>stop_token</code> 的 <code>wait</code> 重载，要么 <code>notify</code> 一下把人叫醒，让谓词看到「该停了」。强制杀线程在标准 C++ 里不存在。</p>
 
   <div class="fig">
@@ -776,8 +776,8 @@ use(fa.get(), fb.get());</pre>
     </div>
   </div>
 
-  <p>Linux 上 <code>std::mutex</code> 无争用时是用户态 atomic（uncontended fast path）；有人要睡才 <code>futex</code> 进内核等待队列。所以「锁很贵」描述的是<strong>争用</strong>，不是每次 <code>lock_guard</code>。<code>atomic::wait</code> / <code>notify</code> 也是同一条系统调用。验证用 TSan；设计期把 happens-before 画出来再写代码。无锁队列、Hazard Pointer、RCU 见 <a href="./memory_model.html#s14">内存模型 §14</a> 与 <a href="../stl/concurrency_patterns_guide.html">并发模式</a>；要看完整可编译的 SPSC 环与 ABA 解法，去 <a href="../communication/high_performance.html#s2">高性能通信 §2–§3</a>。</p>
-  <p>实时线程才值得开优先级继承（PI futex）：持锁的低优先级会被临时抬到等待者的优先级，避免反转。用户态先自旋再睡（adaptive mutex）赌的是临界区极短，只改 P99，不改正确性。TSan 慢 5–15 倍，CI 必开，生产别开。形式化小例子用 cppmem，现场复现用 rr。</p>
+  <p>Linux 上 <code>std::mutex</code> 无争用时是用户态 atomic（uncontended fast path，没人抢时的一条快捷路径：一条原子指令就拿到锁，根本不进内核）；有人要睡才 <code>futex</code>（fast userspace mutex，Linux 的「用户态+内核」混合锁机制：平时用户态解决，需要睡觉/叫醒才进内核）进内核等待队列。所以「锁很贵」描述的是<strong>争用</strong>，不是每次 <code>lock_guard</code>。<code>atomic::wait</code> / <code>notify</code> 也是同一条系统调用。验证用 TSan；设计期把 happens-before 画出来再写代码。无锁队列、Hazard Pointer、RCU 见 <a href="./memory_model.html#s14">内存模型 §14</a> 与 <a href="../stl/concurrency_patterns_guide.html">并发模式</a>；要看完整可编译的 SPSC 环与 ABA 解法，去 <a href="../communication/high_performance.html#s2">高性能通信 §2–§3</a>。</p>
+  <p>实时线程才值得开优先级继承（PI futex，priority inheritance：持锁的低优先级线程被临时抬到等待者的优先级，避免高优先级反被无关任务卡住）。用户态先自旋再睡（adaptive mutex，自适应锁：先空转抢一会儿，抢不到再睡）赌的是临界区极短，只改 P99，不改正确性。TSan 慢 5–15 倍，CI 必开，生产别开。形式化小例子用 cppmem，现场复现用 rr（可回放的调试器）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" role="img" aria-label="无争用时 mutex 在用户态 CAS 成功零次系统调用；争用时失败方 futex_wait 进入内核等待队列，解锁方 futex_wake">
@@ -801,7 +801,7 @@ use(fa.get(), fb.get());</pre>
   </div>
 
   <h3 id="s10-1">10.1 自旋多久才划算</h3>
-  <p>「先自旋一会儿再睡」（adaptive mutex）赌的是<strong>持锁方马上就放</strong>。睡下去再被唤醒是两次系统调用加一次上下文切换，<strong>1–3 μs</strong>；自旋每次 <code>pause</code> 几十纳秒。</p>
+  <p>「先自旋一会儿再睡」（adaptive mutex）赌的是<strong>持锁方马上就放</strong>。睡下去再被唤醒是两次系统调用加一次上下文切换（context switch，内核把 CPU 从一条线程换给另一条线程），<strong>1–3 μs</strong>；自旋每次 <code>pause</code> 几十纳秒。</p>
   <div class="box info">临界区的<strong>剩余</strong>执行时间明显小于一次「睡 + 醒」时，自旋赢；否则既没省下切换，还白占了一个本可以让持锁方更早放锁的核。</div>
   <table>
     <thead><tr><th>情形</th><th>该不该自旋</th><th>原因</th></tr></thead>
@@ -810,7 +810,7 @@ use(fa.get(), fb.get());</pre>
       <tr><td>线程数 &gt; 核数，或容器 CPU 有配额</td><td><strong>不要自旋</strong></td><td>持锁方可能已被调度走，自旋到时间片耗尽它都回不来</td></tr>
     </tbody>
   </table>
-  <p>真要手写，形态是 <strong>test-and-test-and-set</strong>：先用普通 load 自旋（裸 CAS 会让这条 cache line 一直被争抢），看到可能空闲了再发 CAS。但更常见的答案是<strong>不要手写</strong>。</p>
+  <p>真要手写，形态是 <strong>test-and-test-and-set</strong>（先普通读观察锁是否空闲、空闲才发原子交换去抢，减少对那条 cache line 的争抢）：先用普通 load 自旋（裸 CAS 会让这条 cache line 一直被争抢），看到可能空闲了再发 CAS。但更常见的答案是<strong>不要手写</strong>。</p>
 
   <table>
     <thead><tr><th>原语</th><th>保护什么</th><th>典型坑</th></tr></thead>

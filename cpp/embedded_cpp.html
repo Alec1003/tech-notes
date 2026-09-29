@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>资源受限下的 C++ · no-exceptions / no-rtti / freestanding / 无堆 / 代码体积 — Tech Notes</title>
-<meta name="description" content="资源受限下的 C++：把「现代 C++ 的零成本抽象」搬到只有几十 KB Flash、几 KB RAM、无操作系统的 MCU 上： 关掉异常与 RTTI、 不用堆、 编译期算好一切、 抠每一字节代码体积，同时保住类型安全与表达力">
+<meta name="description" content="用大白话讲资源受限下的 C++：MCU（单片机）上为什么要关掉异常和 RTTI、不用堆、把计算挪到编译期做完、怎么抠每一字节 Flash 代码体积，同时保住类型安全。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/embedded_cpp.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/embedded_cpp.html">
 <meta property="og:title" content="资源受限下的 C++ · no-exceptions / no-rtti / freestanding / 无堆 / 代码体积">
-<meta property="og:description" content="资源受限下的 C++：把「现代 C++ 的零成本抽象」搬到只有几十 KB Flash、几 KB RAM、无操作系统的 MCU 上： 关掉异常与 RTTI、 不用堆、 编译期算好一切、 抠每一字节代码体积，同时保住类型安全与表达力">
+<meta property="og:description" content="用大白话讲资源受限下的 C++：MCU（单片机）上为什么要关掉异常和 RTTI、不用堆、把计算挪到编译期做完、怎么抠每一字节 Flash 代码体积，同时保住类型安全。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="资源受限下的 C++ · no-exceptions / no-rtti / freestanding / 无堆 / 代码体积">
-<meta name="twitter:description" content="资源受限下的 C++：把「现代 C++ 的零成本抽象」搬到只有几十 KB Flash、几 KB RAM、无操作系统的 MCU 上： 关掉异常与 RTTI、 不用堆、 编译期算好一切、 抠每一字节代码体积，同时保住类型安全与表达力">
+<meta name="twitter:description" content="用大白话讲资源受限下的 C++：MCU（单片机）上为什么要关掉异常和 RTTI、不用堆、把计算挪到编译期做完、怎么抠每一字节 Flash 代码体积，同时保住类型安全。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -142,7 +142,7 @@
     <section class="chapter" id="ch1">
       <div class="ch-head"><div class="num">01</div><div class="t"><h2>又爱又怕：零成本抽象的边界</h2><div class="sub">哪些抽象真零成本，哪些偷偷收费</div></div></div>
 
-      <p class="lead">"嵌入式只能写 C" 过时了。模板、<code>constexpr</code>、RAII、<code>std::array</code> 真正零运行时开销；异常表、RTTI、隐式 <code>new</code> 则<strong>存在即收费</strong>。几十 KB Flash 上，这几项固定开销会直接压垮固件。用好 C++ 就是分清免费与收费，把收费项按需关掉或替换。</p>
+      <p class="lead">"嵌入式只能写 C" 过时了。模板、<code>constexpr</code>（编译期求值——让计算在编译时就算完，而不是留到 MCU 上运行时再算）、RAII（把资源清理挂到对象析构上——对象出作用域就自动收拾，不用手写 close/free）、<code>std::array</code> 真正零运行时开销；异常表、RTTI（运行时类型信息——程序跑着时还能问"这个对象到底是什么类型"的元数据）、隐式 <code>new</code> 则<strong>存在即收费</strong>。几十 KB Flash（单片机里存代码的存储器，容量只有几十 KB）上，这几项固定开销会直接压垮固件。用好 C++ 就是分清免费与收费，把收费项按需关掉或替换。</p>
 
       <div class="analogy">
         <div class="at">生活类比：自助餐 vs 单点</div>
@@ -208,7 +208,7 @@
   -Os -ffunction-sections -fdata-sections \
   -Wl,--gc-sections ...</code></pre>
 
-      <p><strong>hosted</strong> 有 OS、完整标准库、从 <code>main</code> 正常退出。<strong>freestanding</strong> 只保证不依赖运行时的头（<code>&lt;cstddef&gt;</code> / <code>&lt;array&gt;</code> / <code>&lt;atomic&gt;</code> / <code>&lt;type_traits&gt;</code> / <code>&lt;bit&gt;</code>），启动与退出由你写。MCU 固件就是后者：没有 libc 的 <code>printf</code> 假设，也没有「进程退出再析构」。</p>
+      <p><strong>hosted</strong>（宿主环境——程序住在操作系统这座"酒店"里，有客房服务：完整标准库、libc，跑完 <code>main</code> 还能正常退房退出）。<strong>freestanding</strong>（独立环境——不住酒店，野外扎营：编译器只保证少数不依赖运行时的头可用，比如 <code>&lt;cstddef&gt;</code> / <code>&lt;array&gt;</code> / <code>&lt;atomic&gt;</code> / <code>&lt;type_traits&gt;</code> / <code>&lt;bit&gt;</code>），程序从哪里启动、怎么结束，都得你自己写。MCU 固件就是后者：不能假设 libc 的 <code>printf</code> 一定存在，也没有「进程退出再析构」这回事——固件通常跑到断电为止。</p>
 
       <h3>2.2 每个禁用特性一份对照</h3>
       <table>
@@ -222,7 +222,7 @@
         </tbody>
       </table>
 
-      <div class="box danger">关异常后，本应 throw 的路径走 <code>std::terminate</code>（最终 abort）。<code>vector::at()</code> 越界不再抛而是直接挂——要么彻底不用会抛的 API，要么接受「错误即 fault」并靠看门狗复位。虚函数<strong>不受</strong> <code>-fno-rtti</code> 影响：RTTI 只关 <code>dynamic_cast</code>/<code>typeid</code>，多态照常走 vptr→vtable。</div>
+      <div class="box danger">关异常后，本应 throw 的路径走 <code>std::terminate</code>（最终 abort）。比如 <code>vector::at()</code> 越界不再抛出异常，而是程序直接挂掉——要么彻底不用会抛的 API，要么接受「错误即 fault」并靠看门狗（watchdog——一个倒计时器，程序必须定期"喂狗"续命，卡死了没喂就自动复位芯片）复位。虚函数<strong>不受</strong> <code>-fno-rtti</code> 影响：RTTI 只关 <code>dynamic_cast</code>/<code>typeid</code>，多态照常走 vptr（对象里指向函数表的指针）→vtable（虚函数表——一张函数指针表，虚调用就是查这张表再跳过去）。</div>
 
       <h3>2.3 异常与 RTTI 贵在空间</h3>
       <div class="fig">
@@ -296,14 +296,14 @@
           <text class="ts" x="791" y="122" text-anchor="middle">禁堆则根本不必实现 sbrk</text>
         </svg>
       </div>
-      <p>异常正常路径不花周期，但<strong>启用就要携带整套展开表和 unwinder</strong>——这是空间成本。抛出延迟也不确定，硬实时通常直接 <code>-fno-exceptions</code>。机制见 <a href="./exceptions_guide.html">异常机制</a>。</p>
+      <p>异常在"没抛出"的正常路径上几乎不花 CPU 周期，但只要<strong>启用它，整个二进制就得随身携带整套展开表（<code>.eh_frame</code>——一张"出了异常往哪退"的路线图）和 unwinder（执行退栈动作的代码）</strong>——这就是空间成本。一旦真抛出，退栈延迟还不确定，所以硬实时通常直接 <code>-fno-exceptions</code>。机制见 <a href="./exceptions_guide.html">异常机制</a>。</p>
     </section>
 
     <!-- ═══════════════ CH3 ═══════════════ -->
     <section class="chapter" id="ch3">
       <div class="ch-head"><div class="num">03</div><div class="t"><h2>不用异常，错误怎么传</h2><div class="sub">expected / status code / Result 模式</div></div></div>
 
-      <p>关掉异常后错误随返回值走，控制流可静态分析、可覆盖率统计（这也是 MISRA/AUTOSAR 禁异常、<a href="../embedded-realtime/iso26262_engineering.html">ISO 26262</a> 要确定性的原因）。异常的隐藏跳转和不确定延迟难以论证。</p>
+      <p>关掉异常之后，错误就老老实实跟着返回值走。这样做的好处是：控制流是明写的，工具可以静态分析（不运行程序就能推演出所有执行路径）、可以做覆盖率统计（统计哪些分支真正被测试跑过）。这也是 MISRA/AUTOSAR（汽车/安全关键行业的编码规范）禁异常、<a href="../embedded-realtime/iso26262_engineering.html">ISO 26262</a>（汽车功能安全标准）要求确定性的原因：异常抛出时会在函数间"隐藏跳转"，跳到哪里、跳多快都难以论证。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" role="img" aria-label="禁止异常后用错误码：上面 throw 走 unwind 到 catch，延迟不确定；下面 expected 或 Status 沿返回值返回，调用者必须分支处理">
@@ -331,7 +331,7 @@
 <span class="kw">if</span> (r) <span class="fn">use</span>(*r);
 <span class="kw">else</span> <span class="kw">switch</span> (r.error()) { <span class="cm">/* 分类处理 */</span> }</code></pre>
 
-      <p>C++23 未齐时用 header-only 的 <code>tl::expected</code> 或小型 <code>union</code> Result。它零堆、可平凡拷贝、无异常；<code>[[nodiscard]]</code> 让漏处理变成编译期可见，比 C 的 errno 安全。</p>
+      <p>C++23 还没上齐时，可以用 header-only 的 <code>tl::expected</code>，或者手写一个小型 <code>union</code> Result。这类方案零堆、可平凡拷贝、不用异常；再配上 <code>[[nodiscard]]</code>（标注"这个返回值不许丢"的属性——调用方忘记接住返回值，编译器直接警告），漏处理错误在编译期就看得见，比 C 的 errno（全局错误码，谁忘了查就漏掉）安全。</p>
 
       <table>
         <thead><tr><th>范式</th><th>优点</th><th>注意</th></tr></thead>
@@ -347,7 +347,7 @@
     <section class="chapter" id="ch4">
       <div class="ch-head"><div class="num">04</div><div class="t"><h2>无堆编程：静态分配与对象池</h2><div class="sub">禁 new 之后如何组织内存</div></div></div>
 
-      <p>禁堆：反复 malloc/free 会把空闲区切成不连续小块——总空闲够，也申请不到连续大块（碎片）；分配时间不确定，违背硬实时；失败路径还难写。内存在编译期按最坏情况钉死，比「跑着再找空间」可靠。</p>
+      <p>为什么禁堆（heap——运行时动态分配的内存池，<code>new</code>/<code>malloc</code> 从这里领空间）？因为反复 malloc/free 会把空闲内存切成一堆不连续的小块——好比一间仓库被零散杂物占满，总面积还够，却腾不出一整块连续货架（这就是碎片 fragmentation）；而且每次分配耗时不确定，违背硬实时要求；分配失败后的处理路径也难写。替代思路是：内存在编译期就按最坏情况钉死，比"跑起来再找空间"可靠得多。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="Flash 放 .text 与 .rodata 以及 .data 的装载副本；RAM 放 .data 运行副本、.bss、可选堆、栈从高地址向下长。启动时复制 .data、清零 .bss。堆画成虚线表示可关。">
@@ -373,7 +373,7 @@
         </svg>
       </div>
 
-      <p>有初值的全局在 Flash 里放一份 LMA 副本，启动时拷到 RAM 的 VMA；<code>.bss</code> 只在 RAM 清零，不占 Flash。堆画成虚线：一开就要实现 <code>_sbrk</code>，碎片和不确定延迟立刻回来。</p>
+      <p>有初值的全局变量会在 Flash 里放一份 LMA 副本（装载地址——初值在固件文件里的存放处），上电启动时把它拷到 RAM 的 VMA（运行地址——程序真正读写它的地方）；<code>.bss</code>（无初值的全局区）只占 RAM，启动时统一清零，不占 Flash。图里堆画成虚线，意思是"可选"：一旦打开，就得实现 <code>_sbrk</code>（堆向上扩界时要调用的钩子函数），碎片和不确定延迟立刻全回来。</p>
 
       <h3>4.1 placement new：静态缓冲里就地构造</h3>
       <pre data-lang="cpp"><code><span class="cm">// 编译期定容量，全部落在 .bss / 栈，零堆</span>
@@ -415,8 +415,8 @@
         </svg>
       </div>
 
-      <p>工程用 ETL 的 <code>etl::vector&lt;T,N&gt;</code> / <code>etl::string&lt;N&gt;</code>；标准库 <code>array</code> / <code>span</code> / <code>optional</code> / <code>bitset</code> 也零堆。需要运行时申请/释放（消息、连接）时用<strong>固定大小对象池</strong>：N 槽 + 空闲链表，分配释放 O(1)、不碎片——与 <a href="../perf-debug/low_latency_guide.html">低延迟</a> 的 arena 同手段，动机是实时而不是吞吐。</p>
-      <p>栈从 RAM 顶向下长，和 <code>.bss</code> 抢同一块物理空间；嵌套 ISR 与深递归都吃同一条 MSP（除非用 PSP 拆任务栈）。溢出通常<strong>不报错</strong>，而是静默踩全局变量。链接脚本里的 <code>_Min_Stack_Size</code> 只是占位警告，真正余量要靠最坏调用深度 + 嵌套 IRQ 算出来。</p>
+      <p>工程上可以直接用 ETL（嵌入式模板库，专为无堆环境设计的 STL 替代品）的 <code>etl::vector&lt;T,N&gt;</code> / <code>etl::string&lt;N&gt;</code>；标准库里的 <code>array</code> / <code>span</code> / <code>optional</code> / <code>bitset</code> 也是零堆的。如果确实需要运行时申请/释放（比如消息、连接），就用<strong>固定大小对象池</strong>（object pool——像一排固定格子的储物柜，提前造好 N 个对象，用的时候领一个、还回去再复用）：N 个槽位加一条空闲链表，分配释放都是 O(1)、永不碎片——这与 <a href="../perf-debug/low_latency_guide.html">低延迟</a> 的 arena 同手段，动机是实时性而不是吞吐量。</p>
+      <p>栈（stack——函数调用和局部变量用的内存，从 RAM 顶往下长）会和 <code>.bss</code> 抢同一块物理空间；嵌套 ISR（中断服务程序——硬件中断发生时跳去执行的函数）与深递归都吃同一条 MSP（主栈指针），除非用 PSP（进程栈指针）给任务另拆一条栈。麻烦在于：栈溢出通常<strong>不报错</strong>，而是静默地把全局变量踩坏。链接脚本里的 <code>_Min_Stack_Size</code> 只是个占位警告，真正的余量要靠最坏调用深度加嵌套 IRQ 层数算出来。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 170" style="min-width:720px;height:auto" role="img" aria-label="栈大小预算：RAM 从低到高是 .data、.bss、可选堆、空闲、栈从顶向下。嵌套 ISR 与深递归都吃同一条 MSP，溢出静默踩 .bss。">
@@ -445,7 +445,7 @@
     <section class="chapter" id="ch5">
       <div class="ch-head"><div class="num">05</div><div class="t"><h2>编译期换运行时</h2><div class="sub">constexpr 把工作从 MCU 挪到编译机</div></div></div>
 
-      <p>MCU 周期贵、编译机随便算：能在编译期确定的就别留运行时。查找表、位掩码、状态机跳转表、协议帧长——结果进 Flash 的 <code>.rodata</code>，运行时一次访存。</p>
+      <p>MCU 的每个 CPU 周期都很贵，而编译机（你开发用的电脑）算力随便用：凡是能在编译期确定的，就别留到运行时再算。查找表（lookup table——预先把答案算好列成一张表，运行时直接查，不用现场再算）、位掩码、状态机跳转表、协议帧长——算好的结果直接进 Flash 的 <code>.rodata</code>（只读常量段），运行时只需一次访存。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 180" style="min-width:720px;height:auto" role="img" aria-label="const 和 constexpr 进 .rodata 落在 Flash，运行时一次访存；可变数组进 .bss 占 RAM 还要上电计算。consteval 强制编译期，失败即编译错误。">
@@ -475,7 +475,7 @@
     <section class="chapter" id="ch6">
       <div class="ch-head"><div class="num">06</div><div class="t"><h2>代码体积治理</h2><div class="sub">模板膨胀、vtable、.map 分析</div></div></div>
 
-      <p>Flash 最紧。C++ 用不好会代码膨胀，尤其模板。治理：度量 → 定位 → 削减。</p>
+      <p>Flash 是最紧的资源。C++ 用不好会导致代码膨胀（同样的逻辑被反复生成多份，二进制变大），模板尤其如此。治理三步走：先度量（量出各段多大）→ 再定位（找出谁最肥）→ 最后削减。</p>
 
       <h3>6.1 度量</h3>
       <table>
@@ -497,7 +497,7 @@
         </tbody>
       </table>
 
-      <p>把模板里<strong>不依赖类型参数</strong>的逻辑下沉到非模板基类（thin template / fat base），每个实例化就只剩存取 <code>T</code> 的薄壳。<code>std::span&lt;T&gt;</code> 传缓冲，避免按长度再实例化一份；头文件里少做大批显式实例化。</p>
+      <p>治模板膨胀的核心手法，是把模板里<strong>不依赖类型参数</strong>的逻辑下沉到非模板基类（thin template / fat base——"薄模板、胖基类"：通用逻辑在基类只编译一份，模板壳只负责按类型存取）：这样每个实例化版本就只剩操作 <code>T</code> 的薄壳。用 <code>std::span&lt;T&gt;</code> 传缓冲区，可以避免模板按数组长度再实例化一份；头文件里也要少做大批显式实例化。</p>
 
       <h3>6.3 削减开关</h3>
       <table>
@@ -510,14 +510,14 @@
           <tr><td>newlib-nano；别拖 <code>&lt;iostream&gt;</code></td><td>砍 printf / locale</td></tr>
         </tbody>
       </table>
-      <p>vtable 进 Flash、每对象一个 vptr（通常 4B RAM）。少量多态没问题；给每个小对象都上虚函数会累积。热路径改 CRTP 静态多态，见 <a href="../stl/design_patterns_ppt.html">设计模式</a> / <a href="./object_model.html">对象模型</a>。</p>
+      <p>vtable 本身进 Flash，每个对象要多背一个 vptr（通常 4 字节 RAM）。少量多态没问题；但如果给每个小对象都上虚函数，这些开销会累积起来。热路径可以改用 CRTP（奇异递归模板模式——基类拿派生类当模板参数，编译期就把调用绑定死，不需要查表）做静态多态，见 <a href="../stl/design_patterns_ppt.html">设计模式</a> / <a href="./object_model.html">对象模型</a>。</p>
     </section>
 
     <!-- ═══════════════ CH7 ═══════════════ -->
     <section class="chapter" id="ch7">
       <div class="ch-head"><div class="num">07</div><div class="t"><h2>MCU 上的并发原语</h2><div class="sub">volatile、atomic 与关中断临界区</div></div></div>
 
-      <p>MCU 并发主要是<strong>中断打断主循环</strong>。最常见的错：把 <code>volatile</code> 当原子。</p>
+      <p>MCU 上的并发主要是<strong>中断打断主循环</strong>这一种形态。最常见的错误是：把 <code>volatile</code> 当成原子操作来用——它真不是。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" role="img" aria-label="MMIO 地址窗口：Flash 在 0x08000000，SRAM 在 0x20000000，外设窗口在 0x40000000。GPIO ODR 是总线上的寄存器，必须 volatile 每次真实访存，不是普通变量。">
@@ -559,14 +559,14 @@
           <tr><td>关中断 RAII</td><td>复合状态一致</td><td>临界区一长，中断延迟就上去</td></tr>
         </tbody>
       </table>
-      <p><code>counter++</code> 是读-改-写三步：主循环读到一半被 ISR 改完再写回去，更新就丢。<code>volatile</code> 只保证每步都访存，不保证三步不可分割。单核上 <code>std::atomic</code> 通常无锁、极廉价；一组变量要一起改，用极短的关中断 RAII——和 Linux 驱动 <code>spin_lock_irqsave</code> 同构。内存序见 <a href="./memory_model.html">内存模型</a>。</p>
+      <p><code>counter++</code> 其实是读-改-写三步：主循环刚读完旧值，ISR 插进来把它加一写回，主循环再把自己的旧值写回去——ISR 那次更新就丢了。<code>volatile</code> 只保证每一步都真的读写内存，不保证这三步不可分割。单核上 <code>std::atomic</code> 通常无锁、极廉价；如果一组变量必须一起改，就用极短的关中断 RAII 临界区——和 Linux 驱动里的 <code>spin_lock_irqsave</code> 是同一个思路。内存序见 <a href="./memory_model.html">内存模型</a>。</p>
     </section>
 
     <!-- ═══════════════ CH8 ═══════════════ -->
     <section class="chapter" id="ch8">
       <div class="ch-head"><div class="num">08</div><div class="t"><h2>与 C 驱动 / HAL 互操作</h2><div class="sub">extern "C"、ISR、启动代码里的 C++</div></div></div>
 
-      <p>厂商 HAL 是 C。对接三件事：启动顺序、向量表 C 名字、指定段。</p>
+      <p>厂商 HAL（硬件抽象层——芯片厂提供的 C 语言驱动库）都是 C 写的。C++ 要跟它对接，关键就三件事：启动顺序走对、中断向量表里的符号用 C 的名字、把对象放进指定的内存段。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 160" style="min-width:720px;height:auto" role="img" aria-label="裸机启动：复位后取向量表栈指针，Reset_Handler 复制 .data、清 .bss、调用 __libc_init_array 跑全局构造，最后进 main。漏掉 init_array 则 C++ 全局对象未构造。">
@@ -640,9 +640,9 @@
             CCM(rwx):  ORIGIN=0x10000000, LENGTH=64K }
    SECTIONS { .ccmram (NOLOAD) : { *(.ccmram) } &gt; CCM } */</span></code></pre>
 
-      <p>C++ 会把参数类型编进符号名（name mangling），C 不会。向量表、HAL 回调、链接脚本都按 C 名字找符号，ISR 必须 <code>extern "C"</code>，否则链接到一个不存在的修饰名。头文件用 <code>#ifdef __cplusplus extern "C" {</code> 包一层即可 C/C++ 共用。</p>
-      <p>链接脚本的 <code>MEMORY</code> 声明 Flash / RAM / CCM 窗口；<code>SECTIONS</code> 把输入段钉进去。<code>[[gnu::section(".ccmram")]]</code> 只是给对象贴标签，真正落点仍由脚本决定。DMA 缓冲、高速对象池常要钉到紧耦合 RAM，别让链接器随便丢进主 SRAM。</p>
-      <p>跨 TU 全局构造顺序未定义；少用带副作用的全局，改显式 <code>init()</code>。启动务必跑 <code>__libc_init_array</code>。ISR 只置标志，活丢回主循环或 <a href="../embedded-realtime/landscape.html">RTOS</a> 任务。</p>
+      <p>C++ 编译器会把参数类型编进符号名（name mangling，名字修饰——比如 <code>foo(int)</code> 和 <code>foo(double)</code> 生成两个不同符号，以此支持重载），C 不会。而向量表、HAL 回调、链接脚本都按 C 的名字去找符号，所以 ISR 必须 <code>extern "C"</code>（告诉编译器"这个名字按 C 规则来，别修饰"），否则链接器去找一个根本不存在的修饰名。头文件用 <code>#ifdef __cplusplus extern "C" {</code> 包一层，就能 C/C++ 共用。</p>
+      <p>链接脚本的 <code>MEMORY</code> 段声明有哪些 Flash / RAM / CCM 窗口（地址和大小）；<code>SECTIONS</code> 段把输入内容钉到对应窗口。<code>[[gnu::section(".ccmram")]]</code> 只是给对象贴个标签，真正的落点仍由脚本决定。DMA 缓冲、高速对象池常常需要钉到紧耦合 RAM（CPU 专属的高速小内存），别让链接器随手丢进主 SRAM。</p>
+      <p>跨 TU（翻译单元——每个 .cpp 源文件各算一个）的全局对象，构造顺序是没有定义的；所以少用带副作用的全局，改成显式 <code>init()</code>。启动代码务必跑 <code>__libc_init_array</code>（它会执行所有全局构造函数）。ISR 里只置标志，真正的活丢回主循环或 <a href="../embedded-realtime/landscape.html">RTOS</a> 任务处理。</p>
     </section>
 
     <!-- ═══════════════ CH9 ═══════════════ -->
@@ -656,7 +656,7 @@
           <tr><td>一组传感器</td><td><code>vector&lt;unique_ptr&lt;Sensor&gt;&gt;</code></td><td>已知集合用 <code>tuple</code>/数组折叠；有限类型用 <code>variant</code></td></tr>
         </tbody>
       </table>
-      <p>动态性能压到编译期就压：已知集合用 <code>tuple</code>/数组、有限类型用 <code>variant</code>（无堆多态）、必须真多态才上虚函数或 CRTP。堆和异常是最后手段，不是默认选项。</p>
+      <p>能压到编译期的动态特性就压：集合在编译期已知就用 <code>tuple</code>/数组；类型有限可列举就用 <code>variant</code>（一个能装有限几种类型之一的"带标签联合"，实现无堆多态）；必须真多态才上虚函数或 CRTP。堆和异常是最后手段，不是默认选项。</p>
     </section>
 
     <!-- ═══════════════ CH10 ═══════════════ -->
@@ -724,6 +724,8 @@
       </div>
 
       <div class="intuition">一句话总结：<strong>现代 C++ 完全能上 MCU——把异常/RTTI/堆这几样"收费项"关掉或替换，把计算尽量前移到编译期，用类型系统和 RAII 换来安全，你就得到"和手写 C 一样省，却更安全、更表达"的固件。</strong></div>
+
+      <p>如果你只能带走三条：第一，异常和 RTTI 不是"用了才付钱"，是"装着就占 Flash"，必须显式关；第二，堆换成的不是痛苦而是纪律——固定容器加对象池，内存在编译期就定死；第三，volatile 管的是"每次都真访存"，原子性要靠 atomic 或关中断，两件事别混。</p>
 
       <footer style="text-align:center;padding:40px 20px 20px;color:var(--text-dim);font-size:13px;line-height:2">
         语言深度：<a href="./exceptions_guide.html">🧯 异常机制</a> &nbsp;·&nbsp;

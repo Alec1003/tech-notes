@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE</title>
-<meta name="description" content="C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE：从 四种 cast（static / dynamic / const / reinterpret） 的语义边界，到 隐式转换链 · explicit">
+<meta name="description" content="C++ 类型转换白话指南：讲清 static_cast / dynamic_cast / const_cast / reinterpret_cast 各自该用在哪、C 风格 cast 为什么危险，以及隐式转换链、explicit、std::bit_cast、SFINAE 的门道">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/type_conversions_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/type_conversions_guide.html">
 <meta property="og:title" content="C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE">
-<meta property="og:description" content="C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE：从 四种 cast（static / dynamic / const / reinterpret） 的语义边界，到 隐式转换链 · explicit">
+<meta property="og:description" content="C++ 类型转换白话指南：讲清 static_cast / dynamic_cast / const_cast / reinterpret_cast 各自该用在哪、C 风格 cast 为什么危险，以及隐式转换链、explicit、std::bit_cast、SFINAE 的门道">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE">
-<meta name="twitter:description" content="C++ 类型转换深度指南 — 4 种 cast / 隐式转换 / explicit / SFINAE：从 四种 cast（static / dynamic / const / reinterpret） 的语义边界，到 隐式转换链 · explicit">
+<meta name="twitter:description" content="C++ 类型转换白话指南：讲清 static_cast / dynamic_cast / const_cast / reinterpret_cast 各自该用在哪、C 风格 cast 为什么危险，以及隐式转换链、explicit、std::bit_cast、SFINAE 的门道">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <style>
@@ -230,7 +230,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 20 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -369,7 +369,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">面试出现率 80%</span>
-    <span class="pill green">阅读时长 ~15 min</span>
+    <span class="pill green">阅读时长 ~20 min</span>
     <span class="pill amber">前置 值类别 · 拷贝控制</span>
   </div>
   <div class="meta">
@@ -392,7 +392,7 @@
     </div>
   </div>
 
-  <p>翻车通常不是「不会写 cast」，而是把<strong>改比特</strong>和<strong>改视角</strong>当成一件事，再用 C 风格括号一把梭。</p>
+  <p>翻车通常不是「不会写 cast」（cast——显式改变类型的写法，比如把 <code>double</code> 转成 <code>int</code>），而是把<strong>改比特</strong>和<strong>改视角</strong>当成一件事，再用 C 风格括号一把梭。改比特：值本身被重新计算、内存里的内容真的变了，比如 <code>3.7</code> 变成 <code>3</code>；改视角：内存一个字节都没动，只是换了个角度去「看」它，好比同一栋楼换个门牌号去看，楼还是那栋楼。</p>
 
   <div class="box q">
     <ol>
@@ -412,7 +412,7 @@
   </ul>
 
   <h3>转换的 4 大类</h3>
-  <p>隐式、显式 4 种 cast、用户定义、C++20 <code>bit_cast</code>。用户定义最多一次。</p>
+  <p>转换分四大类：隐式（implicit——你不写任何 cast，编译器自作主张帮你转）、显式的 4 种 cast、用户定义（user-defined——靠构造函数或转换运算符完成的转换）、C++20 的 <code>bit_cast</code>。规则要点：一条隐式转换链里，用户定义转换最多发生一次。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 240" style="min-width:720px;height:auto" role="img" aria-label="值转换改比特本身，如 double 3.7 变成 int 3；类型转换改同一地址上的视角，如 Base 指针看成 Derived 或去掉 const">
@@ -527,7 +527,7 @@
     </div>
   </div>
 
-  <p>C 风格 <code>(T)expr</code> 和函数风格 <code>T(expr)</code> 是<strong>全能 cast</strong>：编译器按固定顺序试五种组合，你在源码里看不出最终用了哪一种。</p>
+  <p>C 风格 <code>(T)expr</code> 和函数风格 <code>T(expr)</code> 是<strong>全能 cast</strong>：编译器会按固定顺序依次尝试五种组合（先 <code>const_cast</code>、再 <code>static_cast</code>、再两者组合、再 <code>reinterpret_cast</code>、最后 <code>reinterpret</code> 加 <code>const_cast</code>），任何一步成功就停。麻烦在于：最终命中哪一种，你在源码里完全看不出来。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="C 风格转换按顺序尝试 const_cast、static_cast、二者组合、reinterpret_cast、再加 const_cast，等于把五种能力叠成一把梭">
@@ -639,7 +639,7 @@
     </div>
   </div>
 
-  <p><strong>编译期</strong>转换，最常用，<strong>不做运行时检查</strong>。下行转错再解引用是 UB。</p>
+  <p><strong>编译期</strong>转换，最常用，<strong>不做运行时检查</strong>——它信你。所谓「下行转错再解引用是 UB」（UB，undefined behavior，未定义行为——标准不再保证会发生什么，程序可能崩、可能静默出错）指的是：把基类指针硬转成派生类指针时，如果对象其实不是那个派生类，转出来的指针是错的，一解引用就出事。</p>
 
   <h3 id="s3-1">3.1 能做的转换</h3>
   <table>
@@ -683,7 +683,7 @@
   </div>
 
   <h3 id="s3-3">3.3 隐藏用法：触发用户定义转换</h3>
-  <p><code>explicit</code> 构造不能写 <code>Money m = 100</code>，但 <code>static_cast&lt;Money&gt;(100)</code> 和直接初始化可以。见 §8，不要在这里再堆一份 <code>Money</code> 类。</p>
+  <p><code>explicit</code> 构造（被标成「不许隐式发生」的构造函数）不能写 <code>Money m = 100</code> 这种隐式初始化，但 <code>static_cast&lt;Money&gt;(100)</code> 和直接初始化可以——这就是它隐藏的用户定义转换入口。见 §8，不要在这里再堆一份 <code>Money</code> 类。</p>
 </section>
 
 <!-- ================================================================
@@ -700,7 +700,7 @@
   </div>
 
   <h3 id="s4-1">4.1 核心语义</h3>
-  <p><strong>运行时</strong>检查的下行 / 交叉转换。失败时：指针 → <code>nullptr</code>；引用 → 抛 <code>std::bad_cast</code>。源类型必须是<strong>多态</strong>（至少一个虚函数），因为要走 RTTI（vtable + <code>type_info</code>）。</p>
+  <p><strong>运行时</strong>检查的下行（基类指针转派生类指针）/ 交叉转换。失败时的表现分两种：转指针 → 返回 <code>nullptr</code>；转引用 → 抛 <code>std::bad_cast</code>（因为引用没有「空」这个状态）。源类型必须是<strong>多态</strong>（至少一个虚函数），因为检查要走 RTTI（Run-Time Type Information，运行时类型信息——对象靠 vptr（指向虚表 vtable 的隐藏指针）找到 <code>type_info</code>，才知道自己「真实是誰」）。</p>
 
   <h3 id="s4-2">4.2 用法</h3>
 <pre><span class="kw">struct</span> <span class="type">Animal</span> { <span class="kw">virtual</span> ~<span class="fn">Animal</span>() = <span class="kw">default</span>; };
@@ -740,7 +740,7 @@
   </div>
 
   <h3 id="s4-3">4.3 性能开销与禁用</h3>
-  <p>开销来自遍历 <code>type_info</code> 图，多继承 / 虚继承更慢。嵌入式和游戏引擎常 <code>-fno-rtti</code> 换二进制体积；代价是这条路径整段不可用。</p>
+  <p>开销来自运行期遍历 <code>type_info</code> 继承图去比对类型，多继承 / 虚继承时路径更长、更慢。嵌入式和游戏引擎常用 <code>-fno-rtti</code> 编译开关把整套 RTTI 关掉换二进制体积；代价是 <code>dynamic_cast</code> 和 <code>typeid</code> 这条路径整段不可用。</p>
 
   <h3 id="s4-4">4.4 dynamic_cast 的替代方案</h3>
   <table>
@@ -787,7 +787,7 @@
     </div>
   </div>
 
-  <p>唯一能<strong>增删 cv</strong>（const / volatile）的 cast。它不授予写权限：只能「承诺对象本来就可写」。</p>
+  <p><code>const_cast</code> 是唯一能<strong>增删 cv</strong>（cv 即 const / volatile 两个类型限定符——「只读」和「别优化掉这次读写」的标记）的 cast。注意它不授予写权限：它只能帮你「承诺这个对象本来就可写」，而不能把真正只读的东西变可写。</p>
 
   <h3 id="s5-1">5.1 唯一安全用法</h3>
   <p>对象本身非 const，只是当前引用带 const：对接保证不写的老 C API，或把 const 重载转调非 const。面试题里有惯用法，正文不重复那份 <code>Container</code>。</p>
@@ -828,7 +828,7 @@
     </div>
   </div>
 
-  <p>「把这段比特<strong>当作</strong>另一种类型看」。不做数值转换，只换类型标签。</p>
+  <p>「把这段比特<strong>当作</strong>另一种类型看」。它不做数值转换，只换类型标签——好比给同一个包裹换了张标签，里面东西一个没动，但你现在按新标签去拆它。</p>
 
   <h3 id="s6-1">6.1 能做的（合法用法）</h3>
   <table>
@@ -840,7 +840,7 @@
   </table>
 
   <h3 id="s6-2">6.2 严格别名规则（Strict Aliasing）⭐</h3>
-  <p>通过类型 A 的指针访问类型 B 是 UB（<code>char</code> / <code>byte</code> 等例外）。float 位型用 <code>memcpy</code> / <code>bit_cast</code>。</p>
+  <p>严格别名规则（Strict Aliasing——编译器假设「一种类型的对象不会被另一种类型的指针访问」，并据此做优化）规定：通过类型 A 的指针访问类型 B 的对象是 UB（<code>char</code> / <code>byte</code> 等少数「什么都能看」的例外类型不算违规）。想安全地看 <code>float</code> 的位型，用 <code>memcpy</code> / <code>bit_cast</code>，不要硬来。</p>
 
   <h3 id="s6-3">6.3 真实工程合法用法</h3>
   <p>出现处必须注释为什么安全。clang-tidy 默认报警。</p>
@@ -868,7 +868,7 @@
   </ol>
 
   <h3 id="s7-2">7.2 整型提升（Integral Promotion）</h3>
-  <p>比 <code>int</code> 窄的整型在算术里先变成 <code>int</code>（或 <code>unsigned int</code>）。提升是通常算术转换的<strong>第一步</strong>。</p>
+  <p>比 <code>int</code> 窄的整型（<code>char</code>、<code>short</code> 这类「装不下一个 int」的小整数）在算术运算里会先变成 <code>int</code>（或 <code>unsigned int</code>），再参与运算。这一步叫整型提升，它是通常算术转换的<strong>第一步</strong>。</p>
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="两个 char 相加时先各自提升为 int 再相加，结果类型是 int 而不是 char，所以 100 加 100 得到 200 不会在 char 上溢出">
       <text class="tb" x="480" y="22" text-anchor="middle">整型提升：窄类型先变成 int，再运算</text>
@@ -912,7 +912,7 @@
   <p><code>int i = -1; unsigned u = 1; i &lt; u</code> 为假：比较前 <code>i</code> 变成 <code>UINT_MAX</code>。</p>
 
   <h3 id="s7-4">7.4 通常算术转换（Usual Arithmetic Conversion）</h3>
-  <p>二元运算先提升，再找共同类型：有 <code>long double</code> / <code>double</code> / <code>float</code> 就跟浮点走；否则同符号取更高 rank，无符号 rank ≥ 有符号则转无符号。</p>
+  <p>二元运算（加减乘除比较这类「两个操作数」的运算）先做提升，再找共同类型：任一方是 <code>long double</code> / <code>double</code> / <code>float</code> 就跟浮点走；否则两边同符号时取 rank（宽度等级）更高的那个，若无符号一方的 rank ≥ 有符号一方，则两边都转成无符号——这一步就是经典的「负数跟无符号比大小反而变大」的来源。</p>
 
   <h3 id="s7-5">7.5 经典陷阱集合</h3>
   <div class="fig">
@@ -951,7 +951,7 @@
     </div>
   </div>
 
-  <p>两种用户定义转换：<b>转换构造</b> <code>T(U)</code>，<b>转换运算符</b> <code>operator U()</code>。隐式序列里用户定义最多<strong>一次</strong>，否则 <code>int→A→B</code> 会组合爆炸。</p>
+  <p>两种用户定义转换：<b>转换构造</b> <code>T(U)</code>（能从 U 构造出 T 的构造函数），<b>转换运算符</b> <code>operator U()</code>（告诉编译器「本类型可以变成 U」的成员函数）。隐式转换序列里用户定义转换最多<strong>一次</strong>——不设这条限制的话，<code>int→A→B</code> 这种接力组合会爆炸，编译器不知道该挑哪条路。</p>
 
   <h3 id="s8-1">8.1 隐式转换链规则</h3>
   <p><code>void f(B); f(42)</code> 若要 <code>int→A→B</code> 两次用户定义，直接失败。写成 <code>f(A(42))</code> 后只剩一次 <code>A→B</code>。</p>
@@ -988,7 +988,7 @@
 <span class="type">Vec</span> v3 = <span class="kw">static_cast</span>&lt;<span class="type">Vec</span>&gt;(100);  <span class="cm">// ✅ 显式触发</span></pre>
 
   <h3 id="s8-3">8.3 explicit 的常见目标</h3>
-  <p>资源类（避免 <code>int→FileHandle</code>）、领域 ID、智能指针。clang-tidy <code>google-explicit-constructor</code> 强制单参构造显式。</p>
+  <p>资源类（避免 <code>int→FileHandle</code> 这种「一个整数悄悄变成文件句柄」的危险隐式转换）、领域 ID、智能指针，是 <code>explicit</code> 最常守护的三类。clang-tidy 的 <code>google-explicit-constructor</code> 检查可以强制单参构造写成显式。</p>
 </section>
 
 <!-- ================================================================
@@ -1008,7 +1008,7 @@
   <p><code>operator double()</code> 让 <code>Money</code> 能隐式进算术；加上 <code>explicit</code> 后只剩 <code>static_cast&lt;double&gt;(m)</code>。长例子与面试重复，不展开。</p>
 
   <h3 id="s9-2">9.2 explicit operator bool — 重要惯用法</h3>
-  <p>C++11 用它取代 safe-bool。<code>if (x)</code> 这种<strong>语境布尔转换</strong>即使 explicit 也走；<code>bool b = x</code> 和 <code>x + 1</code> 被挡住。</p>
+  <p>C++11 用它取代 safe-bool（旧时代为「能判断真假又不许参与算术」而造的各种取巧写法）。<code>if (x)</code> 这种<strong>语境布尔转换</strong>（编译器明确知道「这里要的是 bool」的位置）即使标了 explicit 也会走；而 <code>bool b = x</code> 和 <code>x + 1</code> 这种把对象当普通值用的写法被挡住。</p>
   <div class="fig">
     <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="explicit operator bool 在 if while 感叹号与三元运算语境中生效，赋值给 bool 或参与算术会被拒绝，避免 optional 加一这种代码">
       <text class="tb" x="480" y="22" text-anchor="middle">bool 转换：语境放行，赋值和算术拒绝</text>
@@ -1072,13 +1072,13 @@
     </svg>
     <figcaption>同档多个最佳就是二义，写 cast</figcaption>
   </div>
-  <p><code>'c'</code> 是提升所以打 <code>f(int)</code>；<code>0.5f</code> 提升打 <code>f(double)</code>。面试第 11 题的 <code>0u</code> 不要背成「转 int 更好」。</p>
+  <p>重载决议（overload resolution——多个同名函数候着，编译器按实参类型挑一个最合适的流程）里，转换序列从好到差排成五档：<code>'c'</code> 配 <code>f(int)</code> 走的是提升（第 2 档），所以打得过需要标准转换的对手；<code>0.5f</code> 提升成 double，打 <code>f(double)</code>。面试第 11 题的 <code>0u</code> 不要背成「转 int 更好」——unsigned→int 和 unsigned→double 同属第 3 档，是二义。</p>
 
   <h3 id="s10-2">10.2 经典题</h3>
   <p>见上一张图和 §15。不要在这里再贴一份重载清单。</p>
 
   <h3 id="s10-3">10.3 万能引用劫持</h3>
-  <p><code>template&lt;class T&gt; Person(T&amp;&amp;)</code> 对非 const 左值 <code>short id</code> 是精确匹配；<code>Person(int)</code> 要一次转换。于是劫持拷贝构造 / 整型构造。</p>
+  <p>万能引用（forwarding reference——形如 <code>T&amp;&amp;</code> 的模板参数，左值右值都能接、且接得比谁都精确）劫持：<code>template&lt;class T&gt; Person(T&amp;&amp;)</code> 对非 const 左值 <code>short id</code> 是精确匹配；而 <code>Person(int)</code> 还要一次整型转换。于是这个模板构造函数抢走了本该属于拷贝构造 / 整型构造的调用。</p>
 
   <h3 id="s10-4">10.4 修复万能引用劫持</h3>
   <p><code>requires (!std::integral&lt;decay_t&lt;T&gt;&gt;)</code> 或 <code>enable_if</code> 排除自身类型 / 整型。面试有完整写法。</p>
@@ -1126,7 +1126,7 @@
 <span class="kw">constexpr</span> <span class="kw">float</span> pi = std::<span class="fn">bit_cast</span>&lt;<span class="kw">float</span>&gt;(<span class="num">0x40490FDA</span>);</pre>
 
   <h3 id="s11-3">11.3 约束</h3>
-  <p>两边 <code>sizeof</code> 相同且都是 trivially copyable。它复制出新对象，不是原地改类型。</p>
+  <p>两边 <code>sizeof</code> 相同且都是 trivially copyable（可平凡复制——可以安全地按字节 memcpy 而不出事的类型，没有复杂的构造 / 析构逻辑）。注意它复制出一个新对象，不是在原地改类型。</p>
 
   <h3 id="s11-4">11.4 真实工程用法</h3>
   <p>读 IEEE 位判断 NaN、把 4 字节按端序拼成 <code>uint32_t</code>。C++20 起按位重解释默认 <code>bit_cast</code>；<code>reinterpret_cast</code> 留给 <code>char*</code> 扫字节、函数指针、整数↔指针。</p>
@@ -1146,7 +1146,7 @@
   </div>
 
   <h3 id="s12-1">12.1 什么是 SFINAE</h3>
-  <p><strong>SFINAE</strong> = Substitution Failure Is Not An Error：代入失败不报错，只把该候选移出重载集。这是模板按「有没有这个操作」分流的基础。</p>
+  <p><strong>SFINAE</strong> = Substitution Failure Is Not An Error（代入失败不是错误）：把类型代入模板时如果失败，编译器不报错，只把这个候选函数悄悄移出重载集（overload set——参与角逐的同名函数集合）。这是模板按「有没有这个操作」分流的基础。</p>
 
   <h3 id="s12-2">12.2 经典 SFINAE 写法（C++11/14）</h3>
   <p>返回类型写成 <code>decltype(c.size())</code>：没有 <code>.size()</code> 的类型会替换失败，落到数组重载。代码见面试。</p>
@@ -1158,7 +1158,7 @@
   <p>偏特化 <code>void_t&lt;decltype(declval&lt;T&gt;().size())&gt;</code> 探测成员。Detection Idiom 的骨架。</p>
 
   <h3 id="s12-5">12.5 C++20 concepts —— SFINAE 终结者</h3>
-  <p><code>concept Sizeable = requires(T t) { { t.size() } -&gt; convertible_to&lt;size_t&gt;; }</code>。错误信息是「不满足 Sizeable」，不是八屏替换失败。</p>
+  <p>concept（C++20 的「类型要求清单」，直接声明「T 必须能干什么」）：<code>concept Sizeable = requires(T t) { { t.size() } -&gt; convertible_to&lt;size_t&gt;; }</code>。报错信息是「不满足 Sizeable」这样一句人话，而不是 SFINAE 时代的八屏替换失败。</p>
 
   <h3 id="s12-6">12.6 真实工程：Detection Idiom</h3>
   <p>有 <code>serialize</code> 就调它，否则平凡类型按字节追加，再否则 <code>static_assert</code>。新代码直接 concept，不必再手写 void_t。</p>
@@ -1178,10 +1178,10 @@
   </div>
 
   <h3 id="s13-1">13.1 协议解析 — bit_cast + memcpy 安全字节操作</h3>
-  <p>帧头用 <code>memcpy</code> 进平凡结构，再按端序整理字段。不要 <code>reinterpret_cast&lt;FrameHeader*&gt;(buf)</code>——既踩别名，又可能未构造对象。</p>
+  <p>帧头用 <code>memcpy</code> 拷进平凡结构，再按端序（字节序——多字节数据在内存里「先存低位还是先存高位」的排列方式）整理字段。不要 <code>reinterpret_cast&lt;FrameHeader*&gt;(buf)</code>——既踩严格别名规则，又可能访问一个从未被构造过的对象。</p>
 
   <h3 id="s13-2">13.2 类型安全的 ID 类型族 (newtype 模式)</h3>
-  <p><code>StrongId&lt;UserTag&gt;</code> 与 <code>StrongId&lt;SessionTag&gt;</code> 互转不过编译。<code>explicit</code> 构造挡住 <code>load_user(42)</code>。</p>
+  <p><code>StrongId&lt;UserTag&gt;</code> 与 <code>StrongId&lt;SessionTag&gt;</code> 是两个互不相干的类型，互相赋值过不了编译——这就是 newtype 模式（给裸整数套一层只有名字不同的壳，让编译器替你区分「用户 ID」和「会话 ID」）。<code>explicit</code> 构造同时挡住 <code>load_user(42)</code> 这种裸数字误传。</p>
 
   <h3 id="s13-3">13.3 const 方法 vs 非 const 方法的代码复用</h3>
   <p>const 版实现，非 const 版 <code>const_cast</code> 转调。见 §5.3 / 面试。</p>
@@ -1453,10 +1453,10 @@ T&amp; <span class="f">get</span>() { <span class="k">return</span> <span class=
   </table>
 
   <h3 id="s16-2">16.2 转换序列优先级</h3>
-  <p>Exact → Promotion → Conversion → User-defined（≤1）→ <code>...</code>。详见 §10。</p>
+  <p>Exact（精确匹配，什么都不用转）→ Promotion（提升，窄整型升 int / float 升 double）→ Conversion（标准转换）→ User-defined（用户定义，最多 1 次）→ <code>...</code>（省略号参数，最后兜底）。详见 §10。</p>
 
   <h3 id="s16-3">16.3 explicit 用在哪</h3>
-  <p>单参构造、资源/ID/智能指针、转换运算符；<code>operator bool</code> 几乎总是 explicit。例外（如 <code>string</code> 从 <code>const char*</code>）要写进评审理由。</p>
+  <p>单参构造、资源 / ID / 智能指针、转换运算符都该默认 <code>explicit</code>；<code>operator bool</code> 几乎总是 explicit。确有例外（如 <code>string</code> 从 <code>const char*</code> 隐式构造）要写进评审理由。</p>
 
   <h3 id="s16-4">16.4 编译警告组合（团队规范）</h3>
   <p><code>g++ -Wall -Wextra -Wpedantic -Wsign-compare -Wsign-conversion -Wconversion -Wold-style-cast -Wcast-align -Wcast-qual -Wfloat-equal -Wshadow -Wnon-virtual-dtor -Wstrict-aliasing=2</code></p>

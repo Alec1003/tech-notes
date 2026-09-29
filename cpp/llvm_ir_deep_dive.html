@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LLVM IR 深入 · SSA / Pass / Pipeline / 写自己的 Pass — Tech Notes</title>
-<meta name="description" content="LLVM IR 深入：从 SSA 形式 · IR 三层结构（Module · Function · BasicBlock） 的语法基础，到 Pass / PassManager · 优化管线（-O0 → -O3） 的工作机制，再到 手写一个 LLVM Pass · 插桩">
+<meta name="description" content="看懂 LLVM IR 的白话指南：SSA 为什么每个变量只赋值一次，Module / Function / BasicBlock 如何组织，Pass 与 -O0 到 -O3 优化管线怎么一层层工作，再亲手写一个自己的 Pass。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/llvm_ir_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/llvm_ir_deep_dive.html">
 <meta property="og:title" content="LLVM IR 深入 · SSA / Pass / Pipeline / 写自己的 Pass">
-<meta property="og:description" content="LLVM IR 深入：从 SSA 形式 · IR 三层结构（Module · Function · BasicBlock） 的语法基础，到 Pass / PassManager · 优化管线（-O0 → -O3） 的工作机制，再到 手写一个 LLVM Pass · 插桩">
+<meta property="og:description" content="看懂 LLVM IR 的白话指南：SSA 为什么每个变量只赋值一次，Module / Function / BasicBlock 如何组织，Pass 与 -O0 到 -O3 优化管线怎么一层层工作，再亲手写一个自己的 Pass。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="LLVM IR 深入 · SSA / Pass / Pipeline / 写自己的 Pass">
-<meta name="twitter:description" content="LLVM IR 深入：从 SSA 形式 · IR 三层结构（Module · Function · BasicBlock） 的语法基础，到 Pass / PassManager · 优化管线（-O0 → -O3） 的工作机制，再到 手写一个 LLVM Pass · 插桩">
+<meta name="twitter:description" content="看懂 LLVM IR 的白话指南：SSA 为什么每个变量只赋值一次，Module / Function / BasicBlock 如何组织，Pass 与 -O0 到 -O3 优化管线怎么一层层工作，再亲手写一个自己的 Pass。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/page-shell.css">
@@ -163,7 +163,7 @@
     <header class="hero">
   <div class="badge">LLVM IR · Compiler Internals · 2026</div>
   <h1>LLVM IR 深入</h1>
-  <p class="sub">LLVM IR 是<strong>类汇编 + 强类型 + SSA</strong> 的编译器中枢：Clang 编进来，opt 在上面跑 Pass，后端降到机器码。这篇用图讲清 SSA / phi / alloca / LTO，再用最短 IR 把指令语义钉死——面向静态分析、插桩、自定义优化。</p>
+  <p class="sub">LLVM IR 是<strong>类汇编 + 强类型 + SSA</strong> 的编译器中枢：Clang 编进来，opt 在上面跑 Pass，后端降到机器码。这篇用图讲清 SSA / phi / alloca / LTO，再用最短 IR 把指令语义钉死——面向静态分析、插桩、自定义优化。读完你能顺着一条 C++ 代码从 IR 看到汇编，知道每个优化在中间动了什么手脚。</p>
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">面试出现率 中</span>
@@ -188,10 +188,10 @@
     </div>
   </div>
 
-  <p>LLVM IR 夹在源码和机器码之间：<strong>类汇编、强类型、SSA</strong>。C / Rust / Swift 编到同一 IR；x86 / ARM / RISC-V / WASM / GPU 后端吃同一 IR；AOT、JIT、静态分析、sanitizer 插桩也在这一层做。和 GCC GIMPLE 不同，外部工具能直接 emit / parse / transform。</p>
+  <p>LLVM IR 夹在源码和机器码之间，是一层「中间表示」：<strong>类汇编、强类型、SSA</strong>（Static Single Assignment，静态单赋值——每个变量在整段代码里只许被赋值一次的铁律）。说它类汇编，是因为它一行一条简单指令；说它是中枢，是因为它像铁路的编组站：C / Rust / Swift 这些前端把代码「编进来」，统一卸在这一层，x86 / ARM / RISC-V / WASM / GPU 后端再从这一层「拉走」降成机器码；AOT（Ahead-Of-Time，提前编译）、JIT（运行时即时编译）、静态分析、sanitizer 插桩也都在这一层做。和 GCC GIMPLE 不同，外部工具能直接 emit / parse / transform——IR 是公开接口，谁都能读写。</p>
 
   <h3 id="s1-1">三地址码 + SSA + 强类型：三个选择，各解决一个问题</h3>
-  <p>IR 长成这样不是审美偏好，每一条都在为「优化器好写、好验证」让路。</p>
+  <p>IR 长成这样不是审美偏好，每一条都在为「优化器好写、好验证」让路。逐条看：三地址码让每个中间结果都有名字可查；SSA 让「这个值从哪来」只有一个答案；强类型让非法 IR 当场被抓住。</p>
   <table>
     <thead><tr><th>设计选择</th><th>不这么做会怎样</th><th>买到了什么</th></tr></thead>
     <tbody>
@@ -202,7 +202,7 @@
   </table>
 
   <h3 id="s1-2">为什么会收敛到 IR 这个腰部</h3>
-  <p>M 种语言、N 种架构。如果每个前端各自直奔机器码，「循环不变量外提」这种和语言、架构<strong>都</strong>无关的优化得重复实现 M×N 遍。插一层 IR 之后账变成 M 个前端 + 一套优化器 + N 个后端。</p>
+  <p>M 种语言、N 种架构。如果每个前端各自直奔机器码，「循环不变量外提」这种和语言、架构<strong>都</strong>无关的优化就得重复实现 M×N 遍——好比每家快递公司都自己修一条到每个城市的专线。插一层 IR 之后，账就变成 M 个前端 + 一套优化器 + N 个后端：修一条公共干道，谁都能走。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 268" style="min-width:720px;height:auto" role="img" aria-label="没有中间表示时每个前端要对每个架构写一份代码生成器，路径数是语言数乘架构数；插入 IR 之后变成语言数加架构数">
@@ -248,7 +248,7 @@
     </svg>
   </div>
 
-  <p>数量只是表面，真正的收益在于<strong>谁受益</strong>：Rust 从第一天起就拿到了为 C 打磨十年的 LICM、GVN、向量化，它的编译器团队一行优化代码都没写；反过来一个新架构只要写完后端，立刻拥有全部这些语言。GCC 的 GIMPLE 处在类似位置却没长出这种生态，差别不在技术——它没有稳定的对外格式，而 LLVM 把 IR 当成<strong>公开接口</strong>维护。</p>
+  <p>数量只是表面，真正的收益在于<strong>谁受益</strong>：Rust 从第一天起就拿到了为 C 打磨十年的 LICM、GVN、向量化，它的编译器团队一行优化代码都没写；反过来一个新架构只要写完后端，立刻拥有全部这些语言。GCC 的 GIMPLE 处在类似位置却没长出这种生态，差别不在技术——它没有稳定的对外格式，而 LLVM 把 IR 当成<strong>公开接口</strong>维护：格式有版本承诺，第三方工具敢把整个产品建在上面。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="Clang 前端把源码编成 LLVM IR，opt 在 IR 上跑 Pass，后端再降到机器码">
@@ -291,7 +291,7 @@
     </tbody>
   </table>
 
-  <p>三者是同一份 IR 的三种序列化，<code>llvm-as</code> / <code>llvm-dis</code> 无损互转，语义完全一致，区别只在读写成本和「谁来读」：<code>.ll</code> 是唯一人能读的形态，也是 LLVM 自己的测试格式（<code>llvm/test/</code> 下几万个 <code>.ll</code> 配 FileCheck 就是整个优化器的回归测试网）；<code>.bc</code> 紧凑，而且<strong>有向后兼容承诺</strong>——新版能读旧 bitcode，LTO 时它被塞进 <code>.o</code> 的一个 section（§6.3）；而内存里的 <code>Module</code> 才是 pass 真正操作的对象。</p>
+  <p>三者是同一份 IR 的三种序列化——同一篇文章的精装、平装和电子版，内容一字不差。<code>llvm-as</code> / <code>llvm-dis</code> 无损互转，语义完全一致，区别只在读写成本和「谁来读」：<code>.ll</code> 是唯一人能读的形态，也是 LLVM 自己的测试格式（<code>llvm/test/</code> 下几万个 <code>.ll</code> 配 FileCheck 就是整个优化器的回归测试网）；<code>.bc</code> 紧凑，而且<strong>有向后兼容承诺</strong>——新版能读旧 bitcode，LTO 时它被塞进 <code>.o</code> 的一个 section（§6.3）；而内存里的 <code>Module</code> 才是 pass 真正操作的对象。</p>
   <div class="box tip">推论：生产管线里不要把 IR 落成文本再读回来——那是白付一次 parse，而 bitcode 正是为这个场景存在的。</div>
 </section>
 
@@ -305,7 +305,7 @@
     </div>
   </div>
 
-  <p>嵌套四层：<strong>Module</strong>（一个翻译单元）⊃ <strong>Function</strong> ⊃ <strong>BasicBlock</strong>（直通指令序列，只能末尾跳转）⊃ <strong>Instruction</strong>。</p>
+  <p>IR 从外到内嵌套四层：<strong>Module</strong>（一个翻译单元）⊃ <strong>Function</strong> ⊃ <strong>BasicBlock</strong>（基本块——一段从头到尾顺序执行、中间不拐弯的指令序列，只能从未尾跳转出去）⊃ <strong>Instruction</strong>。好比一本书：Module 是整本书，Function 是一章，BasicBlock 是一个自然段，Instruction 是一个个字。</p>
 
   <h3 id="s2-1">四层容器的边界，以及谁在哪一层干活</h3>
   <table>
@@ -317,10 +317,10 @@
       <tr><td><code>Instruction</code></td><td>一次运算 / 访存 / 跳转</td><td>—</td></tr>
     </tbody>
   </table>
-  <p>层级决定一个 pass 能看多远：Function pass 看不见别的函数，只能保守假设「这个调用可能写了我的内存」——这正是内联能带来那么多<strong>连带</strong>收益的原因（<a href="#s7-1">§7.1</a>）。</p>
+  <p>层级决定一个 pass 能看多远：Function pass 看不见别的函数，所以它只能保守假设「这个调用可能写了我的内存」——一旦 Inliner 把对方函数体搬进来、边界消失，前面那些保守假设全部解除，这正是内联能带来那么多<strong>连带</strong>收益的原因（<a href="#s7-1">§7.1</a>）。</p>
 
   <h3 id="s2-2">最短函数：alloca / store / load / ret</h3>
-  <p>O0 把局部变量放栈上。吐 IR：<code>clang -S -emit-llvm -O0 inc.c -o inc.ll</code>。</p>
+  <p>O0 把局部变量放栈上——也就是不给变量分配寄存器，而是每次用都往内存里存取一遍。吐 IR 的命令：<code>clang -S -emit-llvm -O0 inc.c -o inc.ll</code>。</p>
 <pre><span class="cm">; int inc(int a) { int x = a; x = x + 1; return x; }</span>
 define i32 @inc(i32 %a) {
 entry:
@@ -347,11 +347,11 @@ entry:
   </table>
 
   <h3 id="s2-3">基本块「只能从头进、只能从尾出」</h3>
-  <p>严格说：一个基本块里只有<strong>第一条</strong>指令能是跳转目标，只有<strong>最后一条</strong>能是 terminator（<code>br</code> / <code>switch</code> / <code>ret</code> / <code>invoke</code>）。中间既不许跳进来，也不许跳出去。</p>
-  <p>这条约束把「分析一段代码」拆成两个难度完全不同的问题：<strong>块内</strong>指令严格顺序执行，「这个值在这里是多少」从块顶往下扫一遍就行，完全不用考虑控制流；<strong>块间</strong>的复杂度全被挤到 CFG 这一张图上，变成支配关系、循环识别这些和指令语义无关的纯图算法。允许从块中间跳进来，前一半立刻失效——所以源码里看着像跳进中间的写法（<code>switch</code> 的 fallthrough、<code>&amp;&amp;</code> 的短路）Clang 都会把落点<strong>切成一个新的基本块</strong>。</p>
+  <p>严格说：一个基本块里只有<strong>第一条</strong>指令能是跳转目标，只有<strong>最后一条</strong>能是 terminator（终结指令，即 <code>br</code> / <code>switch</code> / <code>ret</code> / <code>invoke</code> 这类「块到此为止」的指令）。中间既不许跳进来，也不许跳出去。</p>
+  <p>这条约束把「分析一段代码」拆成两个难度完全不同的问题：<strong>块内</strong>指令严格顺序执行，「这个值在这里是多少」从块顶往下扫一遍就行，完全不用考虑控制流；<strong>块间</strong>的复杂度全被挤到 CFG（Control Flow Graph，控制流图——把每个基本块画成一个节点、每条跳转画成一条边的全程序地图）这一张图上，变成支配关系、循环识别这些和指令语义无关的纯图算法。要是允许从块中间跳进来，前一半立刻失效——所以源码里看着像跳进中间的写法（<code>switch</code> 的 fallthrough、<code>&amp;&amp;</code> 的短路）Clang 都会把落点<strong>切成一个新的基本块</strong>。</p>
 
   <h3 id="s2-4"><code>alloca</code> 为什么总在 entry 块</h3>
-  <p><code>alloca</code> <strong>没有</strong>配套的释放指令——它开的栈要等函数返回才随栈帧一起回收，所以这条指令执行几次栈就长几块。放在 entry 块它整个函数只执行一次；一旦落进循环体，转一百万次就是一百万张槽，直接爆栈（C 的 VLA 和 <code>alloca()</code> 在循环里危险就是这个原因）。</p>
+  <p><code>alloca</code> <strong>没有</strong>配套的释放指令——它开的栈要等函数返回才随栈帧一起回收，所以这条指令执行几次栈就长几块。放在 entry 块它整个函数只执行一次，只长一块；一旦落进循环体，转一百万次就是一百万张槽，直接爆栈（C 的 VLA 和 <code>alloca()</code> 在循环里危险就是这个原因）。</p>
   <p>第二个理由才是重点：<strong>mem2reg 只认 entry 块里的静态 <code>alloca</code></strong>。循环里的 <code>alloca</code> 每圈是一张不同的槽，「这个槽里现在是什么值」没有唯一答案，映射不到单个 SSA 名。所以位置放错不只是栈的问题，而是这个变量<strong>永远走内存、进不了寄存器</strong>——代价见 §3.3。</p>
 
   <div class="fig">
@@ -501,7 +501,7 @@ entry:
   </script>
 
   <h3 id="s2-5">CFG（控制流图）</h3>
-  <p>块与块只靠 <code>br</code> / <code>switch</code> / <code>ret</code> 相连。pass 在这张图上算 dominator、循环、可达性。</p>
+  <p>块与块只靠 <code>br</code> / <code>switch</code> / <code>ret</code> 相连。pass 在这张图上算 dominator（支配节点——必经之路：到 B 必须先经过 A，就说 A 支配 B）、循环、可达性。</p>
   <div class="fig">
     <svg viewBox="0 0 720 300" style="min-width:560px;height:auto" role="img" aria-label="CFG：entry 做比较后分支到 T 或 F，再汇合到 merge 返回">
       <defs>
@@ -539,7 +539,7 @@ entry:
     </div>
   </div>
 
-  <div class="def"><strong>SSA</strong>：每个名字只赋值一次。def-use 变成一张图上的唯一边，GVN / LICM / DCE 都靠这个前提。源码里「同一个 x 写两次」，IR 里必须换成 <code>%1</code>、<code>%2</code>。</div>
+  <div class="def"><strong>SSA</strong>：每个名字只赋值一次。def-use（定义到使用）从此变成一张图上的唯一边，GVN / LICM / DCE 都靠这个前提才能工作。源码里「同一个 x 写两次」，IR 里必须换成 <code>%1</code>、<code>%2</code>——每次赋值都发一个新名字，旧名字的值永不改变。</div>
   <div class="analogy">SSA 像快递单号——每个包裹只贴一次。phi 是分拣口：看货从哪条传送带来，就取那条边上的值。</div>
 
   <div class="fig">
@@ -568,12 +568,12 @@ entry:
 ret i32 %2</pre>
 
   <h3 id="s3-1">SSA 真正买到了什么：use-def 链直接可查</h3>
-  <p>在可重复赋值的 IR 上，问「这条 <code>add</code> 的第一个操作数是哪来的」<strong>没有唯一答案</strong>：得沿所有可能的控制流路径往回找最近的那次赋值，有分支时还要在汇合点把多个答案合起来——这套东西叫数据流分析，每个优化都得自己做一遍。</p>
-  <p>SSA 把这个问题整个删掉：<strong>名字只被定义一次，所以「定义在哪」是名字自带的属性。</strong>在 LLVM 的对象模型里这就是 <code>Value</code> 与 <code>User</code>——一条 <code>Instruction</code> 既是 <code>Value</code>（它产生的结果）又是 <code>User</code>（它用到的操作数），「谁用了我」和「我用了谁」都是 O(1) 查询。几个经典优化因此塌成几行：DCE 是「没有 use 且无副作用就删」，常量传播是「def 是常量就 <code>replaceAllUsesWith</code>」，GVN 是「运算和操作数名字都相同 → 结果必然相同」。</p>
-  <p>最后一条是关键：在可重复赋值的 IR 上，<code>x + y</code> 出现两次<strong>不代表结果一样</strong>。SSA 把「语法相同」升级成「语义相同」——这是 GVN 能存在的全部前提。</p>
+  <p>在可重复赋值的 IR 上，问「这条 <code>add</code> 的第一个操作数是哪来的」<strong>没有唯一答案</strong>：得沿所有可能的控制流路径往回找最近的那次赋值，有分支时还要在汇合点把多个答案合起来——这套推算叫数据流分析，每个优化都得自己从头做一遍。</p>
+  <p>SSA 把这个问题整个删掉：<strong>名字只被定义一次，所以「定义在哪」是名字自带的属性。</strong>在 LLVM 的对象模型里这就是 <code>Value</code> 与 <code>User</code>——一条 <code>Instruction</code> 既是 <code>Value</code>（它产生的结果）又是 <code>User</code>（它用到的操作数），于是「谁用了我」和「我用了谁」都是 O(1) 查询。几个经典优化因此塌成几行：DCE（死代码消除）是「没有 use 且无副作用就删」，常量传播是「def 是常量就 <code>replaceAllUsesWith</code>」，GVN 是「运算和操作数名字都相同 → 结果必然相同」。</p>
+  <p>最后一条是关键：在可重复赋值的 IR 上，<code>x + y</code> 出现两次<strong>不代表结果一样</strong>——两次之间 x 可能被改过。SSA 把「语法相同」升级成「语义相同」——名字相同就意味着值相同——这是 GVN 能存在的全部前提。</p>
 
   <h3 id="s3-2">汇合点：phi 为什么必须在块顶</h3>
-  <p>两条前驱都给 <code>x</code> 赋值时，merge 块顶用 phi：<strong>按进来的那条边</strong>选值。phi 只能出现在块顶。</p>
+  <p>两条前驱都给 <code>x</code> 赋值时，merge 块顶用 phi（φ 节点——一个「按来路取值」的选择器）：<strong>按进来的那条边</strong>选值，从 T 边进来就取 T 留下的值，从 F 边进来就取 F 的。phi 只能出现在块顶。</p>
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="phi 节点在汇合块顶部，按前驱边从 T 取 1、从 F 取 2">
       <defs>
@@ -604,13 +604,13 @@ M:
   ret i32 %x</pre>
 
   <p><code>phi</code> 长得像指令，执行模型却不一样。<strong>它必须在块顶</strong>，因为它的含义是「这个块刚被进入时这个值是多少」，依赖的信息是「从哪条边进来的」——而这个信息在块里执行了任何一条真正的指令之后就不再有意义，放到块中间语义无法定义。<strong>同一块顶的所有 <code>phi</code> 还是并行求值的</strong>：循环里交换两个变量（<code>t=a; a=b; b=t;</code>）在 mem2reg 之后是两个互相引用的 <code>phi</code>，按顺序一条条算的话，第二条会读到第一条刚更新的值，两个变量最后变成同一个。</p>
-  <p><strong>它也不是真正的指令</strong>——没有哪个 CPU 有 phi。寄存器分配前的 PHI elimination 把每个 <code>phi</code> 拆成若干条 <code>mov</code>、插到各前驱块的末尾，上面那个并行赋值的麻烦在这一步原样重现（lost-copy / swap problem）。</p>
+  <p><strong>它也不是真正的指令</strong>——没有哪个 CPU 有 phi。寄存器分配前的 PHI elimination（phi 消除——把每个 phi 拆成若干条 <code>mov</code>、插到各前驱块的末尾）负责把它落地，上面那个并行赋值的麻烦在这一步原样重现（lost-copy / swap problem）。</p>
 
-  <p>SSA 只管<strong>函数内</strong>的寄存器值。逃逸对象、global、heap 仍是内存；跨函数要 IPA / LTO。</p>
+  <p>SSA 只管<strong>函数内</strong>的寄存器值。逃逸对象、global、heap 仍是内存；跨函数要 IPA（跨过程分析）/ LTO。</p>
 
   <h3 id="s3-3">mem2reg：几乎所有后续优化的前提</h3>
-  <p>如果整个 LLVM 只让你记住一个 pass，就是它。<code>-O0</code> 的 IR 里每个局部变量是一个 <code>alloca</code> 加一堆 <code>store</code> / <code>load</code>，而<strong>几乎所有优化都只看 SSA 名之间的关系，看不进内存</strong>。</p>
-  <p>为什么看不进：<code>load i32, ptr %x</code> 的结果取决于「上一次写 <code>%x</code> 写进了什么」，这要靠别名分析回答，而它只能保守——中间只要有一次看不见函数体的 <code>call</code>，就必须假设 <code>%x</code> 已经被改了。于是 GVN 不敢合并两个 <code>load</code>，LICM 不敢外提循环里的 <code>load</code>，常量传播不敢把 <code>store</code> 的值代入后面的 <code>load</code>。mem2reg 把这些栈槽整个删掉、改成 SSA 名，并在需要汇合处补上 <code>phi</code>——每一条「不敢」于是都变成「显然」，因为不再有内存，只剩名字。</p>
+  <p>如果整个 LLVM 只让你记住一个 pass，就是它。<code>-O0</code> 的 IR 里每个局部变量是一个 <code>alloca</code> 加一堆 <code>store</code> / <code>load</code>，而<strong>几乎所有优化都只看 SSA 名之间的关系，看不进内存</strong>——内存里存了什么，它们一律不管。</p>
+  <p>为什么看不进：<code>load i32, ptr %x</code> 的结果取决于「上一次写 <code>%x</code> 写进了什么」，这要靠别名分析（alias analysis——判断两个指针会不会指向同一块内存）回答，而它只能保守——中间只要有一次看不见函数体的 <code>call</code>，就必须假设 <code>%x</code> 已经被改了。于是 GVN 不敢合并两个 <code>load</code>，LICM 不敢外提循环里的 <code>load</code>，常量传播不敢把 <code>store</code> 的值代入后面的 <code>load</code>。mem2reg 把这些栈槽整个删掉、改成 SSA 名，并在需要汇合处补上 <code>phi</code>——每一条「不敢」于是都变成「显然」，因为不再有内存，只剩名字。</p>
   <p><strong>这解释了 <code>-O0</code> 和 <code>-O1</code> 之间那道台阶为什么这么陡。</strong>常见说法是「<code>-O1</code> 打开了几十个优化」，真实情况更集中：<code>-O0</code> 是唯一一个连 mem2reg 都不跑的档位，后面那几十个优化<strong>全部空转</strong>。经验上 <code>-O0</code> → <code>-O1</code> 常见 3–10 倍差距，<code>-O1</code> → <code>-O3</code> 往往只有几十个百分点——第一级解决的是「优化器能不能开始工作」。</p>
   <div class="box danger"><strong>别拿 <code>-O0</code> 的数字当性能基准。</strong>它不是「没优化的版本」，而是一个连虚拟寄存器都基本不用的形态——用它测出来的热点分布经常是假的。</div>
   <div class="box tip"><strong>别让局部变量的地址逃逸。</strong>一旦对局部变量取地址、传给一个编译器看不见定义的函数（跨 TU 的函数、虚函数、<code>std::function</code>），它就被钉在栈上，本节列出的优化全部失效。这就是「<code>noinline</code> 的 getter」「跨 TU 的引用传参」在热点上产生可测量开销的机制层原因，也是 LTO 能提速的同一个理由。</div>
@@ -626,7 +626,7 @@ M:
     </div>
   </div>
 
-  <p>每个 value 都有类型，对不上就是非法 IR。整数无符号性不在类型上，而在 <code>add</code> vs <code>add nsw</code> / <code>udiv</code> vs <code>sdiv</code> 这些算子上。</p>
+  <p>每个 value 都有类型，对不上就是非法 IR——非法的 IR 会被 Verifier（校验器）直接拒绝。整数无符号性不在类型上，而在 <code>add</code> vs <code>add nsw</code> / <code>udiv</code> vs <code>sdiv</code> 这些算子上。</p>
 
   <table>
     <thead><tr><th>类型</th><th>含义</th></tr></thead>
@@ -641,12 +641,12 @@ M:
   </table>
 
   <h3 id="s4-1">为什么 IR 要强类型，以及符号性去哪了</h3>
-  <p>一个只记 bit 宽度的 IR（多数字节码就是这样）也能跑，但它让「这段 IR 合法吗」变成没法回答的问题。强类型换来的是：<strong>Verifier 能抓住改坏 IR 的那个 pass</strong>——类型不匹配、terminator 不在块尾、<code>phi</code> 的前驱个数和 CFG 对不上，都能在线性时间里查出来。开发时加 <code>-verify-each</code>，坏在哪一步立刻定位；否则表现是「后端某处崩溃或默默生成错码」，现场离出错点隔着几十个 pass。</p>
+  <p>一个只记 bit 宽度的 IR（多数字节码就是这样）也能跑，但它让「这段 IR 合法吗」变成没法回答的问题。强类型换来的是：<strong>Verifier 能抓住改坏 IR 的那个 pass</strong>——类型不匹配、terminator 不在块尾、<code>phi</code> 的前驱个数和 CFG 对不上，都能在线性时间里查出来。开发时加 <code>-verify-each</code>，坏在哪一步立刻定位；否则表现是「后端某处崩溃或默默生成错码」，现场离出错点隔着几十个 pass，找起来像在铁轨尽头找那根松掉的道钉。</p>
   <p>有意思的是<strong>符号性不在类型里</strong>：<code>i32</code> 既不是 signed 也不是 unsigned。原因很实在——二进制补码下加、减、乘的位模式与符号<em>无关</em>，只有除法、右移、比较、扩展需要区分，于是区分放到了指令上（<code>sdiv</code>/<code>udiv</code>、<code>ashr</code>/<code>lshr</code>、<code>icmp slt</code>/<code>icmp ult</code>），<strong>恰好落在真正需要区分的地方</strong>。</p>
-  <p>同一条思路解释了「有符号溢出为什么是 UB」：它在 IR 层是 <code>add nsw</code>，而 <code>nsw</code> 是前端给优化器的一句保证——真溢出时结果是 poison，于是「把 <code>i32</code> 归纳变量提升成 <code>i64</code> 省掉每圈一次符号扩展」这类推导才成立。</p>
+  <p>同一条思路解释了「有符号溢出为什么是 UB」：它在 IR 层是 <code>add nsw</code>，而 <code>nsw</code> 是前端给优化器的一句保证——真溢出时结果是 poison，于是「把 <code>i32</code> 归纳变量提升成 <code>i64</code> 省掉每圈一次符号扩展」这类推导才成立。相当于前端签字画押「不会溢出」，优化器才敢据此变形代码。</p>
 
   <h3 id="s4-2">opaque pointer：LLVM 15 起指针不再带指向类型</h3>
-  <p>LLVM 15 之前，指针类型自己记着指向什么：<code>i8*</code>、<code>i32*</code>、<code>%struct.Foo*</code>。15 起全部塌成一个 <code>ptr</code>，pointee 类型只写在真正访问它的指令上。这是近十年 IR 最大的一次变化，动机可以压缩成一句：<strong>指向类型对优化毫无用处，却制造了海量的 <code>bitcast</code>。</strong></p>
+  <p>LLVM 15 之前，指针类型自己记着指向什么：<code>i8*</code>、<code>i32*</code>、<code>%struct.Foo*</code>。15 起全部塌成一个 <code>ptr</code>（opaque pointer，不透明指针——光看指针本身看不出它指向什么类型），pointee 类型只写在真正访问它的指令上。这是近十年 IR 最大的一次变化，动机可以压缩成一句：<strong>指向类型对优化毫无用处，却制造了海量的 <code>bitcast</code>。</strong></p>
   <p>优化器真正关心的是「这次访问读写了几个字节、对齐多少、和另一次访问会不会重叠」，这些信息全在 <code>load</code> / <code>store</code> / <code>getelementptr</code> 上，从来不在指针类型里。而 C 和 C++ 本来就允许同一块内存按不同类型访问（<code>malloc</code> 的返回值、<code>memcpy</code> 的 <code>void*</code>、union、placement new、基类与派生类指针互转），每次转换在旧 IR 里都要插一条 <code>bitcast</code>——这些指令<strong>语义上什么都不做</strong>，却要被搬运、被反复消除、被每一处模式匹配跳过（于是 pass 里到处是 <code>stripPointerCasts()</code>，漏一处优化就静默失效）。</p>
   <p>源码层没有变化，但看到 <code>i32*</code> 加一堆 <code>bitcast</code> 的 IR 片段，就知道那是 LLVM 14 及更早的旧教程。</p>
 
@@ -700,7 +700,7 @@ M:
     </div>
   </div>
 
-  <p>指令旁边可以挂 metadata；函数/参数/返回值可以挂 attribute。两者都是给优化器的<strong>保证</strong>，写错等于撒谎，会生成错码。</p>
+  <p>指令旁边可以挂 metadata（元数据——附在指令上的小标签，不改变程序行为，只给工具传信息）；函数/参数/返回值可以挂 attribute（属性——写在函数签名上的承诺，比如「不抛异常」「不写内存」）。两者都是给优化器的<strong>保证</strong>，写错等于撒谎，会生成错码。</p>
 
   <h3 id="s5-1"><code>!dbg</code>：行号能活下来，变量常常活不下来</h3>
   <p><code>!dbg</code> 挂在指令上，指向一条 <code>DILocation</code>（文件、行、列、内联链）。<strong>行号能活下来</strong>，因为它只是个标签，指令搬到哪儿它跟到哪儿——内联之后 <code>DILocation</code> 还会带一条链（「这行在 <code>foo</code> 里，而 <code>foo</code> 被内联到 <code>bar</code> 的第 42 行」），调试器靠它重建出<em>已经不存在</em>的栈帧。</p>
@@ -716,7 +716,7 @@ M:
   <p><code>-O2 -g</code> 下调试体验差，根因不是「调试信息丢了」，而是<strong>被问的那个变量在那一刻真的不存在</strong>——这也是 <code>-Og</code> 的存在理由：只开不破坏变量可见性的优化。</p>
 
   <h3 id="s5-2"><code>!tbaa</code>：严格别名规则就是这样传给优化器的</h3>
-  <p>C++ 的严格别名规则——「不得通过与对象动态类型不兼容的左值访问该对象」——在编译器内部的落地形态，就是每条访存指令上挂的 <code>!tbaa</code>。</p>
+  <p>C++ 的严格别名规则——「不得通过与对象动态类型不兼容的左值访问该对象」——在编译器内部的落地形态，就是每条访存指令上挂的 <code>!tbaa</code>（TBAA，Type-Based Alias Analysis，基于类型的别名分析——用「类型不同」来证明两处访问不重叠）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 240" style="min-width:720px;height:auto" role="img" aria-label="load 挂 tbaa 元数据，别名分析按类型树判断两处访问是否可能重叠">
@@ -736,7 +736,7 @@ M:
     </svg>
   </div>
 
-  <p>Clang 给每条 <code>load</code> / <code>store</code> 标注「这次访问的是什么类型」，类型组织成上图那棵树。判据是：<strong>两个访问的节点不在同一条祖先链上，就断定它们永不重叠</strong>（<code>char</code> 是所有类型的祖先，所以 <code>char*</code> 能别名一切）。</p>
+  <p>Clang 给每条 <code>load</code> / <code>store</code> 标注「这次访问的是什么类型」，类型组织成上图那棵树。判据是：<strong>两个访问的节点不在同一条祖先链上，就断定它们永不重叠</strong>（<code>char</code> 是所有类型的祖先，所以 <code>char*</code> 能别名一切）。相当于按「姓什么」排除嫌疑：一个姓 int、一个姓 float，就认定不是同一家人。</p>
 
   <div class="vs">
     <div class="bad">
@@ -827,7 +827,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
     </div>
   </div>
 
-  <p>每个 pass 只干一件事。<code>-O2</code> 大约 150 个，<code>-O3</code> 再多二三十。Transform 改 IR，Analysis 只产信息（DominatorTree / LoopInfo / AA）；LICM 这类 transform 靠后面那批分析。</p>
+  <p>每个 pass 只干一件事，像流水线上每个工人只负责一道工序。<code>-O2</code> 大约 150 个，<code>-O3</code> 再多二三十。Transform 改 IR，Analysis 只产信息不改 IR（DominatorTree / LoopInfo / AA）；LICM 这类 transform 靠后面那批分析结果喂饭。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 240" style="min-width:720px;height:auto" role="img" aria-label="NewPM 嵌套调度：最外 Module，再 CGSCC，再 Function，最内 Loop">
@@ -842,10 +842,10 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
       <text class="ty" x="356" y="173" text-anchor="middle">Loop · LICM / Unroll / Vectorize</text>
     </svg>
   </div>
-  <p>LLVM 13+ 默认 NewPM（CRTP，比 legacy 虚调用快一截，支持嵌套管线）。自己写 pass 就继承 <code>PassInfoMixin&lt;T&gt;</code> 实现 <code>run()</code>。和 legacy PM 的区别一句话：legacy 靠虚函数加全局注册表、pass 之间用字符串声明依赖，NewPM 是模板加显式嵌套的四层 PassManager，分析结果由 <code>AnalysisManager</code> 缓存，整条管线还能用一个字符串描述（<code>-passes='default&lt;O2&gt;'</code>）。</p>
+  <p>LLVM 13+ 默认 NewPM（New Pass Manager，新 Pass 管理器——CRTP 实现，比 legacy 虚调用快一截，支持嵌套管线）。自己写 pass 就继承 <code>PassInfoMixin&lt;T&gt;</code> 实现 <code>run()</code>。和 legacy PM 的区别一句话：legacy 靠虚函数加全局注册表、pass 之间用字符串声明依赖，NewPM 是模板加显式嵌套的四层 PassManager，分析结果由 <code>AnalysisManager</code> 缓存，整条管线还能用一个字符串描述（<code>-passes='default&lt;O2&gt;'</code>）。</p>
 
   <h3 id="s6-1">analysis 与 transform：分工在「有没有结果要被别人拿走」</h3>
-  <p><strong>Analysis pass</strong> 不改 IR，产出一个可查询的对象：<code>DominatorTree</code>（谁支配谁）、<code>LoopInfo</code>（循环嵌套结构）、<code>AAResults</code>（两个指针会不会重叠）、<code>ScalarEvolution</code>（循环里的表达式关于迭代变量的闭式），结果由 <code>AnalysisManager</code> 惰性缓存。<strong>Transform pass</strong> 改 IR，然后返回一个 <code>PreservedAnalyses</code>，声明「我改完之后哪些分析还有效」。</p>
+  <p><strong>Analysis pass</strong> 不改 IR，只产出一个可查询的对象：<code>DominatorTree</code>（谁支配谁）、<code>LoopInfo</code>（循环嵌套结构）、<code>AAResults</code>（两个指针会不会重叠）、<code>ScalarEvolution</code>（循环里的表达式关于迭代变量的闭式），结果由 <code>AnalysisManager</code> 惰性缓存——谁要谁取，不重复算。<strong>Transform pass</strong> 改 IR，然后返回一个 <code>PreservedAnalyses</code>，声明「我改完之后哪些分析还有效」。</p>
   <p>这个声明是整套机制的关键，也是写 pass 最容易出错的地方：改了 CFG 却声称保留了 <code>DominatorTree</code>，后面的 pass 就会拿着一棵过期的支配树做决策。所以拿不准就返回 <code>PreservedAnalyses::none()</code>——代价是重算，不是错。</p>
 
   <h3 id="s6-2">为什么同一个 pass 要跑很多遍</h3>
@@ -853,7 +853,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
   <p>理想的优化器应该「跑到不动点为止」，现实做不到：这个过程不保证收敛，而编译时间有预算。LLVM 的做法是<strong>手排一个固定顺序、在关键位置重复几个便宜且收益高的 pass</strong>，然后接受「有些机会就是被错过了」——这也解释了为什么同一份源码在不同 LLVM 版本上性能会有差异。</p>
 
   <h3 id="s6-3">LTO：把链接也搬到 IR 层</h3>
-  <p>普通编译在 <code>.o</code> 这一层链接，机器码已经定型，跨 <code>.cpp</code> 的内联和 DCE 无从谈起。LTO 把每个 TU 的 bitcode 塞进 <code>.o</code>，链接器认出来、合回 IR 再优化一轮——这也是 §3.3 那条「别让地址逃逸」的救济手段。</p>
+  <p>普通编译在 <code>.o</code> 这一层链接，机器码已经定型，跨 <code>.cpp</code> 的内联和 DCE 无从谈起。LTO（Link Time Optimization，链接期优化）把每个 TU 的 bitcode 塞进 <code>.o</code>，链接器认出来、合回 IR 再优化一轮——这也是 §3.3 那条「别让地址逃逸」的救济手段。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="LTO 在链接期把多个翻译单元的 bitcode 合成一个 Module，再跑跨模块 opt，最后才降到机器码">
@@ -928,7 +928,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
 
   <h3 id="s7-1">7.1 Inliner — 函数体替代 call</h3>
   <p><strong>源码层对应</strong>：所有小函数——getter、<code>operator[]</code>、lambda、模板里的一行辅助函数、<code>&lt;algorithm&gt;</code> 里几乎每个算法的内层。</p>
-  <p>它本身只省下一条 <code>call</code>，真正的收益是<strong>把两个函数的 IR 放进同一个作用域</strong>：实参的常量传得进去、返回值的常量传得出来、两边的访存能一起做别名分析。所以它是<strong>优化的使能器</strong>，加速多半要记在它后面那几十个 pass 的账上。决策靠 cost（被调函数指令数，可简化的部分打折）与 threshold（<code>-O2</code> 基线 225）比大小。</p>
+  <p>Inliner（内联器）把「跳到别处执行再跳回来」改成「直接把对方函数体抄进来」。它本身只省下一条 <code>call</code>，真正的收益是<strong>把两个函数的 IR 放进同一个作用域</strong>：实参的常量传得进去、返回值的常量传得出来、两边的访存能一起做别名分析。所以它是<strong>优化的使能器</strong>，加速多半要记在它后面那几十个 pass 的账上。决策靠 cost（被调函数指令数，可简化的部分打折）与 threshold（<code>-O2</code> 基线 225）比大小：成本低过门槛才内联。</p>
   <p><strong><code>inline</code> 关键字和内联基本无关</strong>，它管的是链接。真正起作用的是 <code>always_inline</code>（<strong>绕过 cost 模型</strong>，套在大函数上会让体积膨胀、I-cache 变差）、<code>noinline</code>（把冷路径隔出去，让热函数更容易被调用者内联），以及 <strong>LTO</strong>——别的 <code>.cpp</code> 里的函数当前 <code>Module</code> 没有它的 IR，内联无从谈起。</p>
 
   <h3 id="s7-2">7.2 mem2reg — 栈槽提升到 SSA</h3>
@@ -949,23 +949,23 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
 %c = mul i32 %a, %a      <span class="cm">; %b 消失</span></pre>
     </div>
   </div>
-  <p><strong>源码层对应</strong>：重复计算——同一表达式在相邻几行写了两遍、<code>v.size()</code> 在循环条件和循环体里各调一次、同一个数组元素被 <code>load</code> 两次。配上 <code>MemorySSA</code> 它还能消冗余的 <code>load</code>，但成败取决于别名分析：中间夹一个看不见函数体的 <code>call</code>，这次 load 就消不掉。</p>
+  <p><strong>源码层对应</strong>：重复计算——同一表达式在相邻几行写了两遍、<code>v.size()</code> 在循环条件和循环体里各调一次、同一个数组元素被 <code>load</code> 两次。GVN（Global Value Numbering，全局值编号——给每个等价表达式发同一个编号，编号相同就只算一次）配上 <code>MemorySSA</code> 还能消冗余的 <code>load</code>，但成败取决于别名分析：中间夹一个看不见函数体的 <code>call</code>，这次 load 就消不掉。</p>
   <div class="box tip"><strong>所以「手工把重复表达式提到临时变量」多半是白做的</strong>（GVN 做得比你全）。但「把 <code>load</code> 提到循环外」经常真有用，因为你知道那块内存没人改、而编译器不知道。</div>
 
   <h3 id="s7-4">7.4 LICM — 循环不变量外提</h3>
-  <p><strong>源码层对应</strong>：循环里每圈算出同一结果的东西——<code>a[i] = b[i] * scale * 2</code> 里的 <code>scale * 2</code>、写在循环条件里的 <code>strlen(s)</code>、循环体里的 <code>obj.config().timeout()</code>。</p>
-  <p>外提除了要求「值不变」，还要求<strong>外提本身安全</strong>：被提的指令若可能出错（除法、<code>load</code>）而循环可能一次都不执行，外提就等于凭空执行了一条本不会执行的指令。</p>
+  <p><strong>源码层对应</strong>：循环里每圈算出同一结果的东西——<code>a[i] = b[i] * scale * 2</code> 里的 <code>scale * 2</code>、写在循环条件里的 <code>strlen(s)</code>、循环体里的 <code>obj.config().timeout()</code>。LICM（Loop Invariant Code Motion，循环不变量外提）把这些「每圈答案都一样」的计算搬到循环外面，只算一次。</p>
+  <p>外提除了要求「值不变」，还要求<strong>外提本身安全</strong>：被提的指令若可能出错（除法、<code>load</code>）而循环可能一次都不执行，外提就等于凭空执行了一条本不会执行的指令——好比把只在开门后才做的检查，提前到了还没开门的时候。</p>
 
   <h3 id="s7-5">7.5 SROA — 聚合拆标量</h3>
-  <p><strong>源码层对应</strong>：小结构体传参与返回、<code>std::pair</code> / <code>std::optional</code>、聚合初始化的临时对象、按值捕获的 lambda 闭包。它先按字段把整块内存切成独立的 <code>alloca</code>，再各自交给 mem2reg。</p>
-  <p><strong>这是 C++ 零成本抽象在 IR 层的兑现点。</strong><code>std::optional&lt;int&gt;</code> 在内存里是 4 字节加一个标志位加 padding，SROA 之后就是一个 <code>i32</code> 加一个 <code>i1</code>，和手写「一个 int 加一个 bool」完全一样；返回小结构体、<code>string_view</code> 按值传也都不比传两个裸标量贵。失效条件和 mem2reg 一样：地址逃逸，或整块 <code>memcpy</code>。</p>
+  <p><strong>源码层对应</strong>：小结构体传参与返回、<code>std::pair</code> / <code>std::optional</code>、聚合初始化的临时对象、按值捕获的 lambda 闭包。SROA（Scalar Replacement of Aggregates，聚合体标量替换）先按字段把整块内存切成独立的 <code>alloca</code>，再各自交给 mem2reg——好比把一个打包的行李箱拆成一件件单独拿。</p>
+  <p><strong>这是 C++ 零成本抽象在 IR 层的兑现点。</strong><code>std::optional&lt;int&gt;</code> 在内存里是 4 字节加一个标志位加 padding，SROA 之后就是一个 <code>i32</code> 加一个 <code>i1</code>，和手写「一个 int 加一个 bool」完全一样；返回小结构体、<code>string_view</code> 按值传也都不比传两个裸标量贵——抽象在源码层存在，机器码层不收钱。失效条件和 mem2reg 一样：地址逃逸，或整块 <code>memcpy</code>。</p>
 
   <h3 id="s7-6">7.6 Loop Vectorizer</h3>
-  <p><strong>源码层对应</strong>：对连续内存做同一件事的循环——数组求和、逐元素乘加、找最大值。它把 N 圈标量循环改成 N/W 圈向量循环（<code>&lt;8 x float&gt;</code>）加一个处理尾巴的 remainder 循环。条件很硬，缺一条就整个放弃：迭代次数要能写成关于循环变量的表达式（<code>while (*p++)</code> 基本没戏）、迭代间无依赖、访存无别名冲突。而 <code>sum += a[i]</code> 这种规约要重排浮点加法，而浮点加法不满足结合律，所以默认<strong>不做</strong>。</p>
+  <p><strong>源码层对应</strong>：对连续内存做同一件事的循环——数组求和、逐元素乘加、找最大值。它把 N 圈标量循环改成 N/W 圈向量循环（<code>&lt;8 x float&gt;</code>，一条指令同时处理 W 个数据，即 SIMD）加一个处理尾巴的 remainder 循环。条件很硬，缺一条就整个放弃：迭代次数要能写成关于循环变量的表达式（<code>while (*p++)</code> 基本没戏）、迭代间无依赖、访存无别名冲突。而 <code>sum += a[i]</code> 这种规约要重排浮点加法，而浮点加法不满足结合律，所以默认<strong>不做</strong>。</p>
   <div class="box tip">实操：循环体内不调不透明函数、用连续索引访问、指针加 <code>__restrict__</code>。成没成不要靠猜，用 <a href="#s9-1">§9.1</a> 那条 <code>-Rpass</code> 直接问编译器。</div>
 
   <h3 id="s7-7">7.7 InstCombine</h3>
-  <p><strong>源码层对应：没有。</strong>它匹配的模式绝大多数不是人写出来的，而是<strong>前面的 pass 产生的</strong>——内联展开后的冗余、常量传播留下的 <code>x * 1</code>。它做 <code>x + x</code> → <code>x &lt;&lt; 1</code> 这类局部重写，单看都省不了几个周期，真正的作用是<strong>把 IR 归一化</strong>：同一语义的十种写法收敛成一种，后面 GVN 和向量化才匹配得上——这就是它要跑十几次的原因（<a href="#s6-2">§6.2</a>）。</p>
+  <p><strong>源码层对应：没有。</strong>它匹配的模式绝大多数不是人写出来的，而是<strong>前面的 pass 产生的</strong>——内联展开后的冗余、常量传播留下的 <code>x * 1</code>。InstCombine 做 <code>x + x</code> → <code>x &lt;&lt; 1</code> 这类局部重写（peephole，窥孔优化——只看眼前几条指令的小改写），单看都省不了几个周期，真正的作用是<strong>把 IR 归一化</strong>：同一语义的十种写法收敛成一种，后面 GVN 和向量化才匹配得上——这就是它要跑十几次的原因（<a href="#s6-2">§6.2</a>）。</p>
   <div class="box tip"><strong>所以不用手写位运算技巧。</strong>无符号数上 <code>x / 2</code> 和 <code>x &gt;&gt; 1</code>、<code>x % 16</code> 和 <code>x &amp; 15</code> 生成的代码完全一样；反过来手写在有符号数上会算错（<code>-7 / 2</code> 是 -3，<code>-7 &gt;&gt; 1</code> 是 -4）。</div>
 </section>
 
@@ -979,7 +979,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
     </div>
   </div>
 
-  <p>最快的理解路径：写一个 NewPM 插件。分析 pass 返回 <code>PreservedAnalyses::all()</code>；改 IR 的返回 <code>none()</code>，逼着 PM 重算分析。</p>
+  <p>最快的理解路径：写一个 NewPM 插件。分析 pass 返回 <code>PreservedAnalyses::all()</code>；改 IR 的返回 <code>none()</code>，逼着 PM 重算分析——宁可重算，不能让后续 pass 拿旧账本。</p>
   <table>
     <thead><tr><th>API</th><th>作用</th></tr></thead>
     <tbody>
@@ -1014,7 +1014,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
   </ul>
 
   <h3 id="s9-1">对普通 C++ 工程师最有用的那一条：确认优化到底有没有发生</h3>
-  <p>调性能时最常见的判断失误，是<strong>假设某个优化发生了</strong>——「这函数这么小，肯定被内联了」「这循环这么规整，肯定向量化了」。这两句都能用一条命令验证，而且不需要读汇编：</p>
+  <p>调性能时最常见的判断失误，是<strong>假设某个优化发生了</strong>——「这函数这么小，肯定被内联了」「这循环这么规整，肯定向量化了」。这两句都是猜测，而猜测能用一条命令验证，而且不需要读汇编：</p>
   <table>
     <thead><tr><th>想确认什么</th><th>怎么问</th><th>看什么</th></tr></thead>
     <tbody>
@@ -1039,7 +1039,7 @@ std::memcpy(&amp;i, &amp;f, sizeof i);
     </div>
   </div>
 
-  <p>LLVM 约千万行 C++。入门路径：good-first-issue → 带 FileCheck 的 <code>.ll</code> 测试 → <code>ninja check-llvm</code> → PR。3–5 个 merged PR 可申请 commit access，仍要 review。</p>
+  <p>LLVM 约千万行 C++。入门路径：good-first-issue（社区标注的适合新手的 issue）→ 带 FileCheck 的 <code>.ll</code> 测试 → <code>ninja check-llvm</code> → PR。3–5 个 merged PR 可申请 commit access，仍要 review。</p>
   <table>
     <thead><tr><th>步骤</th><th>要点</th></tr></thead>
     <tbody>

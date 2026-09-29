@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Crash Debugging：从崩溃现场定位问题 · SIGSEGV / core dump / 空指针 / UAF / 命令速查 / Debug 思维</title>
-<meta name="description" content="Crash Debugging：从崩溃现场定位问题：这是整个系列的 实战收官。前五篇学的断点、栈帧、变量、内存、寄存器、多线程，在这里被拧成一条 崩溃分析流水线：从信号 → 调用栈 → 帧 → 源码 → 变量 → 内存 → 寄存器 → 汇编 → 根因">
+<meta name="description" content="GDB 崩溃调试实战收官：程序崩了先看内核发来的信号，再用 bt 调用栈和 core dump 快照一步步找到根因。含空指针、UAF、死锁三个案例与命令速查，教你怎么像查案一样定位 SIGSEGV。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/gdb_crash_debugging.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/gdb_crash_debugging.html">
 <meta property="og:title" content="Crash Debugging：从崩溃现场定位问题 · SIGSEGV / core dump / 空指针 / UAF / 命令速查 / Debug 思维">
-<meta property="og:description" content="Crash Debugging：从崩溃现场定位问题：这是整个系列的 实战收官。前五篇学的断点、栈帧、变量、内存、寄存器、多线程，在这里被拧成一条 崩溃分析流水线：从信号 → 调用栈 → 帧 → 源码 → 变量 → 内存 → 寄存器 → 汇编 → 根因">
+<meta property="og:description" content="GDB 崩溃调试实战收官：程序崩了先看内核发来的信号，再用 bt 调用栈和 core dump 快照一步步找到根因。含空指针、UAF、死锁三个案例与命令速查，教你怎么像查案一样定位 SIGSEGV。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Crash Debugging：从崩溃现场定位问题 · SIGSEGV / core dump / 空指针 / UAF / 命令速查 / Debug 思维">
-<meta name="twitter:description" content="Crash Debugging：从崩溃现场定位问题：这是整个系列的 实战收官。前五篇学的断点、栈帧、变量、内存、寄存器、多线程，在这里被拧成一条 崩溃分析流水线：从信号 → 调用栈 → 帧 → 源码 → 变量 → 内存 → 寄存器 → 汇编 → 根因">
+<meta name="twitter:description" content="GDB 崩溃调试实战收官：程序崩了先看内核发来的信号，再用 bt 调用栈和 core dump 快照一步步找到根因。含空指针、UAF、死锁三个案例与命令速查，教你怎么像查案一样定位 SIGSEGV。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -140,7 +140,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 20 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -170,10 +170,10 @@
     <header class="hero">
       <div class="badge">GDB 调试 C++ · 系列 06 / 06 · 实战总结</div>
       <h1>Crash Debugging：如何使用 GDB 定位 C++ 崩溃</h1>
-      <p class="sub">这是整个系列的<strong>实战收官</strong>。前五篇学的断点、栈帧、变量、内存、寄存器、多线程，在这里被拧成一条<strong>崩溃分析流水线</strong>：从信号 → 调用栈 → 帧 → 源码 → 变量 → 内存 → 寄存器 → 汇编 → 根因。三个完整案例（空指针 / UAF / 死锁）、一张工具对比表、一份带「怎么分析」的命令速查、以及最重要的 <strong>C++ Debugging Mindset</strong> —— 让你从「该敲哪个命令」升级到「我现在掌握了什么、下一步验证什么假设」。</p>
+      <p class="sub">这是整个系列的<strong>实战收官</strong>。前五篇分别学了断点、栈帧、变量、内存、寄存器、多线程，这一篇把它们拧成一条<strong>崩溃分析流水线</strong>：从信号 → 调用栈 → 帧 → 源码 → 变量 → 内存 → 寄存器 → 汇编 → 根因。其中信号是操作系统发给程序的「出事通知」，调用栈（backtrace）是程序出事那一刻经过的函数清单，顺着它就能从出事地点倒查回源头。文中给出三个完整案例（空指针 / UAF / 死锁）、一张工具对比表、一份带「怎么分析」的命令速查，以及最重要的 <strong>C++ Debugging Mindset</strong> —— 让你从「该敲哪个命令」升级到「我现在掌握了什么、下一步验证什么假设」。</p>
       <div class="meta-row">
         <span class="pill cyan">实战总结</span>
-        <span class="pill green">阅读 ~15 min</span>
+        <span class="pill green">阅读 ~20 min</span>
         <span class="pill amber">前置：本系列 01–05</span>
         <span class="pill violet">SIGSEGV / core / mindset</span>
       </div>
@@ -203,7 +203,7 @@
           <p class="sub">「程序崩了」在操作系统层面，是内核给它发了一个信号</p>
         </div>
       </div>
-      <p>C++ 程序「突然崩溃」并不是凭空消失，而是它做了非法操作，<strong>内核给它发了一个信号</strong>，默认动作是终止进程（并可能产生 core dump）。GDB 的价值就在于：<strong>在信号把进程杀死的那一刻把它冻住</strong>，让现场原封不动地留给你分析。</p>
+      <p>C++ 程序「突然崩溃」并不是凭空消失，而是它做了非法操作，<strong>内核（操作系统的核心）给它发了一个信号</strong>（signal，相当于内核递来的一张「你违规了」的通知单），默认动作是终止进程（并可能产生 core dump，也就是崩溃瞬间的内存快照）。GDB 的价值就在于：<strong>在信号把进程杀死的那一刻把它冻住</strong>，好比在案发当场按下暂停键，让现场原封不动地留给你分析。</p>
       <table>
         <thead><tr><th>信号</th><th>触发原因</th><th>C++ 里的典型来源</th></tr></thead>
         <tbody>
@@ -216,7 +216,7 @@
       </table>
       <div class="info-box key">
         <div class="title">信号是崩溃分析的「第一个线索」</div>
-        <p>GDB 停下来时第一行就告诉你是<strong>哪个信号</strong>：<code>SIGSEGV</code> → 往「非法内存访问（指针）」方向查；<code>SIGABRT</code> → 往「主动终止（异常/assert/堆损坏）」方向查；<code>SIGFPE</code> → 往「除零/溢出」方向查。<strong>信号类型直接决定你的假设方向</strong>，这就是 Debug Mindset 的起点（见第 09 节）。</p>
+        <p>GDB 停下来时第一行就告诉你是<strong>哪个信号</strong>：<code>SIGSEGV</code> → 往「非法内存访问（指针）」方向查；<code>SIGABRT</code> → 往「主动终止（异常/assert/堆损坏）」方向查；<code>SIGFPE</code> → 往「除零/溢出」方向查。这就像医生先看化验单上的异常指标再决定往哪个科室转 —— <strong>信号类型直接决定你的假设方向</strong>，这就是 Debug Mindset 的起点（见第 09 节）。</p>
       </div>
     </section>
 
@@ -236,10 +236,10 @@ $ gdb ./crash
 Program received signal <span class="sig">SIGSEGV</span>, Segmentation fault.
 0x... in foo () at crash.cpp:8       <span class="comment"># GDB 直接停在出事那一刻</span>
 8           *ptr = 10;</code></pre>
-      <p>GDB 会<strong>在崩溃点冻结</strong>，此时所有寄存器、栈、变量都是崩溃瞬间的真实状态 —— 立即 <code>bt</code> 就能看链。</p>
+      <p>GDB 会<strong>在崩溃点冻结</strong>，此时所有寄存器、栈、变量都是崩溃瞬间的真实状态 —— 立即 <code>bt</code>（backtrace，打印调用栈，也就是「程序是怎么一层层走到出事这一行的」清单）就能看链。</p>
 
       <h3>方式 B：用 core dump 离线复盘</h3>
-      <p>线上程序崩了，你不在现场，但系统留下了「案发时的内存快照」——<strong>core dump</strong>。事后用 GDB 加载它，就像回到崩溃那一刻：</p>
+      <p>线上程序崩了，你不在现场，但系统留下了「案发时的内存快照」——<strong>core dump</strong>（程序崩溃那一刻，操作系统把它当时的内存内容整体存成的一个文件，相当于案发现场的全景照片）。事后用 GDB 加载它，就像回到崩溃那一刻：</p>
       <pre><code><span class="comment"># 先允许生成 core（很多系统默认 0，即不生成）</span>
 $ ulimit -c unlimited
 $ ./crash                 <span class="comment"># 崩溃后生成 core 文件（路径见 /proc/sys/kernel/core_pattern）</span>
@@ -290,7 +290,7 @@ $ gdb ./crash core
       </div>
       <div class="info-box key">
         <div class="title">核心心法</div>
-        <p>这条路径是<strong>「从粗到细、逐步收窄」</strong>：大多数崩溃走到第 5 步（看变量）就定位了，只有栈损坏、优化干扰这类硬骨头才需要下探到 6、7。<strong>不要一上来就 <code>disassemble</code></strong> —— 先用最省力的 <code>bt</code> 收窄范围。</p>
+        <p>这条路径是<strong>「从粗到细、逐步收窄」</strong>：大多数崩溃走到第 5 步（看变量）就定位了，只有栈损坏、优化干扰这类硬骨头才需要下探到 6、7。<strong>不要一上来就 <code>disassemble</code></strong>（把机器指令反查成可读汇编）—— 先用最省力的 <code>bt</code> 收窄范围，好比先看监控锁定嫌疑楼层，再进屋翻垃圾桶找指纹。</p>
       </div>
     </section>
 
@@ -344,11 +344,11 @@ rip = 0x... &lt;writeIt+..&gt;                          <span class="comment"># 
       <div class="info-box key">
         <div class="title">如何区分 nullptr / 野指针 / 悬垂指针</div>
         <ul>
-          <li><strong>nullptr</strong>：<code>p ptr</code> 显示 <code>0x0</code>（或很小的地址如 <code>0x8</code>，是空指针 + 成员偏移）；</li>
-          <li><strong>野指针（wild）</strong>：从未初始化，<code>p ptr</code> 是一个看起来随机、离谱的地址（如 <code>0x7f...</code> 之外的怪值）；</li>
-          <li><strong>悬垂指针（dangling / UAF）</strong>：地址<strong>看起来正常</strong>，但 <code>p *ptr</code> 出来的内容是垃圾或已被改写 —— 见案例 2。</li>
+          <li><strong>nullptr</strong>：<code>p ptr</code> 显示 <code>0x0</code>（或很小的地址如 <code>0x8</code>，是空指针 + 成员偏移）—— 指针明确指向「什么都没有」；</li>
+          <li><strong>野指针（wild，指针从没被赋过合法值，里面装的只是上电后的随机残留）</strong>：从未初始化，<code>p ptr</code> 是一个看起来随机、离谱的地址（如 <code>0x7f...</code> 之外的怪值）；</li>
+          <li><strong>悬垂指针（dangling / UAF，指向的内存已经还给别人，地址本身没变但内容随时会被覆盖）</strong>：地址<strong>看起来正常</strong>，但 <code>p *ptr</code> 出来的内容是垃圾或已被改写 —— 见案例 2。</li>
         </ul>
-        <p><strong>根因</strong>：<code>main</code> 把 <code>nullptr</code> 传进 <code>writeIt</code>；真正的 bug 不在崩溃点 <code>#0</code>，而在 <code>#1</code>（调用者传了空指针）。<strong>崩溃点常是「受害者」，根因在调用链上游</strong> —— 这就是为什么要看整条 <code>bt</code>。</p>
+        <p><strong>根因</strong>：<code>main</code> 把 <code>nullptr</code> 传进 <code>writeIt</code>；真正的 bug 不在崩溃点 <code>#0</code>（调用栈最顶上、正在出事的那一帧），而在 <code>#1</code>（调用者传了空指针）。<strong>崩溃点常是「受害者」，根因在调用链上游</strong> —— 这就是为什么要看整条 <code>bt</code>。</p>
       </div>
     </section>
 
@@ -380,15 +380,15 @@ $2 = 10                            <span class="comment"># 有时还能读到旧
 <span class="comment"># 也可能是垃圾值，甚至此刻不崩、后面某处才崩</span></code></pre>
       <div class="info-box warning">
         <div class="title">为什么 UAF 有时不立即崩溃？</div>
-        <p><code>delete</code> 只是把这块内存<strong>「还给分配器」</strong>，并<strong>不会立刻清零，也不会立刻还给操作系统</strong>。所以紧接着读它，物理上那块内存往往还在、旧值还没被覆盖 —— 于是 <code>*ptr</code> 读出 <code>10</code>，程序「看起来正常」。真正的崩溃发生在<strong>那块内存被后续分配复用、内容被改写之后</strong>，此时读到的是别人的数据，或者结构体里的指针成了垃圾，间接触发 SIGSEGV。<strong>崩溃点和真正的错误（那次 <code>delete</code> 后仍持有指针）在时间和空间上都是错位的</strong> —— 这正是 UAF 极难用 GDB 定位的根源。</p>
+        <p><code>delete</code> 只是把这块内存<strong>「还给分配器」</strong>（allocator，程序内部专门负责发还内存的管家），并<strong>不会立刻清零，也不会立刻还给操作系统</strong>。所以紧接着读它，物理上那块内存往往还在、旧值还没被覆盖 —— 于是 <code>*ptr</code> 读出 <code>10</code>，程序「看起来正常」。真正的崩溃发生在<strong>那块内存被后续分配复用、内容被改写之后</strong>，此时读到的是别人的数据，或者结构体里的指针成了垃圾，间接触发 SIGSEGV。这就好比把房子退租了却还留着旧钥匙：头几天回去还能看到旧家具（旧值），等新住户搬进来把东西全换掉，你再开门拿到的就是别人的东西、甚至被当成小偷赶出去（崩溃）。<strong>崩溃点和真正的错误（那次 <code>delete</code> 后仍持有指针）在时间和空间上都是错位的</strong> —— 这正是 UAF 极难用 GDB 定位的根源。</p>
       </div>
       <div class="info-box">
         <div class="title">为什么 Debug / Release 行为可能不同</div>
-        <p>UAF 属于<strong>未定义行为（UB）</strong>。<code>-O0</code> 下内存布局、分配复用节奏是一种样子；<code>-O2</code> 下变量可能被优化、内存复用时机改变，甚至编译器基于「UB 不会发生」的假设重排代码 —— 于是同一份 UAF，Debug 可能默默跑过、Release 却崩，或反过来。<strong>「换个优化级别行为就变」本身就是 UB 的强烈信号。</strong></p>
+        <p>UAF 属于<strong>未定义行为（UB，Undefined Behavior —— C++ 标准对「这种写法结果是什么」不做任何保证，编译器可以随意处理）</strong>。<code>-O0</code> 下内存布局、分配复用节奏是一种样子；<code>-O2</code> 下变量可能被优化、内存复用时机改变，甚至编译器基于「UB 不会发生」的假设重排代码 —— 于是同一份 UAF，Debug 可能默默跑过、Release 却崩，或反过来。<strong>「换个优化级别行为就变」本身就是 UB 的强烈信号。</strong></p>
       </div>
       <div class="info-box key">
         <div class="title">为什么 ASan 更适合抓 UAF</div>
-        <p>GDB 只能看「崩溃那一刻」的现场，而 UAF 的现场早已错位，你看到的往往是「受害者」而非「凶手」。<strong>AddressSanitizer（ASan）</strong>不同：它给每块内存维护「影子状态」，<code>delete</code> 后把该区域标记为<strong>「隔离/中毒（quarantine）」</strong>，只要之后<strong>任何一次访问</strong>它，ASan 立刻在<strong>第一现场</strong>报错，并同时打印<strong>「分配栈 + 释放栈 + 当前访问栈」</strong>三条调用链 —— 直接把「谁分配的、谁释放的、谁又访问了」摊开给你看。所以：<strong>UAF / 越界这类问题，先上 ASan；GDB 用来对 ASan 指出的点做进一步动态确认。</strong></p>
+        <p>GDB 只能看「崩溃那一刻」的现场，而 UAF 的现场早已错位，你看到的往往是「受害者」而非「凶手」。<strong>AddressSanitizer（ASan，编译器在程序里预埋的内存检查探针）</strong>不同：它给每块内存维护「影子状态」，<code>delete</code> 后把该区域标记为<strong>「隔离/中毒（quarantine）」</strong>，只要之后<strong>任何一次访问</strong>它，ASan 立刻在<strong>第一现场</strong>报错，并同时打印<strong>「分配栈 + 释放栈 + 当前访问栈」</strong>三条调用链 —— 直接把「谁分配的、谁释放的、谁又访问了」摊开给你看。所以：<strong>UAF / 越界这类问题，先上 ASan；GDB 用来对 ASan 指出的点做进一步动态确认。</strong></p>
         <pre style="margin:8px 0 0"><code>$ g++ -g -O1 -fsanitize=address uaf.cpp -o uaf
 $ ./uaf
 ==ERROR: AddressSanitizer: <span class="sig">heap-use-after-free</span> ...
@@ -407,7 +407,7 @@ $ ./uaf
           <p class="sub">在第 05 篇已完整演示，这里放进统一的思维框架</p>
         </div>
       </div>
-      <p>死锁不产生信号、不崩溃，只是<strong>永久卡住</strong>。它的分析路径与崩溃不同，但思维一致 —— <strong>先拿全场快照，再拼因果</strong>：</p>
+      <p>死锁（deadlock，几个线程互相攥着对方需要的锁，谁也不撒手，谁也走不下去）不产生信号、不崩溃，只是<strong>永久卡住</strong>。它的分析路径与崩溃不同，但思维一致 —— <strong>先拿全场快照，再拼因果</strong>：</p>
       <div class="flow-diagram">
         <div class="flow-box">程序卡死 → Ctrl+C / attach 冻结</div>
         <div class="flow-arrow-down"></div>
@@ -417,7 +417,7 @@ $ ./uaf
         <div class="flow-arrow-down"></div>
         <div class="flow-box">拼出环形等待 → <strong>死锁根因：加锁顺序不一致</strong></div>
       </div>
-      <p>完整代码与逐步演示见 <a href="gdb_multithread_debugging.html#s7">第 05 篇 · 案例 3</a>。修复思路：全局统一加锁顺序，或 <code>std::scoped_lock</code> 同时上多把锁。</p>
+      <p>完整代码与逐步演示见 <a href="gdb_multithread_debugging.html#s7">第 05 篇 · 案例 3</a>。修复思路：全局统一加锁顺序（所有人都要先拿 A 锁再拿 B 锁，环形等待就拼不出来），或 <code>std::scoped_lock</code>（C++17 提供的工具，一次同时上多把锁，要么全拿到、要么都不拿）同时上多把锁。</p>
     </section>
 
     <!-- S7 -->
@@ -496,7 +496,7 @@ $ ./uaf
       </table>
       <div class="info-box">
         <div class="title">速查表的正确用法</div>
-        <p>命令本身几分钟就背完，真正的能力是<strong>「看到输出后知道下一步查什么」</strong>。这张表右列刻意写的是「怎么分析」而不是「命令语法」—— 因为调试的瓶颈从来不是记不住命令，而是<strong>不知道命令的结果意味着什么</strong>。</p>
+        <p>命令本身几分钟就背完，真正的能力是<strong>「看到输出后知道下一步查什么」</strong>。这张表右列刻意写的是「怎么分析」而不是「命令语法」—— 因为调试的瓶颈从来不是记不住命令，而是<strong>不知道命令的结果意味着什么</strong>。好比背熟了每台仪器的按键说明书，不等于知道该先测哪一项。</p>
       </div>
     </section>
 
@@ -511,7 +511,7 @@ $ ./uaf
       </div>
       <div class="info-box warning">
         <div class="title">先纠正一个起点</div>
-        <p>不要从<strong>「我应该输入哪个 GDB 命令？」</strong>开始。<br>而要从<strong>「我现在掌握了什么现场信息？下一步需要验证什么假设？」</strong>开始。<br>GDB 命令只是<strong>验证假设的手段</strong>，不是调试的目的。把顺序搞反，就会陷入「乱敲命令、看一堆输出却不知所云」。</p>
+        <p>不要从<strong>「我应该输入哪个 GDB 命令？」</strong>开始。<br>而要从<strong>「我现在掌握了什么现场信息？下一步需要验证什么假设？」</strong>开始。<br>GDB 命令只是<strong>验证假设的手段</strong>，不是调试的目的。把顺序搞反，就会陷入「乱敲命令、看一堆输出却不知所云」。这像医生看病：先有「可能是胃炎」的判断，再去开对应的检查单，而不是把所有检查先做一遍。</p>
       </div>
 
       <h3>通用调试循环</h3>
@@ -550,7 +550,7 @@ $ ./uaf
         <div class="title">三条贯穿全系列的心法</div>
         <ol>
           <li><strong>GDB 是验证假设的工具，不是「看代码工具」。</strong>每敲一条命令前，先问「我想验证什么？」。</li>
-          <li><strong>崩溃点 ≠ 根因。</strong><code>#0</code> 常是受害者，真正的错误（传了空指针、提前 delete、加锁顺序错）在调用链上游或时间上更早处。</li>
+          <li><strong>崩溃点 ≠ 根因。</strong><code>#0</code>（栈顶那帧）常是受害者，真正的错误（传了空指针、提前 delete、加锁顺序错）在调用链上游或时间上更早处 —— 相当于车祸现场那辆车，往往不是最先违规的那辆。</li>
           <li><strong>先粗后细、能省则省。</strong>先信号 → <code>bt</code> → 变量，能定位就停；栈损坏/优化干扰才下探到内存和汇编。</li>
         </ol>
       </div>
@@ -567,14 +567,14 @@ $ ./uaf
         <div class="num">10</div>
         <div class="t"><h2>常见误区（全系列汇总）</h2></div>
       </div>
-      <div class="myth"><p><span class="wrong">❌ 有 <code>-g</code> 就一定能完整调试。</span> 同时开 <code>-O2</code> 会让行号跳、变量 <code>&lt;optimized out&gt;</code>、函数因内联消失。</p></div>
-      <div class="myth"><p><span class="wrong">❌ GDB 能解决所有内存问题。</span> 越界/UAF 常在错位的时间地点才崩，GDB 只看崩溃现场；泄漏更是完全看不出。</p></div>
+      <div class="myth"><p><span class="wrong">❌ 有 <code>-g</code>（让编译器把调试信息写进程序的开关）就一定能完整调试。</span> 同时开 <code>-O2</code> 会让行号跳、变量 <code>&lt;optimized out&gt;</code>、函数因内联消失。</p></div>
+      <div class="myth"><p><span class="wrong">❌ GDB 能解决所有内存问题。</span> 越界/UAF 常在错位的时间地点才崩，GDB 只看崩溃现场；泄漏（该还的内存一直没还，程序越吃越多）更是完全看不出。</p></div>
       <div class="myth"><p><span class="wrong">❌ GDB 可以替代 ASan。</span> ASan 在第一现场报错并给出分配/释放/访问三条栈，GDB 做不到；两者互补。</p></div>
       <div class="myth"><p><span class="wrong">❌ <code>bt</code> 一定能拿到完整调用栈。</span> 内联、缺帧指针、栈被溢出覆盖、尾调用优化，都可能让 <code>bt</code> 不完整或错乱。</p></div>
       <div class="myth"><p><span class="wrong">❌ Release 程序不能使用 GDB。</span> 能用，只是受优化与 strip 限制；生产常用 <code>-O2 -g</code> + 分离符号 + core dump。</p></div>
       <div class="myth"><p><span class="wrong">❌ 优化后的程序变量一定能正常查看。</span> 常显示 <code>&lt;optimized out&gt;</code>，因为变量被消除或只短暂存在于寄存器。</p></div>
       <div class="myth"><p><span class="wrong">❌ <code>p</code> 出来的变量一定是真实当前值。</span> 优化后 GDB 可能给出过期/近似值；崩溃在库函数、寄存器被覆盖时也未必准。</p></div>
-      <div class="myth"><p><span class="wrong">❌ 多线程问题都可以通过 GDB 定位。</span> 死锁/卡住可以；数据竞争这类时序敏感问题该用 TSan，GDB 断点还会改变时序。</p></div>
+      <div class="myth"><p><span class="wrong">❌ 多线程问题都可以通过 GDB 定位。</span> 死锁/卡住可以；数据竞争（多个线程同时读写同一块数据且无保护，结果看谁先谁后）这类时序敏感问题该用 TSan，GDB 断点还会改变时序。</p></div>
       <div class="myth"><p><span class="wrong">❌ 崩溃行就是 bug 所在。</span> 崩溃点常是受害者，根因多在调用链上游或更早的错误操作（空指针来源、提前释放处）。</p></div>
     </section>
 

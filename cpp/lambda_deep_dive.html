@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ Lambda 的本质 · 闭包类脱糖 / 捕获的成员形态 / 类型唯一性 / 零开销与 std::function / 悬垂与协程陷阱</title>
-<meta name="description" content="C++ Lambda 的本质：Lambda 不是运行期的新东西，它是一台 造类机器：编译器为每个 lambda 表达式生成一个唯一的、没有名字的类，把捕获变成它的数据成员，再给它一个 operator()。理解这一点，捕获语义、类型唯一性、零开销、悬垂陷阱这四类问题就都变成了同一个问题的推论">
+<meta name="description" content="C++ Lambda 的本质，用白话讲透：lambda 其实是编译器悄悄生成的一个匿名类（闭包类型），捕获就是它的成员变量，调用就是 operator()。由此讲清捕获语义、mutable、类型唯一性、零开销与 std::function、悬垂与协程陷阱">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/lambda_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/lambda_deep_dive.html">
 <meta property="og:title" content="C++ Lambda 的本质 · 闭包类脱糖 / 捕获的成员形态 / 类型唯一性 / 零开销与 std::function / 悬垂与协程陷阱">
-<meta property="og:description" content="C++ Lambda 的本质：Lambda 不是运行期的新东西，它是一台 造类机器：编译器为每个 lambda 表达式生成一个唯一的、没有名字的类，把捕获变成它的数据成员，再给它一个 operator()。理解这一点，捕获语义、类型唯一性、零开销、悬垂陷阱这四类问题就都变成了同一个问题的推论">
+<meta property="og:description" content="C++ Lambda 的本质，用白话讲透：lambda 其实是编译器悄悄生成的一个匿名类（闭包类型），捕获就是它的成员变量，调用就是 operator()。由此讲清捕获语义、mutable、类型唯一性、零开销与 std::function、悬垂与协程陷阱">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ Lambda 的本质 · 闭包类脱糖 / 捕获的成员形态 / 类型唯一性 / 零开销与 std::function / 悬垂与协程陷阱">
-<meta name="twitter:description" content="C++ Lambda 的本质：Lambda 不是运行期的新东西，它是一台 造类机器：编译器为每个 lambda 表达式生成一个唯一的、没有名字的类，把捕获变成它的数据成员，再给它一个 operator()。理解这一点，捕获语义、类型唯一性、零开销、悬垂陷阱这四类问题就都变成了同一个问题的推论">
+<meta name="twitter:description" content="C++ Lambda 的本质，用白话讲透：lambda 其实是编译器悄悄生成的一个匿名类（闭包类型），捕获就是它的成员变量，调用就是 operator()。由此讲清捕获语义、mutable、类型唯一性、零开销与 std::function、悬垂与协程陷阱">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -106,7 +106,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -179,7 +179,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">面试出现率 极高</span>
-      <span class="pill green">阅读时长 ~30 min</span>
+      <span class="pill green">阅读时长 ~35 min</span>
       <span class="pill amber">前置 类与对象 · 移动语义</span>
     </div>
     <div class="meta">
@@ -197,9 +197,9 @@
     <div class="t"><h2>一句话本质</h2><p class="sub">它是语法糖，糖的下面是一个普通的类</p></div>
   </div>
 
-  <p>C++ 的 lambda 是<strong>纯粹的编译期语法糖</strong>。编译器看到一个 lambda 表达式时，会为它生成一个<strong>唯一的、没有名字的类</strong>，把捕获列表里的东西变成这个类的<strong>非静态数据成员</strong>，并给它一个 <code>operator()</code>；而 lambda 表达式本身求值出来的，是这个类的一个<strong>对象</strong>。</p>
+  <p>C++ 的 lambda 是<strong>纯粹的编译期语法糖</strong>。语法糖（syntax sugar）的意思是：它没有引入任何运行期的新机制，只是把一种写法翻译成另一种你本来就能手写的写法。编译器看到一个 lambda 表达式时，会为它生成一个<strong>唯一的、没有名字的类</strong>，把捕获列表（方括号 <code>[]</code> 里那份「我要带哪些外部变量走」的清单）里的东西变成这个类的<strong>非静态数据成员</strong>（也就是这个类自带的成员变量），并给它一个 <code>operator()</code>（函数调用运算符——让对象可以像函数一样被「调用」的那个成员函数）；而 lambda 表达式本身求值出来的，是这个类的一个<strong>对象</strong>。</p>
 
-  <p>所以 lambda 就是<strong>重载了 <code>operator()</code> 的仿函数</strong>：类名和构造函数都由编译器写。运行期没有「lambda」实体，只有一次普通的对象构造加一次成员函数调用。</p>
+  <p>所以 lambda 就是<strong>重载了 <code>operator()</code> 的仿函数</strong>（functor——任何一个重载了 <code>operator()</code>、因此能当函数用的类对象）：类名和构造函数都由编译器替你写。运行期没有「lambda」这个实体，只发生了一次普通的对象构造，加一次普通的成员函数调用。</p>
 
   <div class="def"><strong>闭包类型（closure type）</strong>：标准为 lambda 表达式生成的那个类。它是<em>唯一的、未命名的、非联合体的类类型</em>，声明在包含该 lambda 表达式的<strong>最小作用域</strong>里（块作用域 / 类作用域 / 命名空间作用域）。<strong>闭包对象（closure object）</strong>：lambda 表达式求值的结果，即该闭包类型的一个对象。你能拿到它、拷贝它、传递它，但<strong>写不出它的类型名</strong>——只能用 <code>auto</code>、<code>decltype</code> 或模板参数去接。</div>
 
@@ -226,7 +226,7 @@
   </div>
 
   <h3 id="s2-1">2.1 完整对照</h3>
-  <p>编译器看到 lambda，就造一个<strong>唯一无名类</strong>：捕获变成员，函数体变成 <code>operator()</code>，表达式求值得到这个类的对象。名字和成员顺序是实现细节，语义是标准规定的。源码级对照见 §2.4 的交互脱糖器。</p>
+  <p>「脱糖」（desugaring）就是把语法糖还原回去：把 lambda 手写成一个普通的类，看看编译器在背后替你做了什么。编译器看到 lambda，就造一个<strong>唯一无名类</strong>：捕获变成员，函数体变成 <code>operator()</code>，表达式求值得到这个类的对象。名字和成员顺序是实现细节（编译器自己说了算），语义是标准规定的。源码级对照见 §2.4 的交互脱糖器。</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 236" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="lambda 表达式脱糖为闭包类与闭包对象">
@@ -277,16 +277,16 @@
     <figcaption>图 1 · lambda 表达式 → 闭包类型 → 闭包对象：三段脱糖</figcaption>
   </div>
 
-  <p>由这张图可以直接推出一串常被单独记忆的「规则」，其实它们都是同一件事的推论：</p>
+  <p>由这张图可以直接推出一串常被单独记忆的「规则」，其实它们都是同一件事的推论——只要记住「lambda 是个类」，每一条都能自己推出来：</p>
   <ul>
-    <li>捕获<strong>是成员</strong>，所以捕获列表决定了闭包对象的大小与内容。</li>
-    <li>成员在<strong>构造时</strong>初始化，所以值捕获的拷贝发生在 lambda <em>创建</em>的那一刻，与调用无关。</li>
-    <li><code>operator()</code> 是<strong>普通成员函数</strong>、非虚，所以调用是静态分派，能被内联。</li>
+    <li>捕获<strong>是成员</strong>，所以捕获列表决定了闭包对象的大小与内容：你捕获什么，对象里就装什么。</li>
+    <li>成员在<strong>构造时</strong>初始化，所以值捕获的拷贝发生在 lambda <em>创建</em>的那一刻，与调用无关——之后外部变量怎么改，都改不到闭包里那份副本。</li>
+    <li><code>operator()</code> 是<strong>普通成员函数</strong>、非虚，所以调用是静态分派（编译期就定好调用哪个函数，不走虚表），能被内联（inline——把函数体直接贴到调用处，省掉一次跳转）。</li>
     <li>类是<strong>唯一且无名</strong>的，所以两个长得一样的 lambda 类型不同，且只能用 <code>auto</code> 接。</li>
   </ul>
 
   <h3 id="s2-2">2.2 mutable 的真相：它去掉的是 operator() 的 const</h3>
-  <p><code>mutable</code> 不是「让捕获的变量可变」，而是<strong>把默认的 <code>const operator()</code> 改成非 const</strong>。值捕获的成员本身从来不是 const 成员，只是经 const 的 <code>this</code> 访问时变成 <code>const T</code>。</p>
+  <p><code>mutable</code> 不是「让捕获的变量可变」，而是<strong>把默认的 <code>const operator()</code> 改成非 const</strong>。换句话说：值捕获的那个成员本身从来不是 const 成员，问题出在默认生成的 <code>operator()</code> 末尾带一个 <code>const</code>——在 const 成员函数里，<code>this</code>（指向当前对象的那个隐藏指针）是指向 const 对象的指针，所以你经它看到的每个成员都带上 const，自然改不动；加了 <code>mutable</code>，<code>const</code> 被去掉，成员就按普通方式访问了。</p>
 
   <table>
     <tr><th>写法</th><th>生成的 <code>operator()</code></th><th>能改值捕获的成员吗</th></tr>
@@ -322,7 +322,7 @@
 <span class="fn">counter</span>();   <span class="cm">// 3</span></pre>
 
   <h3 id="s2-3">2.3 sizeof 与成员布局</h3>
-  <p>捕获就是成员，闭包大小就是「成员之和 + 对齐」。这也是判断「能不能塞进 <code>std::function</code> 小对象缓冲」的依据：</p>
+  <p>捕获就是成员，所以闭包大小就是「成员之和 + 对齐」（对齐——编译器为了让每个成员落在自己习惯的地址边界上，在成员之间塞的空隙）。这也是判断「能不能塞进 <code>std::function</code> 小对象缓冲」的依据：</p>
 
   <table>
     <tr><th>lambda</th><th>成员</th><th>x86-64 典型 sizeof</th></tr>
@@ -339,7 +339,7 @@
     <strong>不要依赖布局。</strong>标准明确规定：成员的<strong>声明顺序未指定</strong>；引用捕获<strong>是否真的产生一个数据成员也未指定</strong>（实现上都存指针，但标准没承诺）。所以别对闭包对象做 <code>reinterpret_cast</code>、别按偏移读它的字段、别把它的二进制表示写进文件或网络包。
   </div>
 
-  <p>「空类 sizeof 为 1」让无捕获 lambda 能被 EBO 吃掉：<code>unique_ptr&lt;FILE, decltype(closer)&gt;</code> 仍是一个指针大小。细节见<a href="./object_model.html">对象模型</a>。</p>
+  <p>「空类 sizeof 为 1」让无捕获 lambda 能被 EBO（Empty Base Optimization，空基类优化——编译器不给「什么都不装」的基类分配额外空间）吃掉：<code>unique_ptr&lt;FILE, decltype(closer)&gt;</code> 仍是一个指针大小。细节见<a href="./object_model.html">对象模型</a>。</p>
 
   <h3 id="s2-4">2.4 脱糖器：换一种捕获，看类怎么变</h3>
 
@@ -376,7 +376,7 @@
     <tr><td><code>[...xs = std::move(pack)]</code>（C++20）</td><td>一组成员（包展开）</td><td>创建时逐个初始化</td><td>可变参转发进闭包</td></tr>
   </table>
 
-  <p>默认捕获 <code>[=]</code> / <code>[&amp;]</code> 不是第七种形态，它只是「<strong>凡是用到的都按这个方式捕获</strong>」的简写，展开后还是上表里的形态。</p>
+  <p>默认捕获（default capture，也就是 <code>[=]</code> / <code>[&amp;]</code>——「用到的全按值 / 全按引用带走」的懒人写法）<code>[=]</code> / <code>[&amp;]</code> 不是第七种形态，它只是「<strong>凡是用到的都按这个方式捕获</strong>」的简写，展开后还是上表里的形态。</p>
 
   <h3 id="s3-2">3.2 拷贝发生在创建点，不是调用点</h3>
   <p>成员在闭包<strong>构造函数</strong>里初始化，构造发生在 lambda 表达式求值时：</p>
@@ -422,7 +422,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s3-3">3.3 引用捕获的内存图</h3>
-  <p>引用捕获之所以危险，是因为它只在闭包里留了一个「地址」，而地址的有效性由<strong>别人的生命周期</strong>决定。闭包对象本身完全没有延长任何东西的能力：</p>
+  <p>引用捕获之所以危险，是因为它只在闭包里留了一个「地址」，而地址指向的那块内存什么时候失效，由<strong>别人的生命周期</strong>决定，闭包说了不算。好比你在纸条上抄了朋友家的门牌号：朋友搬走了，纸条还在，但按地址找过去已经不是他家了。闭包对象本身完全没有延长任何东西寿命的能力：</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 296" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="引用捕获在栈帧存活与销毁两种情形下的内存示意">
@@ -486,7 +486,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s3-4">3.4 看着捕获，其实没捕获</h3>
-  <p>默认捕获只捕获<strong>真正被 odr-use 的自动存储期变量</strong>。<code>static</code> / <code>thread_local</code> / 全局 / 只用其值的 <code>constexpr</code> 都不进闭包；<code>[=]</code> 也不会把没用到的变量拷一份。</p>
+  <p>默认捕获只捕获<strong>真正被 odr-use 的自动存储期变量</strong>。odr-use（odr-used，可以粗暴理解为「真的用到了这个变量本身、需要它有个地址」——比如取它的地址、绑引用、或以非常规方式读它）和自动存储期（automatic storage duration——变量住在函数栈帧里，函数返回就被回收）这两个词连起来的意思是：<code>static</code> / <code>thread_local</code> / 全局 / 只用其值的 <code>constexpr</code> 都不进闭包，因为它们要么全局只有一份、要么编译期就能算出值，闭包没必要带；<code>[=]</code> 也不会把没用到的变量拷一份。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="成员函数里写默认值捕获并不拷贝成员变量，只捕获 this 指针，对象先析构就会悬垂">
@@ -515,7 +515,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s3-5">3.5 init-capture：唯一能 move 进闭包的写法</h3>
-  <p>C++14 起成员可由<strong>任意表达式</strong>初始化。<code>[x = x]</code> 合法：左边是新成员名，右边是外层表达式。外层 <code>unique_ptr</code> 被 move 空之后是 <code>nullptr</code>（明确定义，不是 UB）。C++20 允许包展开：<code>[...xs = std::forward&lt;Args&gt;(args)]</code> 把可变参搬进闭包。</p>
+  <p>init-capture（初始化捕获——在捕获列表里直接「新成员名 = 表达式」地现场造一个成员）是 C++14 起加入的能力：成员可由<strong>任意表达式</strong>初始化。<code>[x = x]</code> 合法：左边是新成员名，右边是外层表达式。外层 <code>unique_ptr</code> 被 move 空之后是 <code>nullptr</code>（这是标准明确定义的行为，不是 UB——undefined behavior，未定义行为，即「标准不管会发生什么」，编译器可以任意发挥）。C++20 允许包展开：<code>[...xs = std::forward&lt;Args&gt;(args)]</code> 把可变参搬进闭包。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="init-capture 把 unique_ptr 从局部变量搬进闭包成员，外层变成空指针；得到的闭包不可拷贝所以塞不进 std::function">
@@ -556,7 +556,7 @@ n = <span class="num">99</span>;
   <p>源码里每出现一次 lambda 就多一个类型，哪怕两处代码一模一样；模板每个实例化里也各有一个。所以写不出这个类型，只能：<code>auto</code>（首选）、<code>decltype(f)</code>（deleter / 比较器）、模板参数 <code>template &lt;class F&gt;</code>（零开销）、或 <code>std::function</code> / <code>move_only_function</code>（要统一类型时，有代价）。</p>
 
   <h3 id="s4-2">4.2 无捕获 lambda 到函数指针的隐式转换</h3>
-  <p>转换函数<strong>只有无捕获时才有</strong>：函数指针里放不下状态。无捕获闭包是空类，调用不需要 <code>this</code>，编译器生成等价自由函数把地址给你。C 回调因此都长成 <code>void (*cb)(void* user_data, ...)</code>——状态必须走单独参数。带捕获的接到这种接口上，用无捕获 lambda 当蹦床，对象地址经 <code>void*</code> 传进去再 <code>static_cast</code> 回来。<code>+[]{...}</code> 的一元 <code>+</code> 可强制触发到函数指针的转换。</p>
+  <p>到函数指针的转换函数<strong>只有无捕获时才有</strong>：函数指针（function pointer——只存一个函数入口地址的变量）里放不下任何状态。无捕获闭包是空类，调用不需要 <code>this</code>，所以编译器可以生成一个等价的普通自由函数，把它的地址给你。C 回调因此都长成 <code>void (*cb)(void* user_data, ...)</code>——状态必须走单独参数。带捕获的闭包要接到这种接口上，就得用无捕获 lambda 当蹦床（trampoline——一个只负责「接住调用、再转手弹给真正对象」的小函数），对象地址经 <code>void*</code> 传进去再 <code>static_cast</code> 回来。<code>+[]{...}</code> 的一元 <code>+</code> 可强制触发到函数指针的转换。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="无捕获闭包是空类，可转换成函数指针；有捕获就必须把状态经 void 指针另传">
@@ -579,7 +579,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s4-3">4.3 C++20 松开的两道口子</h3>
-  <p>C++20 之前闭包的默认构造、拷贝赋值被删除，lambda 也不能出现在未求值上下文——比较器必须先造一个实例再传进 <code>std::set</code>。无捕获闭包在 C++20 可默认构造、可赋值，且 <code>decltype([](int a,int b){ return a&gt;b; })</code> 合法，比较器变成纯类型、零成员、EBO 吃掉。有捕获的仍然没有默认构造。</p>
+  <p>C++20 之前，闭包的默认构造、拷贝赋值是被删除的（deleted——编译器直接禁掉这个操作，用了就报错），lambda 也不能出现在未求值上下文（unevaluated context——比如 <code>decltype(...)</code>、<code>sizeof(...)</code> 这种「只看类型、不真执行」的位置），所以比较器必须先造一个实例再传进 <code>std::set</code>。C++20 给无捕获闭包松了绑：它可默认构造、可赋值，且 <code>decltype([](int a,int b){ return a&gt;b; })</code> 合法，比较器从此变成纯类型、零成员、还能被 EBO 吃掉。有捕获的仍然没有默认构造。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="lambda 作为 STL 谓词：类型作为模板参数被内联进算法；C++20 起无捕获闭包可直接写进 set 的比较器类型">
@@ -666,10 +666,10 @@ n = <span class="num">99</span>;
     <figcaption>图 3 · 同一逻辑的三条调用路径：内联 / 间接调用 / 类型擦除</figcaption>
   </div>
 
-  <p>模板参数把 <code>F</code> 推导成<strong>具体闭包类型</strong>，<code>f(x)</code> 是对已知函数的调用，可整体内联并继续做展开、向量化。<code>std::sort</code> 快于 <code>qsort</code>，主因不是算法更好，而是比较逻辑被内联了。</p>
+  <p>模板参数把 <code>F</code> 推导成<strong>具体闭包类型</strong>，于是 <code>f(x)</code> 是对一个已知函数的调用，编译器可以把函数体整体内联进去，接着做循环展开、向量化（vectorization——把「一次处理一个元素」的循环改写成「一条指令处理多个元素」）。<code>std::sort</code> 快于 <code>qsort</code>，主因不是算法更好，而是比较逻辑被内联了。</p>
 
   <h3 id="s5-2">5.2 std::function 的三重开销</h3>
-  <p><code>std::function&lt;R(Args...)&gt;</code> 做<strong>类型擦除</strong>：把各不相同的闭包抹成一个类型。这个能力不免费：</p>
+  <p><code>std::function&lt;R(Args...)&gt;</code> 做的是<strong>类型擦除</strong>（type erasure——把一堆各不相同的类型「抹平」成同一个外表类型，具体差异藏进内部）：把各不相同的闭包抹成一个类型，代价是运行期要多绕几步。这个能力不免费：</p>
 
   <table>
     <tr><th>开销</th><th>细节</th><th>能否避免</th></tr>
@@ -685,7 +685,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s5-3">5.3 代价的另一面：模板膨胀</h3>
-  <p>每个 lambda 都会让接受它的模板再实例化一份。热路径、当场调用 → 模板参数接原生类型，要内联。冷路径、要存储或跨边界 → 类型擦除，要统一类型。中间解：最外层模板收任意闭包，内部再包装成 <code>move_only_function</code> 进队列。</p>
+  <p>每个 lambda 都会让接受它的模板再实例化（instantiation——编译器按具体类型现场生成一份模板代码）一份，这是零开销的代价：同类代码被复制了很多份，二进制变大、指令缓存命中率下降，也就是<strong>模板膨胀</strong>（template bloat）。选型的判断标准只有两条：热路径、当场调用 → 模板参数接原生类型，要内联。冷路径、要存储或跨边界 → 类型擦除，要统一类型。中间解：最外层模板收任意闭包，内部再包装成 <code>move_only_function</code> 进队列。</p>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -736,7 +736,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s6-2">6.2 constexpr 与 C++23 简写</h3>
-  <p>C++17 起满足条件就隐式 <code>constexpr</code>，不必手写。<code>static operator()</code> 的收益在高频小回调：非 static 即使对象是空类，调用约定也要传 <code>this</code>（占一个参数寄存器）。</p>
+  <p>C++17 起，lambda 只要满足条件就会被隐式标成 <code>constexpr</code>（编译期就能求值的函数——不必手写，编译器自动加）。<code>static operator()</code> 的收益在高频小回调：非 static 的成员函数即使对象是空类，调用约定也要传 <code>this</code>（占一个参数寄存器）；<code>static</code> 把这个隐含参数直接省掉。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="C++23 简写：static 的 call operator 不再传隐含 this；deducing this 让递归 lambda 能直接 self 调用">
@@ -757,7 +757,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s6-3">6.3 递归 lambda 的三种写法</h3>
-  <p>函数体里用不了 <code>auto</code> 变量自己的名字（初始化未完成、类型未定）。三种解法代价递减：</p>
+  <p>函数体里用不了 <code>auto</code> 变量自己的名字——因为初始化还没完成、类型还没定下来，编译器没法在函数体里解析这个名字。三种解法代价递减：</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 220" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="递归 lambda 三种写法：function 又贵又容易悬垂，自传参零开销但调用要多一个参数，C++23 deducing this 最干净">
@@ -802,7 +802,7 @@ n = <span class="num">99</span>;
     <tr><td><code>std::move_only_function</code>（C++23）</td><td>有（可只移动）</td><td>间接 + 可能堆</td><td>✅ 统一</td><td>任务队列里放 <code>unique_ptr</code> 类闭包</td></tr>
   </table>
 
-  <p>另有「只借用不持有」：C++26 方向的 <code>std::function_ref</code>（现有第三方实现），两个指针、不分配。适合<strong>只在本次调用里用一下</strong>的回调参数——过去最常被 <code>std::function</code> 滥用的场景。函数参数写成 <code>std::function</code> 而回调并不存起来，每次调用都可能构造、分配、挡住内联；应改模板参数或 <code>function_ref</code>。若接口必须稳定、实现放 <code>.cpp</code>，擦除才是有意识的选择。</p>
+  <p>另有「只借用不持有」的一档：C++26 方向的 <code>std::function_ref</code>（现有第三方实现），内部只装两个指针、不分配内存。它适合<strong>只在本次调用里用一下</strong>的回调参数——这恰好是过去最常被 <code>std::function</code> 滥用的场景。如果函数参数写成 <code>std::function</code> 而回调并不存起来，那么每次调用都可能构造、分配、挡住内联；应该改成模板参数或 <code>function_ref</code>。反过来，若接口必须稳定、实现要放 <code>.cpp</code> 里藏起来，那类型擦除才是有意识的选择。</p>
 
   <table>
     <tr><th></th><th><code>std::bind</code></th><th>lambda</th></tr>
@@ -825,7 +825,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s8-1">8.1 悬垂三连</h3>
-  <p>闭包对象<strong>不延长任何东西的生命周期</strong>。凡是「闭包会离开当前作用域」的地方，都要逐个审查捕获：</p>
+  <p>闭包对象<strong>不延长任何东西的生命周期</strong>——被引用捕获的变量该死还是死，闭包只是留了个指向它的地址。凡是「闭包会离开当前作用域」的地方，都要逐个审查捕获：</p>
 
   <table>
     <tr><th>形态</th><th>典型写法</th><th>为什么崩</th></tr>
@@ -839,7 +839,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s8-2">8.2 异步任务的正确写法</h3>
-  <p>闭包的存活时间由<strong>调度器</strong>决定，不是由你写代码的那个作用域决定。</p>
+  <p>交给异步框架后，闭包的存活时间由<strong>调度器</strong>（决定这段代码什么时候真正跑起来的那个东西）决定，不是由你写代码的那个作用域决定。</p>
   <table>
     <tr><th>姿势</th><th>写法要点</th><th>何时用</th></tr>
     <tr><td>强持有</td><td><code>[self = shared_from_this()]</code></td><td>回调必须完成（日志、释放、提交）</td></tr>
@@ -871,7 +871,7 @@ n = <span class="num">99</span>;
   </details>
 
   <h3 id="s8-3">8.3 lambda 协程：一个隐蔽得多的悬垂</h3>
-  <p><code>co_await</code> 把 lambda 变成协程。<strong>协程帧保存的是参数，不是捕获</strong>，也不会延长闭包对象的寿命。成员函数协程里的 <code>this</code> 同理，详见<a href="./coroutines_deep_dive.html">协程</a>。</p>
+  <p><code>co_await</code>（协程的「暂停点」标记——在这里挂起、让出执行权，之后再恢复）会把 lambda 变成协程（coroutine——能暂停再继续的函数，状态存在堆上的「协程帧」里）。<strong>协程帧保存的是参数，不是捕获</strong>，也不会延长闭包对象的寿命：闭包对象死了，帧里并不会替你留一份捕获。成员函数协程里的 <code>this</code> 同理，详见<a href="./coroutines_deep_dive.html">协程</a>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 210" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="临时闭包启动协程后在完整表达式结束时销毁，协程帧仍挂起，捕获成员变成悬垂；状态应走参数让帧自己持有">
@@ -894,7 +894,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s8-4">8.4 mutable 状态 + 多线程</h3>
-  <p><code>mutable</code> 闭包和任何有状态对象一样要考虑竞争：<code>pool.post(tick)</code> 是拷贝（状态分叉，计数偏小，sanitizer 不报）；<code>post(std::ref(tick))</code> 才是共享（真竞争）。要共享就用 <code>shared_ptr&lt;atomic&lt;int&gt;&gt;</code> 把意图写出来。见<a href="./memory_model.html">内存模型</a>。</p>
+  <p><code>mutable</code> 闭包和任何有状态对象一样要考虑竞争（race——两个线程同时读写同一份数据，结果取决于谁先谁后）：<code>pool.post(tick)</code> 传的是拷贝（每份闭包各有一个计数，状态分叉、计数偏小，sanitizer 不报）；<code>post(std::ref(tick))</code> 才是共享（真竞争）。要共享就用 <code>shared_ptr&lt;atomic&lt;int&gt;&gt;</code> 把意图写出来。见<a href="./memory_model.html">内存模型</a>。</p>
 </section>
 
 <!-- ================================================================ §9 -->
@@ -905,7 +905,7 @@ n = <span class="num">99</span>;
   </div>
 
   <h3 id="s9-1">9.1 IIFE：给 const 变量一段初始化逻辑</h3>
-  <p>几行才能算出的值，不必放弃 <code>const</code>，也不必写只用一次的函数。立即调用的 lambda 把中间变量关在里面，也适用于构造函数初始化列表。</p>
+  <p>几行才能算出的值，不必为了「先算中间步骤」放弃 <code>const</code>，也不必为此写一个只用一次的函数。IIFE（Immediately Invoked Function Expression，立即调用的函数表达式——定义完当场就调用的写法）把多步计算包在 lambda 里立刻执行，中间变量被关在里面不外泄，也适用于构造函数初始化列表。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="立即调用 lambda 把多步初始化关在表达式里，结果可以是 const，中间变量不外泄">
@@ -935,10 +935,10 @@ n = <span class="num">99</span>;
   <p>这正是 §5 那条分界在标准库里的样子。详见<a href="./smart_pointers_deep_dive.html">智能指针</a>。</p>
 
   <h3 id="s9-3">9.3 overloaded：继承合成重载集</h3>
-  <p>闭包是普通非 final 类，可被继承。<code>struct overloaded : Fs... { using Fs::operator()...; }</code> 把多个 lambda 的 <code>operator()</code> 拉进同一个重载集，给 <code>std::visit</code> 用。没有虚函数、没有分配，全在类型层面完成。C++17 需要推导指引，C++20 起聚合体 CTAD 可省略。</p>
+  <p>闭包是普通非 final 类（final——禁止被继承的标记），所以它可以被继承。<code>struct overloaded : Fs... { using Fs::operator()...; }</code> 的意思是：同时继承多个 lambda 类型，再用 <code>using</code> 把它们各自的 <code>operator()</code> 都拉进同一个重载集（overload set——同名函数凑在一起，调用时编译器按参数类型挑最合适的那个），给 <code>std::visit</code>（对 variant 的当前变体派发对应处理函数）用。没有虚函数、没有分配，全在类型层面完成。C++17 需要推导指引，C++20 起聚合体 CTAD（类模板实参推导——省去手写模板参数）可省略。</p>
 
   <h3 id="s9-4">9.4 scope guard：RAII + lambda</h3>
-  <p>析构时调用保存的闭包：<code>ScopeExit closer{[&amp;]{ ::close(fd); }}</code>。这里的 <code>[&amp;]</code> 安全——<code>ScopeExit</code> 是栈对象，闭包不会离开这个作用域。<strong>危险的是闭包活得比被引用者久，不是引用捕获本身。</strong></p>
+  <p>scope guard（作用域守卫——一个「析构时自动执行收尾动作」的小对象）是 RAII（Resource Acquisition Is Initialization——把资源的管理绑在对象生命周期上：构造获取、析构释放）和 lambda 的组合：析构时调用保存的闭包，<code>ScopeExit closer{[&amp;]{ ::close(fd); }}</code>。这里的 <code>[&amp;]</code> 安全——因为 <code>ScopeExit</code> 是栈对象，闭包不会离开这个作用域。<strong>危险的是闭包活得比被引用者久，不是引用捕获本身。</strong></p>
 
   <h3 id="s9-5">9.5 一份可执行的 review 清单</h3>
   <table>

@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calling Convention 与 ABI · 寄存器传参 / caller-callee saved / 栈对齐 / System V vs Win64 vs ARM64</title>
-<meta name="description" content="Calling Convention 与 ABI：前三篇里反复出现一句话：「这取决于 ABI」。本篇把这个决定一切的幕后规则讲透 —— 参数放哪、返回值怎么带回、哪些寄存器谁负责保存、栈怎么对齐">
+<meta name="description" content="Calling Convention 与 ABI 通俗讲透：参数放哪个寄存器、返回值怎么带回、caller-saved 与 callee-saved 寄存器谁负责保存、栈为何要 16 字节对齐，并对比 System V、Windows x64 与 ARM64 的差异。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/calling_convention_abi.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/calling_convention_abi.html">
 <meta property="og:title" content="Calling Convention 与 ABI · 寄存器传参 / caller-callee saved / 栈对齐 / System V vs Win64 vs ARM64">
-<meta property="og:description" content="Calling Convention 与 ABI：前三篇里反复出现一句话：「这取决于 ABI」。本篇把这个决定一切的幕后规则讲透 —— 参数放哪、返回值怎么带回、哪些寄存器谁负责保存、栈怎么对齐">
+<meta property="og:description" content="Calling Convention 与 ABI 通俗讲透：参数放哪个寄存器、返回值怎么带回、caller-saved 与 callee-saved 寄存器谁负责保存、栈为何要 16 字节对齐，并对比 System V、Windows x64 与 ARM64 的差异。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Calling Convention 与 ABI · 寄存器传参 / caller-callee saved / 栈对齐 / System V vs Win64 vs ARM64">
-<meta name="twitter:description" content="Calling Convention 与 ABI：前三篇里反复出现一句话：「这取决于 ABI」。本篇把这个决定一切的幕后规则讲透 —— 参数放哪、返回值怎么带回、哪些寄存器谁负责保存、栈怎么对齐">
+<meta name="twitter:description" content="Calling Convention 与 ABI 通俗讲透：参数放哪个寄存器、返回值怎么带回、caller-saved 与 callee-saved 寄存器谁负责保存、栈为何要 16 字节对齐，并对比 System V、Windows x64 与 ARM64 的差异。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -130,7 +130,7 @@
     <header class="hero">
       <div class="badge">Under the Hood · 函数调用与底层执行 · 系列 04 / 06</div>
       <h1>Calling Convention 与 ABI：参数为什么不一定压栈？</h1>
-      <p class="sub">前三篇里反复出现一句话：「这取决于 ABI」。本篇把这个决定一切的幕后规则讲透 —— <strong>参数放哪、返回值怎么带回、哪些寄存器谁负责保存、栈怎么对齐</strong>。我们以 <strong>x86-64 Linux System V ABI</strong> 为主线，再横向对比 Windows x64 与 ARM64，让你彻底理解：<em>同一段 C++，为何在不同平台生成完全不同的汇编</em>。</p>
+      <p class="sub">前三篇里反复出现一句话：「这取决于 ABI」。本篇就把这个决定一切的幕后规则讲透——<strong>参数放哪、返回值怎么带回、哪些寄存器由谁负责保存、栈怎么对齐</strong>。我们以 <strong>x86-64 Linux System V ABI</strong>（Linux/macOS 上事实标准的调用规则手册）为主线，再横向对比 Windows x64 与 ARM64，最终你会彻底理解：<em>同一段 C++，为何在不同平台生成完全不同的汇编</em>。</p>
       <div class="meta-row">
         <span class="pill cyan">核心难度 ★★★★☆</span>
         <span class="pill green">阅读 ~10 min</span>
@@ -169,9 +169,9 @@
         </tbody>
       </table>
 
-      <p>可以理解为：<strong>调用约定是 ABI 的一个子集</strong>。ABI 是「两段独立编译的二进制如何协作」的完整合同，调用约定则是其中关于「函数怎么调」的那一章。</p>
+      <p>两者的层级关系可以这样理解：<strong>调用约定是 ABI 的一个子集</strong>。ABI（Application Binary Interface，应用二进制接口）好比「两段独立编译的二进制如何协作」的完整合同，条款覆盖数据布局、文件格式等方方面面；调用约定则是这份合同里专门讲「函数怎么调」的那一章。</p>
 
-      <div class="info-box key"><div class="title">最需要记住的一句</div><p><strong>C++ 语言标准并不规定参数放哪个寄存器、返回值怎么传。</strong>这些完全由 ABI / Calling Convention / 编译器 / 平台决定。C++ 只保证「语义」（调用 <code>add(10,20)</code> 会得到 30），不保证「实现方式」。</p></div>
+      <div class="info-box key"><div class="title">最需要记住的一句</div><p><strong>C++ 语言标准并不规定参数放哪个寄存器、返回值怎么传。</strong>这些完全由 ABI / Calling Convention / 编译器 / 平台决定。C++ 标准只保证「语义」（调用 <code>add(10,20)</code> 一定得到 30），至于「实现方式」——参数走寄存器还是走栈、走哪个寄存器——它一概不管。</p></div>
     </section>
 
     <!-- S2 -->
@@ -181,14 +181,14 @@
         <p class="sub">它是「分开编译、还能拼在一起运行」的前提</p>
       </div></div>
 
-      <p>你的程序由许多独立编译的部分组成：你的 <code>.o</code>、第三方 <code>.so</code>、C 标准库、系统内核。它们可能由不同版本编译器、甚至不同语言产出。为什么它们能互相调用？因为大家<strong>遵守同一份 ABI</strong>：</p>
+      <p>你的程序其实是由许多「分开编译、事后拼装」的零件组成的：你自己的 <code>.o</code>（编译产出的目标文件）、第三方的 <code>.so</code>（动态链接库）、C 标准库、系统内核。这些零件可能出自不同版本的编译器，甚至不同语言。它们凭什么能互相调用？因为大家都<strong>遵守同一份 ABI</strong>，就像各国供应商都按同一份接口图纸生产零件，装到一起才能严丝合缝：</p>
       <ul>
-        <li>调用方按 ABI 把参数放进 <span class="reg">RDI</span>/<span class="reg">RSI</span>…，被调方也按 ABI 从那里取 —— 双方无需见过对方源码；</li>
-        <li>数据类型大小、结构体布局一致，一方写的结构体另一方才能正确读；</li>
-        <li>ABI 稳定，就能<strong>只替换某个 <code>.so</code> 而不重编译整个程序</strong>。</li>
+        <li>调用方按 ABI 把参数放进 <span class="reg">RDI</span>/<span class="reg">RSI</span>…，被调方也按同一份 ABI 从同样的位置取——双方根本无需见过对方的源码；</li>
+        <li>数据类型大小、结构体布局保持一致，一方写出的结构体另一方才能一字不差地读回来；</li>
+        <li>ABI 保持稳定，就能<strong>只替换某个 <code>.so</code> 而不用重编译整个程序</strong>——好比换一颗螺丝不必整台机器返厂。</li>
       </ul>
 
-      <div class="info-box warning"><p><strong>ABI 不匹配的后果非常隐蔽</strong>：编译能过、链接能过，运行时却因为「一方以为参数在 RDI、另一方去 RCX 取」而读到垃圾值、栈错位、崩溃。跨语言（C/C++/Rust/Go）互调、跨平台移植时，ABI 是头号坑。稳定的 C ABI 正是各种 FFI（外部函数接口）的通用桥梁。</p></div>
+      <div class="info-box warning"><p><strong>ABI 不匹配的后果非常隐蔽</strong>：编译能过、链接也能过，可一到运行时，就因为「一方以为参数在 RDI、另一方却跑去 RCX 取」而读到垃圾值、栈错位、莫名崩溃。跨语言（C/C++/Rust/Go）互调、跨平台移植时，ABI 是头号大坑。各种 FFI（外部函数接口——让不同语言互相调用函数的桥）之所以都拿稳定的 C ABI 当通用桥梁，正是这个原因。</p></div>
     </section>
 
     <!-- S3 -->
@@ -207,7 +207,7 @@
         <div class="cell"><div class="r">R8</div><div class="d">第 5 个参数</div></div>
         <div class="cell"><div class="r">R9</div><div class="d">第 6 个参数</div></div>
       </div>
-      <p>浮点/向量参数走另一组 <span class="reg">XMM0–XMM7</span>（8 个），与整数寄存器<strong>独立计数</strong>。所以一个函数可以有 6 个整数 + 8 个浮点参数全部走寄存器。</p>
+      <p>浮点/向量参数走另一组寄存器 <span class="reg">XMM0–XMM7</span>（共 8 个），与整数寄存器<strong>分开计数、互不挤占</strong>。所以一个函数完全可以有 6 个整数 + 8 个浮点参数，全部走寄存器传递。</p>
 
       <pre><code><span class="type">long</span> add(<span class="type">long</span> a, <span class="type">long</span> b) {
     <span class="keyword">return</span> a + b;
@@ -217,9 +217,9 @@
 add:
     lea     rax, [rdi + rsi]   <span class="comment"># a 在 RDI，b 在 RSI</span>
     ret                        <span class="comment"># 返回值在 RAX</span></code></pre>
-      <p>对应关系一目了然：<code>a → RDI</code>，<code>b → RSI</code>，<code>返回值 → RAX</code>。这就是「参数不一定压栈」最直接的证据 —— 这里根本没碰栈。</p>
+      <p>对应关系一目了然：<code>a → RDI</code>，<code>b → RSI</code>，<code>返回值 → RAX</code>。这就是「参数不一定压栈」最直接的证据——上面这段汇编压根没碰过栈。</p>
 
-      <div class="info-box"><div class="title">this 指针去哪了？</div><p>C++ 成员函数的隐藏 <code>this</code> 指针，在 System V 下作为<strong>第一个参数</strong>放进 <span class="reg">RDI</span>，真实参数依次后移到 RSI、RDX…。这解释了为什么成员函数汇编里第一个参数总是 this。</p></div>
+      <div class="info-box"><div class="title">this 指针去哪了？</div><p>C++ 成员函数有个看不见的隐藏参数 <code>this</code>（指向当前对象本身的指针）。在 System V 下，它被当作<strong>第一个参数</strong>放进 <span class="reg">RDI</span>，你写的真实参数则依次后移到 RSI、RDX…。这解释了为什么成员函数的汇编里，第一个参数位置上出现的老是 this。</p></div>
     </section>
 
     <!-- S4 -->
@@ -238,7 +238,7 @@ add:
         </tbody>
       </table>
 
-      <div class="info-box"><div class="title">大对象返回 = sret（结构体返回优化）</div><p>返回一个大 <code>struct</code> 时，编译器改写函数签名：真实的第一个参数变成「结果对象的地址」（RDI），原来的参数后移。被调函数把结果直接构造在调用者给的内存里，<strong>避免一次多余拷贝</strong>。这也是 RVO / NRVO（返回值优化）的底层实现方式之一。</p></div>
+      <div class="info-box"><div class="title">大对象返回 = sret（结构体返回优化）</div><p>返回一个大 <code>struct</code> 时，编译器会悄悄改写函数签名：真正的第一个参数变成「结果对象的地址」（放 RDI），你写的参数全部后移一位。被调函数拿到这块调用者预留好的内存，把结果直接构造在里面，<strong>省掉了一次多余的拷贝</strong>。你在 C++ 里听说的 RVO / NRVO（返回值优化），底层实现方式之一正是这套机制。</p></div>
     </section>
 
     <!-- S5 -->
@@ -248,7 +248,7 @@ add:
         <p class="sub">共用一套寄存器时，「谁负责保护谁」的分工</p>
       </div></div>
 
-      <p>调用者和被调者共用同一套物理寄存器。ABI 把它们分成两类，约定各自的保护责任：</p>
+      <p>调用者和被调者共用同一套物理寄存器（CPU 里那几个数量有限、取用飞快的储物格）。谁先谁后用、用完要不要还原？ABI 把寄存器分成两类，事先约定好各自的保护责任：</p>
       <table>
         <thead><tr><th>类别</th><th>含义</th><th>System V 寄存器</th></tr></thead>
         <tbody>
@@ -269,7 +269,7 @@ foo:
     call    bar
     mov     rcx, [rsp-8]  <span class="comment"># 调用后自己恢复</span></code></pre>
 
-      <div class="info-box key"><p>这套分工的意义：<strong>不必在每次调用时保存全部 16 个寄存器</strong>。只保存「确实要跨调用存活」的那些，把开销降到最低。返回值寄存器 RAX 天然是 caller-saved（本来就要被结果覆盖）。</p></div>
+      <div class="info-box key"><p>这套分工的意义在于：<strong>不必在每次调用时手忙脚乱地保存全部 16 个寄存器</strong>。哪些值需要「跨调用存活」，就保存哪一类对应的寄存器，把开销压到最低。返回值寄存器 RAX 天生就是 caller-saved——它本来就要被调用结果覆盖，谈不上保护。</p></div>
     </section>
 
     <!-- S6 -->
@@ -279,9 +279,9 @@ foo:
         <p class="sub">一个不遵守就可能崩溃的隐形规则</p>
       </div></div>
 
-      <p>System V x86-64 规定：<strong>在执行 <code>call</code> 那一刻，<span class="reg">RSP</span> 必须 16 字节对齐</strong>。由于 <code>call</code> 会压入 8 字节返回地址，所以函数<em>入口处</em> <code>RSP % 16 == 8</code>。编译器据此计算序言里 <code>sub rsp, N</code> 的 N，使调用下一层前重新对齐到 16。</p>
+      <p>System V x86-64 有一条硬规定：<strong>在执行 <code>call</code> 那一刻，<span class="reg">RSP</span>（栈顶指针）必须落在 16 字节对齐的地址上</strong>（即地址是 16 的整数倍）。又因为 <code>call</code> 会先压入 8 字节的返回地址，所以进入函数<em>入口处</em>时 <code>RSP % 16 == 8</code>（对齐被这 8 字节顶歪了）。编译器会据此精心计算序言里 <code>sub rsp, N</code> 的 N，保证调用下一层之前重新对齐回 16 的倍数。</p>
 
-      <div class="info-box warning"><div class="title">为什么要对齐？</div><p>SSE/AVX 的对齐访存指令（如 <code>movaps</code>）要求操作数 16 字节对齐，否则触发 <code>#GP</code> 异常直接崩溃。若你手写汇编或在信号处理里破坏了对齐，常见症状就是「进某个用到 SIMD 的库函数就段错误」。ARM64 同样要求栈 16 字节对齐。</p></div>
+      <div class="info-box warning"><div class="title">为什么要对齐？</div><p>SSE/AVX（CPU 的一批向量加速指令）中的对齐访存指令（如 <code>movaps</code>）要求操作数必须 16 字节对齐，不满足就直接触发 <code>#GP</code> 异常当场崩溃。如果你手写汇编、或在信号处理函数里破坏了对齐，典型症状就是「一进某个用到 SIMD 的库函数就段错误」。ARM64 同样要求栈 16 字节对齐。</p></div>
 
       <pre><code><span class="comment"># 典型：为了对齐而多留 8 字节</span>
 foo:
@@ -298,7 +298,7 @@ foo:
         <p class="sub">寄存器不够，栈来兜底</p>
       </div></div>
 
-      <p>当整数参数超过 6 个，第 7 个起<strong>从右向左压栈</strong>。看一个 8 参数的例子：</p>
+      <p>那整数参数超过 6 个呢？从第 7 个起，多出来的部分<strong>从右向左压栈</strong>（先压最右边的，再往左）。看一个 8 参数的例子：</p>
       <pre><code><span class="type">long</span> f(<span class="type">long</span> a,<span class="type">long</span> b,<span class="type">long</span> c,<span class="type">long</span> d,<span class="type">long</span> e,<span class="type">long</span> g,<span class="type">long</span> h,<span class="type">long</span> i);
 <span class="comment">// a→RDI b→RSI c→RDX d→RCX e→R8 g→R9   h,i→压栈</span></code></pre>
 
@@ -311,7 +311,7 @@ foo:
       </div>
       <p class="grow-lo">▲ 超出寄存器的参数由调用者压栈，被调函数用 [rsp+N] 读取</p>
 
-      <div class="info-box"><p>从右向左压栈，使得<strong>第 7 个参数离返回地址最近</strong>、编号越大越远。这也是 C 变参函数（<code>printf</code>）能工作的部分基础。<strong>结论：栈只是寄存器不够时的补充</strong>，绝非「参数的默认归宿」。</p></div>
+      <div class="info-box"><p>从右向左压栈的结果是：<strong>第 7 个参数紧挨着返回地址</strong>，编号越大离得越远、位置越规整。C 的变参函数（如 <code>printf</code>，参数个数不定）能工作，部分底气就来自这套摆放规则。<strong>一句话结论：栈只是寄存器不够用时的补充手段</strong>，绝不是「参数的默认归宿」。</p></div>
     </section>
 
     <!-- S8 -->
@@ -341,19 +341,19 @@ foo:
 
 <span class="comment"># Windows x64：a→RCX, b→RDX</span>
     lea     rax, [rcx + rdx]</code></pre>
-      <p>完全相同的 C++，寄存器分配却不同。这就是为什么<strong>直接把 Linux 编译的 <code>.o</code> 拿去 Windows 链接会出问题</strong> —— 二者 ABI 不兼容。</p>
+      <p>完全相同的 C++，两个平台分配的寄存器却不同。这就是为什么<strong>直接把 Linux 编译的 <code>.o</code> 拿去 Windows 链接会出问题</strong>——两者的 ABI 不兼容，就像两家的插座插头制式不同，硬插只会出事故。</p>
 
       <h3>ARM64（AArch64）：嵌入式 / 移动开发</h3>
-      <p>ARM64 用 <span class="reg">X0–X7</span> 传前 8 个整数参数，返回值在 <span class="reg">X0</span>。它有独立的链接寄存器 <span class="reg">LR (X30)</span> 保存返回地址（而非像 x86 那样压栈）—— 叶子函数因此常常连栈都不碰，非常适合低功耗场景。理解这点，看 Cortex-M / 手机 SoC 的反汇编就不再陌生。</p>
+      <p>ARM64 用 <span class="reg">X0–X7</span> 这 8 个寄存器传前 8 个整数参数，返回值放 <span class="reg">X0</span>。它还有一个专门的链接寄存器 <span class="reg">LR (X30)</span>，用来保存返回地址（不必像 x86 那样压到栈上）——于是叶子函数常常连栈都不碰，省时省电，特别适合低功耗场景。理解了这一点，再看 Cortex-M / 手机 SoC 的反汇编就不会陌生。</p>
 
-      <div class="info-box key"><p><strong>核心洞见：调用约定是「平台的选择」，不是「语言的规定」。</strong>正因如此，C++ 才能在从 8 位单片机到超算的各种硬件上运行 —— 语义统一，实现各随其平台的 ABI。</p></div>
+      <div class="info-box key"><p><strong>核心洞见：调用约定是「平台的选择」，不是「语言的规定」。</strong>正因为各平台可以各定各的 ABI 而语义不变，C++ 才能在从 8 位单片机到超算的各种硬件上运行——语言层面语义统一，实现层面各随其平台的 ABI。</p></div>
     </section>
 
     <!-- S9 -->
     <section class="chapter" id="s9">
       <div class="ch-head"><div class="num">09</div><div class="t"><h2>核心结论</h2></div></div>
       <div class="phase-card"><ul>
-        <li><strong>调用约定 ⊂ ABI</strong>：前者管单次调用，后者管整套二进制协作合同。</li>
+        <li><strong>调用约定 ⊂ ABI</strong>：前者只管单次函数怎么调，后者是整套二进制协作合同。</li>
         <li>System V x86-64：整数参数 <strong>RDI/RSI/RDX/RCX/R8/R9</strong>，返回值 <strong>RAX</strong>，浮点走 XMM。</li>
         <li><strong>Caller-saved</strong> 由调用者按需保存，<strong>Callee-saved</strong> 由被调函数保存并恢复。</li>
         <li>call 时 <strong>RSP 必须 16 字节对齐</strong>，否则 SIMD 指令可能崩溃。</li>

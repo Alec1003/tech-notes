@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 编译步骤详解</title>
-<meta name="description" content="C++ 编译步骤详解：从 预处理 · 词法 / 语法分析 的编译前端，到 语义分析 · 优化 · 汇编生成 的编译核心，再到 目标文件 · 静态 / 动态链接 · 符号解析">
+<meta name="description" content="C++ 编译步骤通俗讲解：源码先经预处理展开头文件与宏，再经词法 / 语法 / 语义分析与优化生成汇编，汇编成 .o 目标文件后，由链接器做符号解析与重定位，拼出可执行文件。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/compilation_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/compilation_guide.html">
 <meta property="og:title" content="C++ 编译步骤详解">
-<meta property="og:description" content="C++ 编译步骤详解：从 预处理 · 词法 / 语法分析 的编译前端，到 语义分析 · 优化 · 汇编生成 的编译核心，再到 目标文件 · 静态 / 动态链接 · 符号解析">
+<meta property="og:description" content="C++ 编译步骤通俗讲解：源码先经预处理展开头文件与宏，再经词法 / 语法 / 语义分析与优化生成汇编，汇编成 .o 目标文件后，由链接器做符号解析与重定位，拼出可执行文件。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 编译步骤详解">
-<meta name="twitter:description" content="C++ 编译步骤详解：从 预处理 · 词法 / 语法分析 的编译前端，到 语义分析 · 优化 · 汇编生成 的编译核心，再到 目标文件 · 静态 / 动态链接 · 符号解析">
+<meta name="twitter:description" content="C++ 编译步骤通俗讲解：源码先经预处理展开头文件与宏，再经词法 / 语法 / 语义分析与优化生成汇编，汇编成 .o 目标文件后，由链接器做符号解析与重定位，拼出可执行文件。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -474,7 +474,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 20 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -503,11 +503,11 @@
     <header class="hero">
   <div class="badge">C++ Compilation · Build Pipeline · 2026</div>
   <h1>C++ 编译步骤详解</h1>
-  <p class="sub">以 <em>netconf_agent</em> 为线索，把 <strong>预处理 → 编译 → 汇编 → 链接</strong> 走一遍：每个 <code>.cpp</code> 是独立翻译单元，链接器按符号把 <code>.o</code> 与库拼成可执行文件。CMake 怎么拼 target 见 <a href="./cmake_modern.html#s4">CMake · 真实项目走读</a>。</p>
+  <p class="sub">以 <em>netconf_agent</em> 为线索，把 <strong>预处理 → 编译 → 汇编 → 链接</strong> 走一遍：每个 <code>.cpp</code> 是一个独立的翻译单元（一个 .cpp 加上它展开的头文件，单独编译成一个 .o，彼此看不见对方），最后由链接器按符号（函数、变量在目标文件里的名字记录）把各个 <code>.o</code> 与库拼成可执行文件。CMake 怎么拼 target 见 <a href="./cmake_modern.html#s4">CMake · 真实项目走读</a>。</p>
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★☆☆</span>
     <span class="pill cyan">面试出现率 中</span>
-    <span class="pill green">阅读时长 ~15 min</span>
+    <span class="pill green">阅读时长 ~20 min</span>
     <span class="pill amber">前置 C++ 语法基础</span>
   </div>
   <div class="meta">
@@ -759,7 +759,7 @@
   </div>
 
   <h3 id="s2-2">include 卫士失败</h3>
-  <p>头文件是文本粘贴，没有卫士时两个头互相 include 会把预处理器绕死。</p>
+  <p>预处理器的本质是文本粘贴：<code>#include</code> 写到哪里，就把那个文件的内容原样抄到哪里，不做任何理解。include 卫士（<code>#pragma once</code> / <code>#ifndef</code>）的作用，是给每个头文件挂一块「已抄过」的牌子，防止同一份内容被重复抄写。没有卫士时，两个头文件互相 include 会让预处理器陷入无限循环——a 抄 b、b 又抄 a、a 再抄 b——直到嵌套层数超限被编译器强行拦下。</p>
   <pre><code><span class="comment">// a.hpp  —— 没有 #pragma once / #ifndef</span>
 <span class="keyword">#include</span> <span class="string">"b.hpp"</span>
 <span class="keyword">int</span> fa();
@@ -793,7 +793,7 @@
     <div class="meta-item"><span class="label">输出：</span><code>.s</code></div>
   </div>
 
-  <p>编译器内部六步：词法 → 语法 → 语义（含模板实例化）→ IR → 优化 → 出汇编。日常排障只需要记住：<strong>类型/重载/模板错误出在语义分析</strong>；<code>-O2</code> 才开始认真内联。</p>
+  <p>编译器内部其实是六步接力：先把字符流切成一个个词（词法），再把词组织成树（语法），然后在树上检查类型与名字的含义（语义，模板实例化也发生在这一步），接着翻译成与具体 CPU 无关的中间表示（IR），在 IR 上做优化，最后才吐出汇编。日常排障只需要记住两条：<strong>类型 / 重载 / 模板的错误出在语义分析</strong>这一步；<code>-O2</code>（优化等级 2）才开始认真做内联（把函数调用直接展开成函数体）。</p>
 
   <div class="substage-row">
     <div class="substage"><span class="num">1</span><span class="title">词法</span><span class="desc">字符 → Token</span></div>
@@ -805,10 +805,10 @@
   </div>
 
   <h3 id="p2-1">2.1 词法分析</h3>
-  <p><code>int count = 42;</code> 被切成关键字 / 标识符 / 运算符 / 字面量 / 分号。拼写错误多半死在这一层。</p>
+  <p>词法分析做的事类似断句：把一长串字符切成一个个有意义的单词（Token，源码的最小词汇单元）。比如 <code>int count = 42;</code> 会被切成关键字 / 标识符 / 运算符 / 字面量 / 分号，每个 Token 都带上类型标签。拼写错误——比如把 <code>int</code> 打成 <code>itn</code>——多半死在这一层，因为词表里查不到这个词。</p>
 
   <h3 id="p2-2">2.2 语法分析</h3>
-  <p>Token 流长成 AST。模板在树上只是「带类型参数的函数」，此刻还不生成机器码。</p>
+  <p>语法分析把 Token 流组织成一棵 AST（抽象语法树——把代码的嵌套结构画成一棵树，谁包含谁一目了然）。好比把一排单词整理成主谓宾的句子结构。模板在树上只是「带类型参数的函数」这么一个记号，此刻还不生成机器码。</p>
 
   <h3 id="p2-3">2.3 语义分析</h3>
   <table>
@@ -842,7 +842,7 @@
   </div>
 
   <h3 id="p2-4">2.4 中间代码</h3>
-  <p>AST 变成 LLVM IR / GIMPLE：与 CPU 无关、SSA 形式，后面的优化都在这层做。LTO 就是把这份 IR 留到链接期再优化。</p>
+  <p>AST 被翻译成 LLVM IR / GIMPLE（中间表示——编译器内部的一种通用语言，不针对任何具体 CPU）。它通常采用 SSA 形式（每个变量只赋值一次，方便编译器推理数据从哪来到哪去），后面的优化都在这层做。LTO（链接时优化）就是把这份 IR 留到链接期再优化——好比工厂把半成品先存起来，等所有零件到齐了再统一加工。</p>
 
   <h3 id="p2-5">2.5 优化</h3>
   <table>
@@ -856,7 +856,7 @@
   </table>
 
   <h3 id="p2-6">2.6 目标代码生成</h3>
-  <p>IR → 目标平台汇编。C++ 符号被 name mangling 编进参数类型（<code>c++filt</code> 还原）。GCC 5+ 双 ABI 会让 mangled 名对不上，表现为 <code>undefined reference</code>——细节见下文面试专题。</p>
+  <p>IR 被翻译成目标平台的汇编。为了支持重载，C++ 编译器会把参数类型编进符号名里，这个动作叫 name mangling（名字修饰，好比给每个重载函数的名字后面偷偷缀上参数暗号）；<code>c++filt</code> 能把暗号还原成人读的签名。GCC 5+ 的双 ABI（同一个 <code>std::string</code> 有新旧两套内存布局）会让 mangled 名对不上，表现为 <code>undefined reference</code>——细节见下文面试专题。</p>
 </div>
 
 <!-- ============ PHASE 3 ============ -->
@@ -879,7 +879,7 @@
     <div class="meta-item"><span class="label">输出：</span><code>.o</code></div>
   </div>
 
-  <p>汇编器把助记符变成机器码，并写下符号表 / 重定位项。链接器稍后只看这些表，不再回头读源码。<code>D</code> 是已初始化全局量，<code>B</code> 是 BSS；排障时先分清 <code>U</code> 和 <code>T</code> 就够。</p>
+  <p>汇编器（as）把人能读的助记符（如 <code>mov</code>、<code>call</code>）逐条翻译成机器码字节，同时额外记下两本账：符号表（这个文件里有哪些名字、哪些名字还没着落）和重定位项（哪些调用点的地址要等链接时回填）。链接器稍后只看这些表，不再回头读源码。用 <code>nm</code> 看符号时，<code>T</code> 表示本文件已定义的函数，<code>U</code> 表示引用了但还没找到定义；<code>D</code> 是已初始化全局量，<code>B</code> 是未初始化全局量（BSS 段）。排障时先分清 <code>U</code> 和 <code>T</code> 就够用了。</p>
 
   <h3 id="s4-1">目标文件的段</h3>
   <table>
@@ -892,7 +892,7 @@
   </table>
 
   <h3 id="s4-2">用 nm 看 U 与 T</h3>
-  <p><code>T</code> = 本文件已定义的函数；<code>U</code> = 引用了但本文件没有，等别的 <code>.o</code> / 库来给。</p>
+  <p>再直白一点读这张表：<code>T</code> = 本文件已经定义好的函数（有地址，可以给别人用）；<code>U</code> = 引用了但本文件没有的（无地址，等别的 <code>.o</code> 或库来补上）。下面这个例子里，<code>stopMonitoring</code> 是本文件的产出，<code>setWithXml</code> 和 <code>string</code> 构造函数都是欠账。</p>
   <pre><code>$ nm -C PmAdapter.o
 0000000000000120 T PmAdapter::stopMonitoring(...)
                  U YangAdapter::setWithXml(...)
@@ -920,7 +920,7 @@
   </div>
 
   <h3 id="s5-1">4.1 符号解析</h3>
-  <p>链接器把各 <code>.o</code> 的符号表并在一起：每个 <code>U</code> 必须找到恰好一个定义（<code>T</code> / <code>D</code>）。找不到 → <code>undefined reference</code>；找到多份强符号 → <code>multiple definition</code>（ODR）。静态库里「没人点名」的 <code>.o</code> 整份丢弃，靠全局 ctor 自注册的插件要用 <code>--whole-archive</code>（见面试题）。</p>
+  <p>链接器做的第一件事是符号解析：把所有 <code>.o</code> 的符号表并在一起对账，每个 <code>U</code>（欠账）必须找到恰好一个定义（<code>T</code> / <code>D</code>）。找不到 → <code>undefined reference</code>；找到多份强符号（不允许重名的定义）→ <code>multiple definition</code>（这背后是 ODR，单一定义规则，见 §7）。静态库（.a，一堆 .o 的归档打包）里「没人点名引用」的 <code>.o</code> 会被整份丢弃——所以靠全局构造函数自注册的插件经常因此失踪，要用 <code>--whole-archive</code> 强制整库链入（见面试题）。</p>
 
   <!-- ===== 交互式动画：符号解析 + 重定位 ===== -->
   <style>
@@ -996,10 +996,10 @@
   </script>
 
   <h3 id="s5-2">4.2 重定位</h3>
-  <p>每个 <code>.o</code> 里的 <code>call</code> 先写占位。符号解析成功后，链接器把真实地址填回去——这就是重定位。段合并只是把各文件的 <code>.text</code> / <code>.data</code> 首尾相接。</p>
+  <p>因为每个 <code>.o</code> 都是独立编译的，它并不知道别人在哪，所以里面的 <code>call</code> 指令只能先写个占位地址。符号解析成功后，链接器把对方的真实地址填回这些占位处——这个回填动作就是重定位（relocation）。段合并则是机械操作：把各文件的同名段（<code>.text</code> / <code>.data</code>）首尾相接拼在一起。</p>
 
   <h3 id="s5-3">4.3 段合并</h3>
-  <p>最终映像 = 所有被选中的 <code>.text</code> + <code>.data</code> + <code>.rodata</code>。没被引用的静态库成员根本不会进来。</p>
+  <p>最终映像（可执行文件的内容布局）= 所有被选中的 <code>.text</code> + <code>.data</code> + <code>.rodata</code>。没被引用的静态库成员根本不会进来——链接器只搬被点名要的东西。</p>
 
   <h3 id="s5-4">4.4 静态库只抽用到的 .o</h3>
   <div class="fig">
@@ -1072,11 +1072,11 @@
 
 <div class="phase-card" style="border-left-color: var(--accent-cyan);">
   <h3 id="s6-1">CMake 构建流程</h3>
-  <p>CMake 落到命令行就是：每个 <code>.cpp</code> 一条 <code>g++ -c</code>（可 <code>-j</code> 并行），再一条链接。</p>
+  <p>CMake 落到命令行其实非常朴素：每个 <code>.cpp</code> 一条 <code>g++ -c</code>（可以 <code>-j</code> 多进程并行），最后再来一条链接命令把它们接起来。</p>
   <div class="box tip">这段只展示「CMake 最终会变成哪些 g++ 命令」。CMake 本身是什么、这个仓库的 OBJECT 库怎么拼出二进制，见 <a href="./cmake_modern.html#s4">CMake · 真实项目走读</a>。</div>
 
   <h3 id="s6-2">实际编译命令（CMake 生成）</h3>
-  <p>每个翻译单元独立 <code>-c</code> 出 <code>.o</code>，最后 <code>g++ *.o -lconfig-store -lyang -o netconf_agent</code>。旗标含义见 §8。PCH 把 <code>&lt;vector&gt;</code> 这类公共头预编译成 AST，每个 <code>.cpp</code> 直接加载，前端能少做一大半，大型项目常见 20–50% 加速。</p>
+  <p>每个翻译单元独立 <code>-c</code> 出 <code>.o</code>，最后 <code>g++ *.o -lconfig-store -lyang -o netconf_agent</code> 一条命令链接成可执行文件。旗标含义见 §8。PCH（预编译头）是把 <code>&lt;vector&gt;</code> 这类公共头预先解析好存成 AST 缓存，每个 <code>.cpp</code> 直接加载现成结果，前端解析工作能省一大半——大型项目常见 20–50% 加速。</p>
 
   <h3 id="s6-3">改一头文件，谁要重编</h3>
   <div class="fig">
@@ -1159,7 +1159,7 @@
   </svg>
 </div>
 
-<p>最短反例：非 inline 函数写进头，两个 <code>.cpp</code> 一 include 就炸。inline 首先是<strong>链接许可</strong>（允许多份定义再合并），其次才是内联优化。</p>
+<p>最短反例：非 inline 函数写进头，两个 <code>.cpp</code> 一 include 就各自生成一份定义，链接时撞车报 multiple definition。inline 首先是<strong>链接许可</strong>（告诉链接器「允许出现多份定义，你挑一份合并掉」），其次才是内联优化——顺序反过来的理解都容易踩坑。</p>
 <pre><code><span class="comment">// util.hpp —— 非 inline 定义进了头</span>
 <span class="keyword">int</span> next_id() { <span class="keyword">static</span> <span class="keyword">int</span> n; <span class="keyword">return</span> ++n; }
 
@@ -1209,16 +1209,16 @@
   </div>
 
 <div class="phase-card linking">
-<p>站在高级 C++ 工程师视角，编译/链接的深度考点集中在：<strong>ODR</strong>、<strong>LTO</strong>、<strong>内联/模板的链接行为</strong>、<strong>动/静态库对比</strong>、<strong>Name Mangling 与 ABI 稳定性</strong>、<strong>常见链接错误诊断</strong>。</p>
+<p>站在高级 C++ 工程师视角，编译/链接的深度考点集中在六件事：<strong>ODR</strong>（单一定义规则）、<strong>LTO</strong>（链接时优化）、<strong>内联/模板的链接行为</strong>、<strong>动/静态库对比</strong>、<strong>Name Mangling 与 ABI 稳定性</strong>（ABI：二进制层面的接口约定，决定了不同编译单元/库能不能互相调用）、<strong>常见链接错误诊断</strong>。</p>
 </div>
 
 <h3 id="interview-odr">1. ODR — One Definition Rule（单一定义规则）</h3>
 <div class="phase-card">
-<p>C++ 最基础也最易违反的规则：</p>
+<p>C++ 最基础也最易违反的规则——同一个东西的定义全程序只能有一份，否则行为未定义：</p>
 <ul>
   <li><strong>一个翻译单元内</strong>：每个变量/函数/类/模板/枚举 <em>定义</em> 只能出现一次</li>
   <li><strong>整个程序</strong>：非 inline 函数和全局变量 <em>定义</em> 只能出现一次</li>
-  <li><strong>多个 TU 中</strong>：类、inline 函数、模板可重复定义，但必须<strong>逐 token 相同</strong></li>
+  <li><strong>多个 TU 中</strong>：类、inline 函数、模板可重复定义，但必须<strong>逐 token 相同</strong>（一个字符都不能差）</li>
 </ul>
 <h4>违反 ODR 的典型场景（UB，链接器不一定报错）</h4>
 <pre><code><span class="cm">// foo.hpp</span>
@@ -1236,7 +1236,7 @@
 
 <h3 id="interview-lto">2. LTO / ThinLTO — 链接时优化</h3>
 <div class="phase-card">
-<p>传统编译以<strong>单个翻译单元</strong>为优化边界：跨 .cpp 的函数无法内联、无法常量传播、无法死代码消除。</p>
+<p>传统编译以<strong>单个翻译单元</strong>为优化边界：编译 a.cpp 时看不到 b.cpp 的内容，所以跨 .cpp 的函数无法内联、无法常量传播、无法死代码消除（DCE，删掉永远不会被执行的代码）。LTO 的思路是让编译器把中间表示（IR）存进 .o，等链接器把所有 .o 凑齐后再做一轮全程序优化：</p>
 <div class="pipeline">
   <div class="pipeline-stage stage-src">.cpp × N</div>
   <div class="pipeline-arrow">→</div>
@@ -1290,7 +1290,7 @@
 
 <h3 id="interview-mangling">5. Name Mangling 与 ABI 稳定性</h3>
 <div class="phase-card">
-<p>C++ 函数重载、模板、命名空间都通过 <strong>name mangling</strong> 编码进符号名。GCC/Clang 使用 <strong>Itanium C++ ABI</strong>。</p>
+<p>C++ 支持函数重载（同名函数按参数区分），但链接器只认裸名字，所以编译器把参数类型、命名空间等信息编码进符号名里——这就是 <strong>name mangling</strong>（名字修饰）。GCC/Clang 遵循同一套编码规则：<strong>Itanium C++ ABI</strong>，所以它们编出的 .o 能互相链接。</p>
 <pre><code><span class="cm">// 源代码</span>
 <span class="kw">namespace</span> ns { <span class="kw">int</span> foo(<span class="kw">int</span>, <span class="kw">const</span> std::string&amp;); }
 
@@ -1306,7 +1306,7 @@ c++filt _ZN2ns3fooEiRKSs   <span class="cm">// → ns::foo(int, std::string cons
   <li><code>_GLIBCXX_USE_CXX11_ABI=1</code>（默认）：新 ABI，命名空间 <code>std::__cxx11</code></li>
   <li><code>_GLIBCXX_USE_CXX11_ABI=0</code>：旧 ABI，兼容 GCC 4</li>
 </ul>
-<p>两种 ABI 编译的 .o 链接会 <strong>undefined reference</strong>——因为 mangled 名不同。解决：统一宏；或 extern "C" 接口隔离。</p>
+<p>两种 ABI 编译的 .o 链接会 <strong>undefined reference</strong>——因为同一个函数在两种 ABI 下编出来的 mangled 名不同，链接器认不出来它们本是同一个。解决：全项目统一宏取值；或用 extern "C" 接口隔离（C 符号不带修饰）。</p>
 <p><strong>为什么 C 没有这些问题</strong>：C 无重载、无模板，函数名直接就是符号名，ABI 极其稳定（几十年不变）。</p>
 </div>
 
@@ -1529,13 +1529,13 @@ API <span class="kw">void</span> public_api();   <span class="cm">// 进 .dynsym
     <text class="ts" x="804" y="118" text-anchor="middle">malloc 插桩 / LD_PRELOAD</text>
   </svg>
 </div>
-<p>inline / 模板是自动弱符号（COMDAT）：多 TU 各生成一份，链接器留一份。未初始化全局变量在 C 里也是弱的，C++ 不要靠这个。</p>
+<p>inline / 模板是自动弱符号（COMDAT——「内容相同的重复副本合并留一份」的机制）：多 TU 各生成一份，链接器留一份。未初始化全局变量在 C 里也是弱的，C++ 不要靠这个语义，行为太脆。</p>
 
 <h3 id="s10-4">L4. 链接器优化开关</h3>
 <p>常用项已收进 §8 旗标表。<code>--gc-sections</code> 会误删「没人引用、只靠全局 ctor 注册」的对象——用 <code>__attribute__((used))</code> 或 linker script <code>KEEP()</code>。</p>
 
 <h3 id="s10-5">L5. 全局对象初始化顺序</h3>
-<p>同一 TU：声明序构造、逆序析构。跨 TU / 跨 .so：<strong>标准不保证</strong>（SIOF）。修法：函数内 <code>static</code>（Meyers Singleton，C++11 起线程安全），不要在别的全局 ctor 里碰它。</p>
+<p>同一 TU：按声明顺序构造、逆序析构，这个是保证的。跨 TU / 跨 .so：<strong>标准不保证谁先谁后</strong>（这就是 SIOF，静态初始化顺序问题）。修法：函数内 <code>static</code>（Meyers Singleton，C++11 起线程安全）——第一次调用时才构造，顺序问题自然消失；不要在别的全局构造函数里碰它。</p>
 <p>典型事故：<code>libplugin.so</code> 的全局对象在 ctor 里写 <code>libcore.so</code> 的 Logger，但链接顺序让 plugin 先初始化 → Logger 还是零页 → 段错误。Debug 碰巧顺序对，Release 才炸。跨 so 只能靠按需构造，<code>init_priority</code> 只管同一 so。</p>
 
 <h3 id="s10-6">L6. 跨 .so 的 C++ 类型</h3>
@@ -1544,7 +1544,7 @@ API <span class="kw">void</span> public_api();   <span class="cm">// 进 .dynsym
 <tr><td>POD / C ABI</td><td>✅</td></tr>
 <tr><td><code>std::string</code> / <code>vector</code> / 异常 / 虚函数</td><td>⚠️ 同 libstdc++、同 dual ABI、typeinfo 可见</td></tr>
 </table>
-<p>so 边界优先 C ABI 或 PIMPL；toolchain 三件套（编译器 / libstdc++ / <code>_GLIBCXX_USE_CXX11_ABI</code>）必须锁死。</p>
+<p>so（动态库）边界优先传 C ABI 风格的接口或 PIMPL（只暴露一个不透明指针，实现细节全藏在 .so 内部）；toolchain 三件套（编译器 / libstdc++ / <code>_GLIBCXX_USE_CXX11_ABI</code>）必须锁死成同一套，差一个都可能链接失败或运行期崩溃。</p>
 
 <h3 id="s10-7">L7. 调试工具</h3>
 <p>看 <code>U</code> 用 <code>nm -u</code>；看导出用 <code>nm -D</code>；依赖用 <code>ldd</code>；运行时解析用 <code>LD_DEBUG=libs|symbols|bindings</code>。其余命令见 §8。</p>

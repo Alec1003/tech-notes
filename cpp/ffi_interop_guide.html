@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 跨语言互操作 · 稳定 C API / pybind11 与 nanobind / C++ ↔ Rust / 所有权与异常边界</title>
-<meta name="description" content="C++ 跨语言互操作：C++ 没有标准 ABI，跨语言边界上唯一能依赖的只有 C ABI。本文讲透边界的四条铁律（所有权、异常、类型、生命周期），手写 opaque handle 式稳定 C API，pybind11 与 nanobind 的 GIL、零拷贝与 return_value_policy，cxx 如何把 C++ ↔ Rust 的所有权编码进类型系统，以及 protobuf 生成码的真实代价">
+<meta name="description" content="用大白话讲 C++ 跨语言互操作：为什么跨语言只能走 C ABI 这扇窄门，边界四铁律（异常、所有权、生命周期），怎么手写 opaque handle 式稳定 C API，pybind11 的 GIL 与零拷贝，cxx 怎么把所有权编进类型。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/ffi_interop_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/ffi_interop_guide.html">
 <meta property="og:title" content="C++ 跨语言互操作 · 稳定 C API / pybind11 与 nanobind / C++ ↔ Rust / 所有权与异常边界">
-<meta property="og:description" content="C++ 跨语言互操作：C++ 没有标准 ABI，跨语言边界上唯一能依赖的只有 C ABI。本文讲透边界的四条铁律（所有权、异常、类型、生命周期），手写 opaque handle 式稳定 C API，pybind11 与 nanobind 的 GIL、零拷贝与 return_value_policy，cxx 如何把 C++ ↔ Rust 的所有权编码进类型系统，以及 protobuf 生成码的真实代价">
+<meta property="og:description" content="用大白话讲 C++ 跨语言互操作：为什么跨语言只能走 C ABI 这扇窄门，边界四铁律（异常、所有权、生命周期），怎么手写 opaque handle 式稳定 C API，pybind11 的 GIL 与零拷贝，cxx 怎么把所有权编进类型。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 跨语言互操作 · 稳定 C API / pybind11 与 nanobind / C++ ↔ Rust / 所有权与异常边界">
-<meta name="twitter:description" content="C++ 跨语言互操作：C++ 没有标准 ABI，跨语言边界上唯一能依赖的只有 C ABI。本文讲透边界的四条铁律（所有权、异常、类型、生命周期），手写 opaque handle 式稳定 C API，pybind11 与 nanobind 的 GIL、零拷贝与 return_value_policy，cxx 如何把 C++ ↔ Rust 的所有权编码进类型系统，以及 protobuf 生成码的真实代价">
+<meta name="twitter:description" content="用大白话讲 C++ 跨语言互操作：为什么跨语言只能走 C ABI 这扇窄门，边界四铁律（异常、所有权、生命周期），怎么手写 opaque handle 式稳定 C API，pybind11 的 GIL 与零拷贝，cxx 怎么把所有权编进类型。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -176,7 +176,7 @@
 
   <p>写一个 C 函数 <code>int add(int, int)</code>，编译成 <code>.so</code> 之后，Python 的 <code>ctypes</code>、Rust 的 <code>extern "C"</code>、Java 的 JNI、C# 的 P/Invoke 都能直接调，不需要知道它是谁编译的。换成 C++ 的 <code>int add(int, int)</code>，同样一行代码，上面这些全都调不了。</p>
 
-  <p>差别不在语言能力，在于<strong>有没有一份所有人都同意的二进制约定</strong>。C 有：参数怎么放寄存器、结构体怎么对齐、符号叫什么名字，这些在每个平台上都由 psABI 钉死了。C++ 没有——它把这件事留给了各家实现。</p>
+  <p>差别不在语言能力，在于<strong>有没有一份所有人都同意的二进制约定</strong>。C 有：参数怎么放寄存器、结构体怎么对齐、符号叫什么名字，这些在每个平台上都由 psABI（平台级 ABI 规范——每个"芯片 + 操作系统"组合一份的官方二进制约定书）钉死了。C++ 没有——标准把这件事留给了各家编译器自己定。</p>
 
   <div class="def"><strong>ABI（Application Binary Interface）</strong>：两段<em>已经编译完</em>的代码要能互相调用，必须先约定好的那些二进制细节——符号名、调用约定、类型布局、对象生命周期。API 谈的是源码层面「怎么写」，ABI 谈的是链接与运行期「内存里长什么样」。<strong>C++ 标准定义了 API，从未定义 ABI。</strong></div>
 
@@ -184,7 +184,7 @@
 
   <h3 id="s1-1">1.1 三家编译器三套名字</h3>
 
-  <p>C++ 允许重载，所以 <code>add(int,int)</code> 和 <code>add(double,double)</code> 必须在目标文件里有不同的符号名。把参数类型编码进符号名的过程叫 <strong>name mangling</strong>，而这套编码规则各家自己定：GCC 与 Clang 在类 Unix 上都遵循 Itanium C++ ABI，MSVC 则是完全另一套。</p>
+  <p>C++ 允许重载，所以 <code>add(int,int)</code> 和 <code>add(double,double)</code> 必须在目标文件里有不同的符号名。把参数类型编码进符号名的过程叫 <strong>name mangling</strong>（名字修饰——把"函数名 + 参数类型"压成一个字符串当符号名），而这套编码规则各家自己定：GCC 与 Clang 在类 Unix 上都遵循 Itanium C++ ABI，MSVC 则是完全另一套。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 268" role="img" aria-label="同一个 C++ 函数声明在 GCC/Clang 与 MSVC 下被修饰成完全不同的符号名，而加上 extern C 后三者收敛到同一个裸符号 add，成为跨语言唯一可依赖的窄门">
@@ -221,7 +221,7 @@
 
   <h3 id="s1-2">1.2 同一个编译器也会变卦</h3>
 
-  <p>更糟的是，就算钉死用 GCC，ABI 也不是永恒的。最著名的一次是 GCC 5：C++11 要求 <code>std::string</code> 不能再用写时复制（COW），于是 libstdc++ 引入了 <code>_GLIBCXX_USE_CXX11_ABI</code> 宏，同时提供新旧两套 <code>std::string</code> 与 <code>std::list</code>。两边编译出的库混用时，链接器要么报未定义符号，要么——更可怕——链接成功而在运行期读到错位的成员。</p>
+  <p>更糟的是，就算钉死用 GCC，ABI 也不是永恒的。最著名的一次是 GCC 5：C++11 要求 <code>std::string</code> 不能再用写时复制（COW，copy-on-write——多个字符串共享一份底层内存，要改时才复制，节省内存但有线程安全争议），于是 libstdc++ 引入了 <code>_GLIBCXX_USE_CXX11_ABI</code> 宏，同时提供新旧两套 <code>std::string</code> 与 <code>std::list</code>。两边编译出的库混用时，链接器要么报未定义符号，要么——更可怕——链接成功而在运行期读到错位的成员。</p>
 
   <p>所以结论不是「小心一点就能跨编译器传 <code>std::string</code>」，而是<strong>根本不要在边界上出现任何 C++ 类型</strong>。标准库的布局、异常的展开表、虚表的位置、RTTI 的比较方式，全都是实现细节。</p>
 
@@ -229,7 +229,7 @@
 
   <h3 id="s1-3">1.3 所有绑定技术的同一个形状</h3>
 
-  <p>认清这一点之后，pybind11、cxx、JNI、P/Invoke 这些看起来风格迥异的东西就露出了同一个骨架：<strong>边界处永远是 C ABI，两侧各有一层胶水把本语言的概念翻译过去</strong>。区别只在于胶水由谁写、写在哪里。</p>
+  <p>认清这一点之后，pybind11、cxx、JNI、P/Invoke 这些看起来风格迥异的东西就露出了同一个骨架：<strong>边界处永远是 C ABI，两侧各有一层胶水（glue code——负责把本语言的概念翻译成对面能懂的形式的粘合代码）把本语言的概念翻译过去</strong>。区别只在于胶水由谁写、写在哪里。</p>
 
   <table>
     <thead><tr><th>方案</th><th>胶水由谁生成</th><th>所有权规则写在哪</th><th>典型代价</th></tr></thead>
@@ -252,7 +252,7 @@
     <div class="t"><h2>边界四铁律</h2><p class="sub">四条都是从「对面不是 C++」这一个事实推出来的</p></div>
   </div>
 
-  <p>无论你用哪种绑定技术，下面四条都成立。它们不是最佳实践，是<strong>违反了就一定会出事</strong>的那一档。</p>
+  <p>无论你用哪种绑定技术，下面四条都成立。它们不是可选的最佳实践，而是<strong>违反了就一定会出事</strong>的那一档——相当于过马路必须看红绿灯，不是"建议看"。</p>
 
   <table>
     <thead><tr><th>#</th><th>铁律</th><th>为什么</th><th>违反后的现场</th></tr></thead>
@@ -266,9 +266,9 @@
 
   <h3 id="s2-1">2.1 异常绝不能穿过边界</h3>
 
-  <p>第 2 条最容易被低估，因为它<strong>在测试里往往不触发</strong>——正常路径上没有异常，只有线上遇到那个畸形输入时才第一次穿过边界。</p>
+  <p>第 2 条最容易被低估，因为它<strong>在测试里往往不触发</strong>——正常路径上没有异常，只有线上遇到那个畸形输入时，异常才第一次尝试穿过边界。</p>
 
-  <p>C++ 异常的传播依赖编译期生成的展开表（unwind tables）：抛出时运行时库沿调用栈逐帧查表，找到匹配的 handler，沿途调用析构函数。当中间夹着一帧 C 代码或 Rust 代码时，那一帧可能压根没有展开信息，也可能有但语义完全不同。</p>
+  <p>C++ 异常的传播依赖编译期生成的展开表（unwind tables——一张描述"每个栈帧出错时该怎么收拾"的清单）：抛出时运行时库沿调用栈逐帧查表，找到匹配的 handler，沿途调用析构函数。当中间夹着一帧 C 代码或 Rust 代码时，那一帧可能压根没有展开信息，也可能有但语义完全不同。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" role="img" aria-label="异常从 C++ 实现层向上抛，穿过中间的 C 或 Rust 帧时的三种结局：终止进程、跳过析构导致资源泄漏、以及正确做法在边界处捕获并转成错误码">
@@ -307,7 +307,7 @@
 
   <p>第 3 条的典型现场是这样的：C++ 库返回一个 <code>char*</code>，说「用完 <code>free</code> 掉」。调用方是一个 Python 扩展，它老老实实调了 <code>free</code>——然后崩在 glibc 的 <code>free</code> 内部，栈顶全是 malloc 的实现细节，看上去跟业务代码毫无关系。</p>
 
-  <p>原因是两侧链接到了不同的分配器实例：Windows 上是不同的 CRT（<code>/MT</code> 静态 CRT 会让每个 DLL 各有一份堆），Linux 上可能是一侧 <code>LD_PRELOAD</code> 了 jemalloc 而另一侧没有。<strong>「一块内存必须由分配它的那个分配器释放」</strong>，跨边界时这个前提不再自动成立。</p>
+  <p>原因是两侧链接到了不同的分配器实例（各自管各自的堆）：Windows 上是不同的 CRT（C 运行时库，<code>/MT</code> 静态 CRT 会让每个 DLL 各有一份堆），Linux 上可能是一侧 <code>LD_PRELOAD</code> 了 jemalloc 而另一侧没有。<strong>「一块内存必须由分配它的那个分配器释放」</strong>，跨边界时这个前提不再自动成立。好比酒店 A 的房卡只能开酒店 A 的门——拿去刷酒店 B 的锁，轻则刷不开，重则把门禁系统搞坏。</p>
 
   <div class="vs">
     <div class="bad">
@@ -329,7 +329,7 @@ void  tn_string_free(char*);</code></pre>
     </div>
   </div>
 
-  <p>甲式还有一个常被忽略的好处：<code>need</code> 参数让调用方可以先传 <code>cap = 0</code> 探长度，再分配一次刚好的缓冲。这是 POSIX 和 Win32 用了几十年的惯例，对面的语言绑定层也最容易自动化。</p>
+  <p>甲式还有一个常被忽略的好处：<code>need</code> 参数让调用方可以先传 <code>cap = 0</code> 探长度（第一次只问"需要多大"），再分配一次刚好的缓冲。这是 POSIX 和 Win32 用了几十年的惯例，对面的语言绑定层也最容易自动化。</p>
 </section>
 
 <!-- ================================================================ §3 -->
@@ -339,7 +339,7 @@ void  tn_string_free(char*);</code></pre>
     <div class="t"><h2>手写稳定 C API</h2><p class="sub">opaque handle 是这里唯一值得背下来的模式</p></div>
   </div>
 
-  <p>不管最终用哪种绑定工具，<strong>底下都应该先有一层干净的 C API</strong>。这一层写好了，pybind11、cxx、ctypes、JNI 都只是它的不同包装；写砸了，每种绑定都要各自绕一遍坑。</p>
+  <p>不管最终用哪种绑定工具，<strong>底下都应该先有一层干净的 C API</strong>（只含 C 概念的稳定接口层）。这一层写好了，pybind11、cxx、ctypes、JNI 都只是它的不同包装；写砸了，每种绑定都要各自绕一遍坑。</p>
 
   <h3 id="s3-1">3.1 不完整类型冻结 ABI</h3>
 
@@ -431,7 +431,7 @@ const char*  tn_last_error(void);
 
   <h3 id="s3-3">3.3 实现侧的防漏网</h3>
 
-  <p>头文件只是契约，真正的功夫在实现文件。每个导出函数都要做同一件事：<strong>把 C++ 世界完整地包起来，只让整数出去</strong>。</p>
+  <p>头文件只是契约，真正的功夫在实现文件。每个导出函数都要做同一件事：<strong>把 C++ 世界完整地包起来，只让整数（状态码）出去</strong>。</p>
 
   <pre><code>namespace {
 thread_local std::string g_last_error;   // 每线程一份，互不干扰
@@ -487,7 +487,7 @@ extern "C" tn_status tn_engine_run(tn_engine* e,
 
   <h3 id="s4-2">4.2 GIL：没变快的头号原因</h3>
 
-  <p>这是本章最该记住的一条。Python 的全局解释器锁（GIL）保证同一时刻只有一个线程在执行 Python 字节码。当 Python 调进你的 C++ 函数时，<strong>GIL 默认仍然被持有着</strong>——也就是说，你那个跑了 200 毫秒的 C++ 计算，全程把整个解释器锁死了。</p>
+  <p>这是本章最该记住的一条。Python 的全局解释器锁（GIL——一把全解释器级别的大锁，保证同一时刻只有一个线程在执行 Python 字节码）在 Python 调进你的 C++ 函数时，<strong>默认仍然被持有着</strong>——也就是说，你那个跑了 200 毫秒的 C++ 计算，全程把整个解释器锁死了，别的 Python 线程一步都动不了。</p>
 
   <p>后果很具体：用户把热点用 C++ 重写，单线程确实快了 10 倍，然后开 8 个线程想再快 8 倍，结果发现<strong>总吞吐几乎没动</strong>。</p>
 
@@ -539,11 +539,11 @@ void on_done(const py::function&amp; cb, int code) {
     cb(code);
 }</code></pre>
 
-  <p>两个方向都要小心。释放时的铁律是<strong>那段代码里一个 Python 对象都不能碰</strong>——包括析构一个 <code>py::object</code>，因为那会减引用计数。反向获取时忘了加锁，症状通常不是立刻崩溃，而是引用计数错乱后在几分钟后的某次 GC 里崩掉，现场毫无线索。</p>
+  <p>两个方向都要小心。释放时的铁律是<strong>那段代码里一个 Python 对象都不能碰</strong>——包括析构一个 <code>py::object</code>，因为那会减引用计数（refcount——Python 记录"几个地方在用这个对象"的计数，减到零就回收）。反向获取时忘了加锁，症状通常不是立刻崩溃，而是引用计数错乱后在几分钟后的某次 GC（垃圾回收）里崩掉，现场毫无线索。</p>
 
   <h3 id="s4-3">4.3 零拷贝与生命周期</h3>
 
-  <p>把一个 <code>std::vector&lt;float&gt;</code> 返回给 Python，默认行为是<strong>整块拷贝</strong>成 Python list。数据一大，绑定层本身就成了瓶颈。零拷贝的做法是让 numpy 数组直接指向 C++ 的缓冲区——但这样一来，「C++ 侧什么时候释放这块内存」就变成了一个必须回答的问题。</p>
+  <p>把一个 <code>std::vector&lt;float&gt;</code> 返回给 Python，默认行为是<strong>整块拷贝</strong>成 Python list。数据一大，绑定层本身就成了瓶颈。零拷贝（zero-copy——不复制数据，让两边的指针指向同一块内存）的做法是让 numpy 数组直接指向 C++ 的缓冲区——但这样一来，「C++ 侧什么时候释放这块内存」就变成了一个必须回答的问题。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 246" role="img" aria-label="pybind11 return_value_policy 的四种所有权语义对照：copy 拷贝一份、take_ownership 移交所有权给 Python、reference 不管理生命周期有悬垂风险、reference_internal 把生命周期绑定到父对象">
@@ -610,7 +610,7 @@ void on_done(const py::function&amp; cb, int code) {
     </tbody>
   </table>
 
-  <p>前两个是「把 C ABI 翻译成能编译的声明」，边界安全仍然靠人；cxx 不一样，它要求你把接口<strong>声明一遍</strong>，然后由它生成两侧代码，从而能在类型层面拒绝一批错误用法。</p>
+  <p>前两个是「把 C ABI 翻译成能编译的声明」，边界安全仍然靠人；cxx 不一样，它要求你把接口<strong>声明一遍</strong>，然后由它生成两侧代码（shim——垫片代码，站在边界上做双向翻译），从而能在类型层面拒绝一批错误用法。</p>
 
   <h3 id="s5-2">5.2 cxx 把所有权编进类型</h3>
 
@@ -668,13 +668,13 @@ mod ffi {
     </svg>
   </div>
 
-  <p><code>UniquePtr&lt;Engine&gt;</code> 出现在 Rust 侧，意味着这个 C++ 对象的所有权确实交给了 Rust，Rust 的 <code>drop</code> 会去调 C++ 的析构函数；<code>Box&lt;Session&gt;</code> 出现在 C++ 侧则相反。而 <code>&amp;[u8]</code> 这类引用只是借用，编译器保证它不会活得比被借用者更久。<strong>「谁分配谁释放」这条原本只能写在文档里的铁律，在这里变成了编译错误。</strong></p>
+  <p><code>UniquePtr&lt;Engine&gt;</code> 出现在 Rust 侧，意味着这个 C++ 对象的所有权（ownership——"谁负责在什么时候释放这块内存"的归属权）确实交给了 Rust，Rust 的 <code>drop</code> 会去调 C++ 的析构函数；<code>Box&lt;Session&gt;</code> 出现在 C++ 侧则相反。而 <code>&amp;[u8]</code> 这类引用只是借用（borrow——临时借来看，不拥有也不负责释放），编译器保证它不会活得比被借用者更久。<strong>「谁分配谁释放」这条原本只能写在文档里的铁律，在这里变成了编译错误。</strong></p>
 
   <h3 id="s5-3">5.3 panic 与异常</h3>
 
-  <p>Rust 的 <code>panic!</code> 和 C++ 的 <code>throw</code> 在跨边界这件事上是完全对称的：都不能穿过对面的栈帧。cxx 的处理方式是在生成的 shim 里两头都设墙——Rust 函数被 <code>catch_unwind</code> 包住，C++ 函数的异常被捕获。</p>
+  <p>Rust 的 <code>panic!</code>（Rust 的致命错误机制，相当于 C++ 的 <code>throw</code>）和 C++ 的 <code>throw</code> 在跨边界这件事上是完全对称的：都不能穿过对面的栈帧。cxx 的处理方式是在生成的 shim 里两头都设墙——Rust 函数被 <code>catch_unwind</code>（Rust 侧接住 panic 的机制）包住，C++ 函数的异常被捕获。</p>
 
-  <p>连接两者的是声明里的 <code>Result</code>：把返回类型写成 <code>Result&lt;T&gt;</code>，就是在告诉生成器「这个方向可能失败，请把对面的错误转换成本侧的错误表示」。C++ 抛出的 <code>std::exception</code> 会变成 Rust 的 <code>Err</code>（携带 <code>what()</code> 字符串），Rust 的 <code>Err</code> 则变成 C++ 侧抛出的异常。<strong>没写 <code>Result</code> 却真的 panic 了，结果是进程 abort</strong>——和 §2.1 的结局 A 一样，这是刻意设计的。</p>
+  <p>连接两者的是声明里的 <code>Result</code>（Rust 的"要么成功值、要么错误"返回类型）：把返回类型写成 <code>Result&lt;T&gt;</code>，就是在告诉生成器「这个方向可能失败，请把对面的错误转换成本侧的错误表示」。C++ 抛出的 <code>std::exception</code> 会变成 Rust 的 <code>Err</code>（携带 <code>what()</code> 字符串），Rust 的 <code>Err</code> 则变成 C++ 侧抛出的异常。<strong>没写 <code>Result</code> 却真的 panic 了，结果是进程 abort</strong>——和 §2.1 的结局 A 一样，这是刻意设计的。</p>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -684,7 +684,7 @@ mod ffi {
     <div class="t"><h2>protobuf / gRPC 的代价</h2><p class="sub">它也是一种跨语言边界，只是代价藏在编译期和二进制里</p></div>
   </div>
 
-  <p>用 protobuf 做跨语言通信，回避了前面所有 ABI 问题——两侧各自生成本语言的代码，边界上只有字节流。代价转移到了别处，而且往往没人算过这笔账。</p>
+  <p>用 protobuf 做跨语言通信，回避了前面所有 ABI 问题——两侧各自生成本语言的代码，边界上只有字节流（序列化后的扁平数据）。代价转移到了别处，而且往往没人算过这笔账。</p>
 
   <table>
     <thead><tr><th>代价</th><th>量级</th><th>缓解手段</th></tr></thead>
@@ -728,7 +728,7 @@ mod ffi {
     </svg>
   </div>
 
-  <p>Arena 那一行是最容易踩的：它把「每个消息自己管自己」换成了「整块内存一起活一起死」，性能收益明显，但 <code>delete msg</code> 从正确代码变成了未定义行为。这个改动不会有编译错误提醒你，所以它应该是一个<strong>项目级决定</strong>，而不是某个人在某个热点函数里的局部优化。</p>
+  <p>Arena 那一行是最容易踩的：它把「每个消息自己管自己」换成了「整块内存一起活一起死」（Arena——竞技场式的一次性大块分配，所有对象住在同一块内存里，最后整体释放），性能收益明显，但 <code>delete msg</code> 从正确代码变成了未定义行为。这个改动不会有编译错误提醒你，所以它应该是一个<strong>项目级决定</strong>，而不是某个人在某个热点函数里的局部优化。</p>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -738,7 +738,7 @@ mod ffi {
     <div class="t"><h2>失败模式与排障</h2><p class="sub">这些崩溃的共同点是：栈顶跟真正的 bug 没有关系</p></div>
   </div>
 
-  <p>跨语言 bug 难查，不是因为机制复杂，而是因为<strong>症状出现的地方离原因很远</strong>。下面这张表按「你看到的现场」来索引，而不是按原因。</p>
+  <p>跨语言 bug 难查，不是因为机制复杂，而是因为<strong>症状出现的地方离原因很远</strong>。好比水管在三层漏水，水渍出现在一层天花板——你看到的现场往往不是案发现场。下面这张表按「你看到的现场」来索引，而不是按原因。</p>
 
   <table>
     <thead><tr><th>你看到的</th><th>大概率是什么</th><th>怎么确认</th></tr></thead>

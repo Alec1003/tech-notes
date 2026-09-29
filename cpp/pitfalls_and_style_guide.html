@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C/C++ 常见陷阱与编码规范 · UB / 生命周期 / 初始化 / 类型转换 / 并发 / clang-tidy 落地</title>
-<meta name="description" content="C/C++ 常见陷阱与编码规范：C++ 的难不在语法多，而在于 写错了它经常不告诉你 ——代码跑得好好的，换个编译器、开个优化、上个新平台就崩。这篇把六类高频陷阱按「最小复现 → 为什么会这样 → 用什么工具能自动抓到」讲一遍，并给出把规范真正落进 CI 的方案">
+<meta name="description" content="C/C++ 常见陷阱白话指南：UB 未定义行为为什么写错了还不报错，悬垂引用、初始化、类型转换、数据竞争各错在哪，以及用 Sanitizer 和 clang-tidy 把规范落进 CI 的做法。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/pitfalls_and_style_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/pitfalls_and_style_guide.html">
 <meta property="og:title" content="C/C++ 常见陷阱与编码规范 · UB / 生命周期 / 初始化 / 类型转换 / 并发 / clang-tidy 落地">
-<meta property="og:description" content="C/C++ 常见陷阱与编码规范：C++ 的难不在语法多，而在于 写错了它经常不告诉你 ——代码跑得好好的，换个编译器、开个优化、上个新平台就崩。这篇把六类高频陷阱按「最小复现 → 为什么会这样 → 用什么工具能自动抓到」讲一遍，并给出把规范真正落进 CI 的方案">
+<meta property="og:description" content="C/C++ 常见陷阱白话指南：UB 未定义行为为什么写错了还不报错，悬垂引用、初始化、类型转换、数据竞争各错在哪，以及用 Sanitizer 和 clang-tidy 把规范落进 CI 的做法。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C/C++ 常见陷阱与编码规范 · UB / 生命周期 / 初始化 / 类型转换 / 并发 / clang-tidy 落地">
-<meta name="twitter:description" content="C/C++ 常见陷阱与编码规范：C++ 的难不在语法多，而在于 写错了它经常不告诉你 ——代码跑得好好的，换个编译器、开个优化、上个新平台就崩。这篇把六类高频陷阱按「最小复现 → 为什么会这样 → 用什么工具能自动抓到」讲一遍，并给出把规范真正落进 CI 的方案">
+<meta name="twitter:description" content="C/C++ 常见陷阱白话指南：UB 未定义行为为什么写错了还不报错，悬垂引用、初始化、类型转换、数据竞争各错在哪，以及用 Sanitizer 和 clang-tidy 把规范落进 CI 的做法。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -140,7 +140,7 @@
   <header class="hero">
     <div class="badge">Modern C++ · Pitfalls &amp; Style · 2026</div>
     <h1>C/C++ 常见陷阱与编码规范</h1>
-    <p class="sub">C++ 的难不在语法多，而在于<strong>写错了它经常不告诉你</strong>——代码跑得好好的，换个编译器、开个优化、上个新平台就崩。这篇把六类高频陷阱按「<strong>为什么会这样 → 正确写法 → 用什么工具能自动抓到</strong>」讲一遍，并给出把规范真正落进 CI 的方案。</p>
+    <p class="sub">C++ 的难不在语法多，而在于<strong>写错了它经常不告诉你</strong>——代码跑得好好的，换个编译器、开个优化、上个新平台就崩。这篇把六类高频陷阱按「<strong>为什么会这样 → 正确写法 → 用什么工具能自动抓到</strong>」讲一遍，并给出把规范真正落进 CI 的方案。每节都从最小复现讲起，顺着读就能明白每个坑背后的因果。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">高频事故源</span>
@@ -162,7 +162,7 @@
     <div class="t"><h2>未定义行为的本质</h2><p class="sub">为什么「能跑」不等于「对」</p></div>
   </div>
 
-  <div class="def"><strong>未定义行为（UB）</strong>：标准<strong>不对程序做任何要求</strong>。不是「结果随机」，而是整个程序失控——编译器可以假设 UB 永不发生，并据此删掉你的检查。</div>
+  <div class="def"><strong>未定义行为（UB，Undefined Behavior）</strong>：标准<strong>不对程序做任何要求</strong>。不是「结果随机」，而是整个程序失控——编译器可以假设 UB 永不发生，并据此删掉你的检查。</div>
 
   <div class="analogy">合同里没写的条款。你以为按常理；编译器的立场是「你保证过不会发生」，于是把「如果发生就报警」的代码当成死代码删掉。</div>
   <p>UB 最危险的特点是<strong>通常「能跑」</strong>：Debug 不优化时按字面执行，测试环境正常，换编译器或开 <code>-O2</code> 才崩。它不是「那一行结果随机」，而是让编译器基于错误前提优化<em>整个函数甚至调用链</em>，看起来毫不相关的地方会一起坏。</p>
@@ -171,7 +171,7 @@
 <pre><span class="kw">bool</span> will_overflow(<span class="kw">int</span> a, <span class="kw">int</span> b) {
     <span class="kw">return</span> a + b &lt; a;   <span class="cm">// -O2 → 直接 return false，无警告</span>
 }</pre>
-  <p>编译器推理链：有符号溢出是 UB → 假设永不发生 → <code>b &gt;= 0</code> 时 <code>a+b</code> 必然 <code>&gt;= a</code> → 函数恒为 false。检查被删掉时<strong>整条调用链</strong>都可能被基于这个假前提优化，看起来毫不相关的分支也会变。正解：<code>__builtin_add_overflow</code>、<code>std::midpoint</code>（C++20），或先转无符号再加（无符号溢出是回绕，有定义）。对策不是「小心点」，是 <strong>UBSan 进 CI</strong>。</p>
+  <p>编译器推理链：有符号溢出是 UB → 假设永不发生 → <code>b &gt;= 0</code> 时 <code>a+b</code> 必然 <code>&gt;= a</code> → 函数恒为 false。检查被删掉时<strong>整条调用链</strong>都可能被基于这个假前提优化，看起来毫不相关的分支也会变。正解：<code>__builtin_add_overflow</code>、<code>std::midpoint</code>（C++20），或先转无符号再加（无符号溢出是回绕，有定义）。对策不是「小心点」，是 <strong>UBSan 进 CI</strong>（Undefined Behavior Sanitizer，未定义行为检测器——运行时把每次踩线都当场报出来）。</p>
 
   <div class="demo">
     <h4>同一段 UB：三种「结果」</h4>
@@ -251,7 +251,7 @@
     </svg>
     <figcaption>对象死了观察者还活着 = 悬垂。三条硬规矩在图底</figcaption>
   </div>
-  <div class="danger"><strong><code>string_view</code> / <code>span</code> 让悬垂变多了，不是变少了。</strong>它们是「指针 + 长度」，却长得像值类型。硬规矩：① 除非指向调用方传入的数据或静态存储，否则<strong>不要返回 view</strong>；② 当成员存 view 必须能证明被指数据活得更久；③ view <strong>不保证以 <code>\0</code> 结尾</strong>，不能直接丢给 <code>fopen</code> / <code>strlen</code>。</div>
+  <div class="danger"><strong><code>string_view</code> / <code>span</code> 让悬垂变多了，不是变少了。</strong>它们本质是「指针 + 长度」，只是长得像值类型——好比一张写着地址的便签：便签自己不拥有那栋房子，房子拆了便签就成了废纸。硬规矩：① 除非指向调用方传入的数据或静态存储，否则<strong>不要返回 view</strong>；② 当成员存 view 必须能证明被指数据活得更久；③ view <strong>不保证以 <code>\0</code> 结尾</strong>，不能直接丢给 <code>fopen</code> / <code>strlen</code>。</div>
 
   <div class="fig">
     <svg viewBox="0 0 780 210" role="img" aria-label="vector 扩容导致迭代器和引用失效：push_back 可能分配新缓冲区，旧指针变成悬垂">
@@ -294,7 +294,7 @@
     </svg>
     <figcaption>vector 一扩容，引用和迭代器一起废。不要长期攥着元素的地址</figcaption>
   </div>
-  <p>别的容器不一样：<code>list</code> / <code>map</code> 只有被删的那个迭代器失效；<code>unordered_*</code> 插入可能 rehash——迭代器全废，但元素引用仍有效；<code>deque</code> 两端插入时迭代器失效、引用通常还在。规则记不住就<strong>存索引或键</strong>，不要赌稳定性。</p>
+  <p>别的容器不一样：<code>list</code> / <code>map</code> 只有被删的那个迭代器失效；<code>unordered_*</code> 插入可能 rehash（重哈希——内部桶数组重排，迭代器全部作废），但元素引用仍有效；<code>deque</code> 两端插入时迭代器失效、引用通常还在。规则记不住就<strong>存索引或键</strong>，不要赌稳定性。</p>
 
   <table>
     <thead><tr><th>写法</th><th>为什么错</th><th>正确做法</th></tr></thead>
@@ -306,7 +306,7 @@
       <tr><td><code>pool.submit([&amp;]{ use(local); })</code></td><td>异步执行时 <code>local</code> 已销毁</td><td>按值捕获，或 <code>shared_ptr</code></td></tr>
     </tbody>
   </table>
-  <p>裸指针不是坏东西：表示「可选、不拥有」；<code>T&amp;</code> 非空、<code>unique_ptr</code> 移交、<code>shared_ptr</code> 共享——<strong>签名就是文档</strong>。把所有指针都换成 <code>shared_ptr</code> 反而掩盖所有权，还容易循环引用。详见 <a href="smart_pointers_deep_dive.html">智能指针深度解析</a>。</p>
+  <p>裸指针不是坏东西：表示「可选、不拥有」；<code>T&amp;</code> 非空、<code>unique_ptr</code> 移交、<code>shared_ptr</code> 共享——<strong>签名就是文档</strong>，看函数参数就知道谁负责释放。把所有指针都换成 <code>shared_ptr</code> 反而掩盖所有权，还容易循环引用。详见 <a href="smart_pointers_deep_dive.html">智能指针深度解析</a>。</p>
 </section>
 
 <!-- ================================================================ §3 -->
@@ -348,7 +348,7 @@
     </svg>
     <figcaption>「没写就是 0」只对静态存储成立。栈上默认是脏的</figcaption>
   </div>
-  <div class="def"><strong>Static Initialization Order Fiasco</strong>：不同 <code>.cpp</code> 里的全局对象，<strong>构造顺序由链接顺序决定</strong>。A 的构造用到 B 而 B 还没建，就是访问未构造对象——UB。调一下 CMake 源文件顺序就能让今天能跑的程序明天崩在构造函数里，栈回溯经常一片模糊。</div>
+  <div class="def"><strong>Static Initialization Order Fiasco</strong>（静态初始化顺序灾难）：不同 <code>.cpp</code> 里的全局对象，<strong>构造顺序由链接顺序决定</strong>。A 的构造用到 B 而 B 还没建，就是访问未构造对象——UB。调一下 CMake 源文件顺序就能让今天能跑的程序明天崩在构造函数里，栈回溯经常一片模糊。</div>
   <div class="warn">「未初始化默认是 0」只对静态/线程存储期成立。栈上和 <code>new T</code>（无括号）是<strong>不确定值</strong>。Debug 常碰巧为 0 或填 <code>0xCC</code>，Release 是上一个栈帧的脏数据——又一个「Debug 正常 Release 崩」来源。<code>new T()</code> 才零初始化，差一对括号。</div>
   <div class="analogy">跨 TU 的全局依赖像两家店互相等对方先开业，而开业顺序是工商局随机排的——调一下链接顺序就换开业日。</div>
 
@@ -362,7 +362,7 @@
       <tr><td>跨 TU 全局对象互相用</td><td>构造顺序由链接顺序决定</td><td>函数内 <code>static</code>（Meyers）；更好是别用全局单例</td></tr>
     </tbody>
   </table>
-  <p>函数内 static（Meyers Singleton）解决了构造顺序：首次调用才构造，C++11 起线程安全。析构仍按构造逆序，A 的析构用到已死的 B 还是 UB。进程级单例可 <code>static T&amp; inst = *new T;</code> 永不析构，让 OS 回收——看起来像泄漏，Google Style 明确推荐。根本解法是别用全局单例，改成 <code>main</code> 里显式创建 + 依赖注入。</p>
+  <p>函数内 static（Meyers Singleton，梅耶斯单例——把全局对象改成「首次用到时才在函数里构造」的写法）解决了构造顺序：首次调用才构造，C++11 起线程安全。析构仍按构造逆序，A 的析构用到已死的 B 还是 UB。进程级单例可 <code>static T&amp; inst = *new T;</code> 永不析构，让 OS 回收——看起来像泄漏，Google Style 明确推荐。根本解法是别用全局单例，改成 <code>main</code> 里显式创建 + 依赖注入。</p>
 
   <h3 id="s3-1">3.1 六种初始化形式的对照</h3>
 
@@ -380,7 +380,7 @@
     </tbody>
   </table>
 
-  <p>两条推论值得单独记住。其一，<strong><code>{}</code> 的「禁止窄化」是它最被低估的好处</strong>：<code>int x(3.9)</code> 悄悄截成 3，<code>int x{3.9}</code> 直接编译错误——默认用 <code>{}</code> 的理由主要是这个，不是「统一」。其二，<code>{}</code> 也是它最大的坑：只要类里有 <code>initializer_list</code> 构造函数，<code>{}</code> 就会<strong>优先匹配它</strong>，哪怕另一个构造函数是完美匹配。<code>vector&lt;int&gt; v{3, 0}</code> 得到两个元素而不是三个 0，就是这条规则；这也是为什么容器的「给个大小」永远该写圆括号。</p>
+  <p>两条推论值得单独记住。其一，<strong><code>{}</code> 的「禁止窄化」是它最被低估的好处</strong>（窄化——把大类型塞进小类型时悄悄丢掉高位，比如 3.9 截成 3）：<code>int x(3.9)</code> 悄悄截成 3，<code>int x{3.9}</code> 直接编译错误——默认用 <code>{}</code> 的理由主要是这个，不是「统一」。其二，<code>{}</code> 也是它最大的坑：只要类里有 <code>initializer_list</code> 构造函数，<code>{}</code> 就会<strong>优先匹配它</strong>，哪怕另一个构造函数是完美匹配。<code>vector&lt;int&gt; v{3, 0}</code> 得到两个元素而不是三个 0，就是这条规则；这也是为什么容器的「给个大小」永远该写圆括号。</p>
 
   <h3 id="s3-2">3.2 聚合初始化与 NSDMI：边界一直在动</h3>
 
@@ -437,7 +437,7 @@
     </svg>
     <figcaption>能写 <code>{}</code> 就写 <code>{}</code>。索引循环能不写就不写</figcaption>
   </div>
-  <p><code>-Wsign-compare</code>（<code>-Wall</code> 已含）能抓绝大多数混用。<code>std::cmp_less</code> / <code>std::ssize()</code>（C++20）是专门补丁；最省事仍是 range-for 和算法库，根本不写索引。列表初始化 <code>{}</code> 会拒绝窄化，普通 <code>=</code> 不会——这是优先写 <code>{}</code> 的工程理由。</p>
+  <p><code>-Wsign-compare</code>（<code>-Wall</code> 已含）能抓绝大多数混用。<code>std::cmp_less</code> / <code>std::ssize()</code>（C++20）是专门补丁；最省事仍是 range-for 和算法库，根本不写索引。列表初始化 <code>{}</code> 会拒绝窄化，普通 <code>=</code> 不会——这是优先写 <code>{}</code> 的工程理由。一句话：有符号和无符号混着比大小，编译器会先把有符号一方悄悄转成无符号，-1 就变成了天文数字。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 200" role="img" aria-label="单参构造没有 explicit 时，整数和 bool 会悄悄变成 Buffer 再传进 process">
@@ -486,7 +486,7 @@
       <tr><td><code>reinterpret_cast</code></td><td>重新解释比特</td><td>极易违反严格别名；类型双关用 <code>bit_cast</code> / <code>memcpy</code></td></tr>
     </tbody>
   </table>
-  <p><strong>严格别名</strong>：不同类型指针默认不指向同一块内存（<code>char*</code> / <code>byte*</code> 除外），编译器据此把值缓存在寄存器里重排读写。<code>*(float*)&amp;i</code> 在 <code>-O2</code> 下可能读到旧值。合法双关：<code>std::bit_cast</code>（C++20）或 <code>memcpy</code>（会优化成一条 <code>mov</code>）。C 的 union 双关在 C++ 里是 UB，不要依赖 GCC 扩展。<code>-fno-strict-aliasing</code> 能关掉这个假设（内核这么编），代价是少一批循环优化。</p>
+  <p><strong>严格别名</strong>：不同类型指针默认不指向同一块内存（<code>char*</code> / <code>byte*</code> 除外），编译器据此把值缓存在寄存器里重排读写——好比它认定「写支票的手和读支票的手不可能是同一个人」，于是敢把两件事调换顺序。<code>*(float*)&amp;i</code> 在 <code>-O2</code> 下可能读到旧值。合法双关：<code>std::bit_cast</code>（C++20）或 <code>memcpy</code>（会优化成一条 <code>mov</code>）。C 的 union 双关在 C++ 里是 UB，不要依赖 GCC 扩展。<code>-fno-strict-aliasing</code> 能关掉这个假设（内核这么编），代价是少一批循环优化。</p>
 </section>
 
 <!-- ================================================================ §5 -->
@@ -521,7 +521,7 @@
     </svg>
     <figcaption>移动构造忘写 noexcept，vector 扩容会退化成拷贝，无警告</figcaption>
   </div>
-  <p><code>vector</code> 扩容要强保证：搬到一半若移动抛了，旧元素已是空壳，回不去。<code>move_if_noexcept</code> 的规则是——<strong>移动构造不是 noexcept 就退化成拷贝</strong>。忘写这一标，扩容可能慢几十倍且零警告。成员都是 noexcept 可移动时，编译器生成的默认移动会自动带上；手写析构反而会抑制移动生成。</p>
+  <p><code>vector</code> 扩容要强保证：搬到一半若移动抛了，旧元素已是空壳，回不去。<code>move_if_noexcept</code> 的规则是——<strong>移动构造不是 noexcept 就退化成拷贝</strong>（noexcept 承诺「绝不抛异常」；拷贝虽然慢，但失败时旧数据完好，还能回滚）。忘写这一标，扩容可能慢几十倍且零警告。成员都是 noexcept 可移动时，编译器生成的默认移动会自动带上；手写析构反而会抑制移动生成。</p>
 
   <table>
     <thead><tr><th>写法</th><th>为什么错</th><th>正确做法</th></tr></thead>
@@ -532,7 +532,7 @@
       <tr><td>基类指针 delete 而析构非虚</td><td>派生部分不析构</td><td><code>virtual ~Base()</code> 或 <code>protected</code> 非虚</td></tr>
     </tbody>
   </table>
-  <p><strong>零法则优先</strong>：不手写析构/拷贝/移动，让 <code>vector</code> / <code>string</code> / <code>unique_ptr</code> 各自管资源，编译器生成的版本自动带正确的 <code>noexcept</code>。不得不写时（fd、句柄、非常规拷贝），先做只管一种资源的 RAII 小类，业务类再对它用零法则。多态基类需要 <code>virtual ~Base()</code> 时，其余四个显式 <code>= default</code>，因为声明析构会抑制移动生成。</p>
+  <p><strong>零法则优先</strong>（零法则——析构、拷贝、移动这五个特殊函数一个都不手写，全交给编译器生成）：不手写析构/拷贝/移动，让 <code>vector</code> / <code>string</code> / <code>unique_ptr</code> 各自管资源，编译器生成的版本自动带正确的 <code>noexcept</code>。不得不写时（fd、句柄、非常规拷贝），先做只管一种资源的 RAII 小类，业务类再对它用零法则。多态基类需要 <code>virtual ~Base()</code> 时，其余四个显式 <code>= default</code>，因为声明析构会抑制移动生成。</p>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -580,7 +580,7 @@
     </tbody>
   </table>
   <div class="analogy"><code>volatile</code> 当同步，像把「请勿打扰」挂在门上就以为门锁了——编译器不再省略「看门牌」，但门没锁，CPU 和其他线程照进。</div>
-  <p>TSan 能在没实际撞上竞争时就报（两线程访问过同一地址且缺同步）。并发 bug 是概率性的：本地一万次不复现，压测十分钟挂一次，所以不要靠人肉审查。完整内存序见 <a href="memory_model.html">C++ 内存模型</a>与 <a href="../stl/concurrency_patterns_guide.html">并发模式</a>，死锁见 <a href="../perf-debug/deadlock_debugging_guide.html">死锁调试指南</a>。</p>
+  <p>TSan（ThreadSanitizer，线程竞争检测器）能在没实际撞上竞争时就报（两线程访问过同一地址且缺同步）。并发 bug 是概率性的：本地一万次不复现，压测十分钟挂一次，所以不要靠人肉审查。完整内存序见 <a href="memory_model.html">C++ 内存模型</a>与 <a href="../stl/concurrency_patterns_guide.html">并发模式</a>，死锁见 <a href="../perf-debug/deadlock_debugging_guide.html">死锁调试指南</a>。</p>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -630,7 +630,7 @@
     </svg>
     <figcaption>静态分析吃源码；Sanitizer 吃执行路径。两道都要</figcaption>
   </div>
-  <div class="warn"><strong>ASan 和 TSan 不能同时开</strong>，要跑两遍。MSan 要求整棵依赖树（含标准库）重编，很多团队改用「成员默认初始化 + <code>-Wuninitialized</code>」从源头规避。Sanitizer 是运行时工具：<strong>没执行到的代码什么都发现不了</strong>。</div>
+  <div class="warn"><strong>ASan 和 TSan 不能同时开</strong>，要跑两遍。MSan 要求整棵依赖树（含标准库）重编，很多团队改用「成员默认初始化 + <code>-Wuninitialized</code>」从源头规避。Sanitizer（消毒剂——编译器自带的运行时检查器，程序每次踩线都当场染红报错）是运行时工具：<strong>没执行到的代码什么都发现不了</strong>。</div>
 
   <table>
     <thead><tr><th>问题</th><th>工具</th><th>代价 / 注意</th></tr></thead>
@@ -644,7 +644,7 @@
       <tr><td>解析器 / 反序列化</td><td>libFuzzer + ASan</td><td>处理外部输入必须做</td></tr>
     </tbody>
   </table>
-  <p>CI 三个格子：Release + <code>-Werror</code>；Debug + ASan/UBSan 跑全量单测；Debug + TSan 只跑并发。<code>ASAN_OPTIONS=abort_on_error=1</code>、<code>UBSAN_OPTIONS=halt_on_error=1</code> 让报错即失败。CMake 里用 option 加 <code>-fsanitize=address,undefined</code> 即可，不要把 sanitizer 混进 RelWithDebInfo 给用户。</p>
+  <p>CI 三个格子：Release + <code>-Werror</code>；Debug + ASan/UBSan 跑全量单测；Debug + TSan 只跑并发。<code>ASAN_OPTIONS=abort_on_error=1</code>、<code>UBSAN_OPTIONS=halt_on_error=1</code> 让报错即失败。CMake 里用 option 加 <code>-fsanitize=address,undefined</code> 即可，不要把 sanitizer 混进 RelWithDebInfo 给用户——检测代码会让程序又慢又胖，只该留在测试环境。</p>
 </section>
 
 <!-- ================================================================ §8 -->
@@ -711,7 +711,7 @@ std::max(x, y);   <span class="cm">// 只求值一次，有类型</span></pre>
     </svg>
     <figcaption>头文件一脏，全项目跟着脏。IWYU 能检查</figcaption>
   </div>
-  <p><code>using Ptr = T*</code> 优于 <code>typedef</code>：可读，而且能写模板别名（<code>template&lt;class T&gt; using Vec = vector&lt;T&gt;;</code>），typedef 做不到。多余或缺失的 include 交给 IWYU / clangd，不要靠人眼。</p>
+  <p><code>using Ptr = T*</code> 优于 <code>typedef</code>：可读，而且能写模板别名（<code>template&lt;class T&gt; using Vec = vector&lt;T&gt;;</code>），typedef 做不到。多余或缺失的 include 交给 IWYU（Include What You Use，一个专门检查「用到什么头就引什么头」的工具）/ clangd，不要靠人眼。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 188" role="img" aria-label="const-correctness：const T指针、T const指针、const 成员函数、返回 const 引用的含义">
@@ -767,7 +767,7 @@ std::max(x, y);   <span class="cm">// 只求值一次，有类型</span></pre>
       <tr><td>MISRA / AUTOSAR</td><td>禁动态内存 / 异常</td><td>功能安全认证</td></tr>
     </tbody>
   </table>
-  <p>别从零发明规范。挑成熟基线（推荐 Core Guidelines），只把冲突条款写成「本地例外」放进 README。自创规范最大的代价是<strong>没有现成工具能检查</strong>——不能自动化的条款三个月后没人守。</p>
+  <p>别从零发明规范。挑成熟基线（推荐 Core Guidelines），只把冲突条款写成「本地例外」放进 README。自创规范最大的代价是<strong>没有现成工具能检查</strong>——不能自动化的条款三个月后没人守：写规范如同立法，没有执法的条款就是一纸空文。</p>
   <table>
     <thead><tr><th>工具</th><th>管什么</th><th>落地要点</th></tr></thead>
     <tbody>
@@ -776,7 +776,7 @@ std::max(x, y);   <span class="cm">// 只求值一次，有类型</span></pre>
       <tr><td>编译警告</td><td>第一道防线</td><td>新项目直接 <code>-Werror</code>；老项目棘轮：基线只许降，清一类就 <code>-Werror=xxx</code> 锁死</td></tr>
     </tbody>
   </table>
-  <p>存量切忌一次性开 <code>-Werror</code>——上万条警告的结局是所有人把它关掉。先让新代码零警告立刻生效，存量按类还。审查只讨论设计和逻辑，「少个空格 / 该加 const」交给机器。</p>
+  <p>存量切忌一次性开 <code>-Werror</code>——上万条警告的结局是所有人把它关掉。先让新代码零警告立刻生效，存量按类还（棘轮策略：警告总数只许降不许升，像棘轮一样单向锁定）。审查只讨论设计和逻辑，「少个空格 / 该加 const」交给机器。</p>
   <p>默认值值得写死，而且每条都能被 clang-tidy 检查：能 const 就 const；单参 explicit；移动 noexcept；禁止裸 new / C 风格 cast；基类析构 virtual 或 protected；成员有默认初值。这六条能挡掉本文前六章里的大部分陷阱。<strong>短、可执行、可自动化——规范才活得下来。</strong></p>
 </section>
 

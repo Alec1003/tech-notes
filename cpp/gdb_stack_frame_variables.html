@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stack / Frame / Variable：分析 C++ 调用过程 · bt / frame / up / down / print / info locals</title>
-<meta name="description" content="Stack / Frame / Variable：分析 C++ 调用过程：程序停下来之后，第一个要回答的问题往往不是「这里是什么」，而是 「它是怎么走到这里的」。这一篇把 GDB 里最常用、也最能救命的一组能力讲透：用 bt 看调用链、用 frame / up / down 在栈帧间穿梭">
+<meta name="description" content="GDB 怎么看调用链和变量？本篇白话讲清 bt 看调用栈、frame / up / down 切换栈帧、info locals 与 info args 查变量，以及指针、引用、STL 容器和智能指针怎么看。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/gdb_stack_frame_variables.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/gdb_stack_frame_variables.html">
 <meta property="og:title" content="Stack / Frame / Variable：分析 C++ 调用过程 · bt / frame / up / down / print / info locals">
-<meta property="og:description" content="Stack / Frame / Variable：分析 C++ 调用过程：程序停下来之后，第一个要回答的问题往往不是「这里是什么」，而是 「它是怎么走到这里的」。这一篇把 GDB 里最常用、也最能救命的一组能力讲透：用 bt 看调用链、用 frame / up / down 在栈帧间穿梭">
+<meta property="og:description" content="GDB 怎么看调用链和变量？本篇白话讲清 bt 看调用栈、frame / up / down 切换栈帧、info locals 与 info args 查变量，以及指针、引用、STL 容器和智能指针怎么看。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Stack / Frame / Variable：分析 C++ 调用过程 · bt / frame / up / down / print / info locals">
-<meta name="twitter:description" content="Stack / Frame / Variable：分析 C++ 调用过程：程序停下来之后，第一个要回答的问题往往不是「这里是什么」，而是 「它是怎么走到这里的」。这一篇把 GDB 里最常用、也最能救命的一组能力讲透：用 bt 看调用链、用 frame / up / down 在栈帧间穿梭">
+<meta name="twitter:description" content="GDB 怎么看调用链和变量？本篇白话讲清 bt 看调用栈、frame / up / down 切换栈帧、info locals 与 info args 查变量，以及指针、引用、STL 容器和智能指针怎么看。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -131,7 +131,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 10 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -163,7 +163,7 @@
       <p class="sub">程序停下来之后，第一个要回答的问题往往不是「这里是什么」，而是<strong>「它是怎么走到这里的」</strong>。这一篇把 GDB 里最常用、也最能救命的一组能力讲透：用 <code>bt</code> 看调用链、用 <code>frame</code>/<code>up</code>/<code>down</code> 在栈帧间穿梭、用 <code>print</code>/<code>info locals</code>/<code>info args</code> 检查变量 —— 并专门处理 C++ 特有的指针、引用、STL 容器怎么在 GDB 里看清楚。</p>
       <div class="meta-row">
         <span class="pill cyan">调用链分析</span>
-        <span class="pill green">阅读 ~10 min</span>
+        <span class="pill green">阅读 ~15 min</span>
         <span class="pill amber">前置：本系列 01–02</span>
         <span class="pill violet">栈帧 / 变量</span>
       </div>
@@ -186,7 +186,7 @@
 
     <div class="info-box">
       <div class="title">原理在姊妹篇，这里讲「怎么观察」</div>
-      <p>本篇是 <a href="stack_frame_deep_dive.html">Stack Frame 深入</a>、<a href="call_ret_internals.html">CALL / RET</a> 两篇的「实操验证版」：那里讲栈帧为什么长这样、返回地址如何工作，这里教你用 GDB 亲眼看到它。建议交叉阅读。</p>
+      <p>本篇是 <a href="stack_frame_deep_dive.html">Stack Frame 深入</a>、<a href="call_ret_internals.html">CALL / RET</a> 两篇的「实操验证版」：那里讲栈帧为什么长这样、返回地址如何工作，这里教你用 GDB 亲眼看到它。打个比方：姊妹篇是解剖课讲义，本篇是带你上手用显微镜。建议交叉阅读。</p>
     </div>
 
     <!-- S1 -->
@@ -238,7 +238,7 @@ Breakpoint 1, baz (n=5) at call_chain.cpp:12</code></pre>
           <p class="sub">调试里被敲得最多的命令，没有之一</p>
         </div>
       </div>
-      <p><code>bt</code>（<code>backtrace</code> 的缩写，等价还有 <code>where</code>）打印<strong>当前线程从崩溃点/暂停点一路回溯到 <code>main</code> 的完整调用链</strong>。停在 <code>baz</code> 时：</p>
+      <p><code>bt</code>（<code>backtrace</code> 的缩写，等价还有 <code>where</code>）打印<strong>当前线程从崩溃点/暂停点一路回溯到 <code>main</code> 的完整调用链</strong>。它就像侦探还原案发路径：从案发现场（当前停住的位置）一路倒推，经过哪一层、谁调用谁，全部列出来。停在 <code>baz</code> 时：</p>
       <pre><code><span class="prompt">(gdb)</span> bt
 #0  baz (n=5) at call_chain.cpp:12
 #1  0x... in bar (n=5) at call_chain.cpp:13
@@ -278,7 +278,7 @@ Breakpoint 1, baz (n=5) at call_chain.cpp:12</code></pre>
           <p class="sub">这些编号不是「行号」，是「栈帧编号」</p>
         </div>
       </div>
-      <p>每一层函数调用在栈上都占一块<strong>栈帧（stack frame）</strong>。GDB 给它们编号，<strong><code>#0</code> 永远是最内层（当前正在执行的那一帧），编号越大越靠近 <code>main</code>（越「外层/越早」）</strong>。</p>
+      <p>每一层函数调用在栈上都占一块<strong>栈帧（stack frame）</strong>——可以把它理解成每个函数进场时在栈上圈出来的一块「自留地」，参数、局部变量、返回地址都放在这块地里，函数退出时整块归还。GDB 给这些帧编号，<strong><code>#0</code> 永远是最内层（当前正在执行的那一帧），编号越大越靠近 <code>main</code>（越「外层/越早」）</strong>。</p>
 
       <div class="framefig">
         <div class="cap">栈帧编号（frame number）</div>
@@ -293,7 +293,7 @@ Breakpoint 1, baz (n=5) at call_chain.cpp:12</code></pre>
         <p>很多人误以为 <code>#0</code> 是「最先执行的」。恰恰相反：<code>#0</code> 是<strong>最后进入、最内层、当前正在跑</strong>的那个函数；<code>#3</code>（<code>main</code>）才是最早开始的。这正是栈「后进先出」的体现 —— 最后压栈的帧编号最小、离栈顶最近。GDB 里所有「查看变量」的命令，<strong>默认都作用在<code>#0</code> 这一帧</strong>，除非你切换过去。</p>
       </div>
 
-      <p>为什么栈能这样被逐层回溯出来？因为每一帧都保存了「返回地址」和上一帧的帧指针，GDB 顺着这条链一路往回爬 —— 底层机制见 <a href="call_ret_internals.html">CALL / RET 深入</a>。</p>
+      <p>为什么栈能这样被逐层回溯出来？因为每一帧都保存了「返回地址」和上一帧的帧指针，GDB 顺着这条链一路往回爬——好比沿途每帧都留了一枚面包屑，顺着捡就能回到起点。底层机制见 <a href="call_ret_internals.html">CALL / RET 深入</a>。</p>
     </section>
 
     <!-- S4 -->
@@ -324,7 +324,7 @@ Breakpoint 1, baz (n=5) at call_chain.cpp:12</code></pre>
 
       <div class="info-box key">
         <div class="title">为什么要切帧</div>
-        <p>切换栈帧的意义在于：<strong>把「当前上下文」搬到你想检查的那一层</strong>。停在 <code>baz</code> 时想看 <code>main</code> 里那个 <code>User u</code>？必须先 <code>frame 3</code>，否则 <code>p u</code> 会因为「当前帧（baz）里没有 <code>u</code>」而报错。这是新手最常见的困惑 —— 变量明明存在却说找不到，多半是<strong>站错帧</strong>了。</p>
+        <p>切换栈帧的意义在于：<strong>把「当前上下文」搬到你想检查的那一层</strong>。停在 <code>baz</code> 时想看 <code>main</code> 里那个 <code>User u</code>？必须先 <code>frame 3</code>，否则 <code>p u</code> 会因为「当前帧（baz）里没有 <code>u</code>」而报错。这是新手最常见的困惑 —— 变量明明存在却说找不到，多半是<strong>站错帧</strong>了。好比在办公楼里问前台「张工的工位」：你得先走到那一层楼，才看得到那一层的东西。</p>
       </div>
 
       <p><code>info frame</code> 展示的是这一帧的「解剖图」：帧基址（对应 <span class="reg">RBP</span>）、栈顶（<span class="reg">RSP</span>）、返回地址存在哪、哪些被调用者保存寄存器被压在这一帧里。这些字段与 <a href="stack_frame_deep_dive.html">02 篇栈帧</a>里讲的一一对应，第 04 篇会结合寄存器进一步展开。</p>
@@ -356,7 +356,7 @@ r = 0</code></pre>
       </table>
       <div class="info-box">
         <div class="title">调试直觉</div>
-        <p>拿到崩溃现场后的高效动作：<code>bt</code> 看链 → 逐帧 <code>up</code>，每到一帧就 <code>info args</code> + <code>info locals</code> 扫一眼，找「哪一层的数据开始不对劲」。<strong>参数在这一层还是对的、到下一层就错了</strong>，问题就锁定在这两层之间。</p>
+        <p>拿到崩溃现场后的高效动作：<code>bt</code> 看链 → 逐帧 <code>up</code>，每到一帧就 <code>info args</code> + <code>info locals</code> 扫一眼，找「哪一层的数据开始不对劲」。<strong>参数在这一层还是对的、到下一层就错了</strong>，问题就锁定在这两层之间。好比接力赛查出掉棒发生在第三棒和第四棒之间：两棒各自的状态都看一遍，交接处就现形了。</p>
       </div>
     </section>
 
@@ -376,7 +376,7 @@ $2 = 25
 <span class="prompt">(gdb)</span> p/x 255           <span class="comment"># 以十六进制显示：$3 = 0xff</span>
 <span class="prompt">(gdb)</span> p sizeof(User)    <span class="comment"># 甚至能算 sizeof</span>
 <span class="prompt">(gdb)</span> set var n = 42    <span class="comment"># 修改运行中的变量值</span></code></pre>
-      <p><code>print</code> 的表达式能力非常强：算术、比较、解引用、成员访问、数组下标、类型转换、甚至<strong>在被调试进程里调用一个函数</strong>（<code>p some_func(3)</code>）。<code>p/FMT</code> 可指定输出格式：<code>/x</code> 十六进制、<code>/d</code> 十进制、<code>/t</code> 二进制、<code>/c</code> 字符、<code>/a</code> 地址、<code>/f</code> 浮点。</p>
+      <p><code>print</code> 的表达式能力非常强：算术、比较、解引用、成员访问、数组下标、类型转换、甚至<strong>在被调试进程里调用一个函数</strong>（<code>p some_func(3)</code>）。<code>p/FMT</code> 可指定输出格式：<code>/x</code> 十六进制、<code>/d</code> 十进制、<code>/t</code> 二进制、<code>/c</code> 字符、<code>/a</code> 地址、<code>/f</code> 浮点。也就是说，它不只是「看变量」，更是一个能在程序暂停现场直接演算的小计算器。</p>
 
       <h3>display：每次停下来自动打印</h3>
       <pre><code><span class="prompt">(gdb)</span> display n          <span class="comment"># 之后每次暂停都自动显示 n</span>
@@ -414,13 +414,13 @@ $5 = {id = 7, name = "Kavin"}
 $6 = "Kavin"</code></pre>
       <div class="info-box warning">
         <div class="title">指针调试的第一性原理</div>
-        <p><code>p ptr</code> 给你的是<strong>地址</strong>，<code>p *ptr</code> 给你的是<strong>内容</strong>。崩溃排查时这两步缺一不可：先 <code>p ptr</code> 看地址是否是 <code>0x0</code>（空指针）或一个明显不合理的值（野指针）；地址看起来正常，再 <code>p *ptr</code> 看内容是否是垃圾（可能是悬垂指针指向已释放内存）。第 06 篇会把这套流程用在真实崩溃上。</p>
+        <p><code>p ptr</code> 给你的是<strong>地址</strong>，<code>p *ptr</code> 给你的是<strong>内容</strong>。崩溃排查时这两步缺一不可：先 <code>p ptr</code> 看地址是否是 <code>0x0</code>（空指针）或一个明显不合理的值（野指针——指向的地址本身就没有效对象）；地址看起来正常，再 <code>p *ptr</code> 看内容是否是垃圾（可能是悬垂指针指向已释放内存）。第 06 篇会把这套流程用在真实崩溃上。</p>
       </div>
       <h4>数组与引用</h4>
       <pre><code><span class="prompt">(gdb)</span> p arr[0]           <span class="comment"># 数组下标</span>
 <span class="prompt">(gdb)</span> p *arr@5           <span class="comment"># 把 arr 起始的 5 个元素当数组打印（@ 语法）</span>
 <span class="prompt">(gdb)</span> p ref              <span class="comment"># 引用在 GDB 里透明：直接显示被引用对象</span></code></pre>
-      <p><code>@</code> 是很实用的技巧：<code>p *data@len</code> 能把一段裸内存/动态数组按 <code>len</code> 个元素打印出来，弥补「指针不知道自己指向多少元素」的问题。</p>
+      <p><code>@</code> 是很实用的技巧：<code>p *data@len</code> 能把一段裸内存/动态数组按 <code>len</code> 个元素打印出来，弥补「指针不知道自己指向多少元素」的问题。好比指针只告诉你书架第一格在哪，<code>@len</code> 则是把整排格子一次全拉开。</p>
     </section>
 
     <!-- S8 -->
@@ -432,7 +432,7 @@ $6 = "Kavin"</code></pre>
           <p class="sub">现代 GDB 带 pretty-printer，STL 看起来很友好 —— 但要知道它靠什么</p>
         </div>
       </div>
-      <p>现代 GDB 通常随发行版附带一套 <strong>Python pretty-printer</strong>（libstdc++/libc++ 的打印插件），它把 STL 对象的内部结构翻译成人类可读形式：</p>
+      <p>现代 GDB 通常随发行版附带一套 <strong>Python pretty-printer</strong>（libstdc++/libc++ 的打印插件——一组负责「把对象内部原始字段翻译成人话」的小插件），它把 STL 对象的内部结构翻译成人类可读形式：</p>
       <pre><code><span class="prompt">(gdb)</span> p v
 $1 = std::vector of length 3, capacity 3 = {10, 20, 30}
 <span class="prompt">(gdb)</span> p v[1]             <span class="comment"># 甚至支持下标</span>
@@ -462,7 +462,7 @@ $5 = std::shared_ptr&lt;User&gt; (use count 1, weak count 0) = {get()=0x55...}</
       </div>
       <div class="info-box">
         <div class="title">shared_ptr 的 use count 是宝藏</div>
-        <p>排查「对象被提前释放」或「循环引用内存不降」时，<code>p sp</code> 显示的 <strong>use count</strong> 直接告诉你现在有几个 <code>shared_ptr</code> 持有它。计数异常偏高 → 可能循环引用；该释放却仍 &gt; 0 → 有地方多持有了一份。配合 <a href="smart_pointers_deep_dive.html">智能指针深度指南</a>一起看。</p>
+        <p>排查「对象被提前释放」或「循环引用内存不降」时，<code>p sp</code> 显示的 <strong>use count</strong>（引用计数，即当前有几个 shared_ptr 共同持有这个对象）直接告诉你现在有几个 <code>shared_ptr</code> 持有它。计数异常偏高 → 可能循环引用；该释放却仍 &gt; 0 → 有地方多持有了一份。配合 <a href="smart_pointers_deep_dive.html">智能指针深度指南</a>一起看。</p>
       </div>
     </section>
 

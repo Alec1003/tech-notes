@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 内存模型详解</title>
-<meta name="description" content="C++ 内存模型详解：从 进程内存布局 · 栈 / 堆 / BSS 的基础，到 C++11 原子操作 · memory_order · acquire-release · happens-before 的内存序语义，再到 无锁队列 · Seqlock · 伪共享">
+<meta name="description" content="C++ 内存模型详解：用白话讲清进程内存布局与栈 / 堆 / BSS，C++11 原子操作与 memory_order、acquire-release、happens-before 的内存序语义，再到无锁队列、Seqlock、伪共享">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/memory_model.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/memory_model.html">
 <meta property="og:title" content="C++ 内存模型详解">
-<meta property="og:description" content="C++ 内存模型详解：从 进程内存布局 · 栈 / 堆 / BSS 的基础，到 C++11 原子操作 · memory_order · acquire-release · happens-before 的内存序语义，再到 无锁队列 · Seqlock · 伪共享">
+<meta property="og:description" content="C++ 内存模型详解：用白话讲清进程内存布局与栈 / 堆 / BSS，C++11 原子操作与 memory_order、acquire-release、happens-before 的内存序语义，再到无锁队列、Seqlock、伪共享">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 内存模型详解">
-<meta name="twitter:description" content="C++ 内存模型详解：从 进程内存布局 · 栈 / 堆 / BSS 的基础，到 C++11 原子操作 · memory_order · acquire-release · happens-before 的内存序语义，再到 无锁队列 · Seqlock · 伪共享">
+<meta name="twitter:description" content="C++ 内存模型详解：用白话讲清进程内存布局与栈 / 堆 / BSS，C++11 原子操作与 memory_order、acquire-release、happens-before 的内存序语义，再到无锁队列、Seqlock、伪共享">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -280,7 +280,7 @@
   </div>
 
 <div class="card">
-<p>当一个 C++ 程序被操作系统加载运行时，它在虚拟地址空间中拥有以下几个关键内存区域：</p>
+<p>当一个 C++ 程序被操作系统加载运行时，它会在虚拟地址空间（virtual address space，每个进程「以为」自己独占的一整段连续地址，实际由 OS 映射到物理内存）中拥有以下几个关键内存区域：</p>
 
 <div class="diagram-wrap">
 <svg width="420" height="620" viewBox="0 0 420 620" role="img" aria-label="进程虚拟地址空间自上而下的分段：高地址是内核空间，其下是向低地址增长的栈（局部变量、函数参数、返回地址），中间是自由区域，再往下是向高地址增长的堆（new 与 malloc 的动态分配），然后依次是存放未初始化全局静态变量的 BSS 段、存放已初始化全局静态变量的数据段、存放字符串字面量与 const 全局的只读数据段，最低处是存放可执行机器指令的代码段">
@@ -463,7 +463,7 @@
 </div>
 
 <h3>3.2 内存对齐与填充 (Padding)</h3>
-<p>按声明顺序对齐：<code>char, int, char</code> 会在中间和尾部各垫 3 字节（12B）；改成 <code>int, char, char</code> 只在尾部垫 2 字节（8B）。成员按大小从大到小排，padding 最少。</p>
+<p>对齐（alignment，每种类型都要放在自身大小整数倍的地址上，CPU 才好一次取完）决定了填充的位置。按声明顺序 <code>char, int, char</code> 排列，int 前后要凑齐 4 的倍数，于是中间和尾部各垫 3 字节（共 12B）；改成 <code>int, char, char</code>，就只在尾部垫 2 字节（共 8B）。所以成员按大小从大到小排，padding（填充字节，纯粹占位用的空白）最少。</p>
 
 <div class="diagram-wrap">
 <svg width="650" height="200" viewBox="0 0 650 200" role="img" aria-label="成员声明顺序影响结构体大小：Bad 版本把两个单字节成员分别放在 int 两侧，各产生 3 字节填充，共 12 字节；Good 版本把 int 提到最前、两个单字节成员挨着放，只剩 2 字节填充，共 8 字节。技巧是按成员大小从大到小排列">
@@ -496,7 +496,7 @@
 </div>
 
 <h3>3.3 虚函数表 (vtable) 布局</h3>
-<p>含虚函数的对象前端有一个 <code>vptr</code>（64 位上 8B），指向该类共享的 vtable。虚调用 = 一次间接跳转。</p>
+<p>含虚函数的对象前端有一个 <code>vptr</code>（虚表指针，64 位上占 8B），指向该类共享的 vtable（虚函数表，一张存着各虚函数真实地址的目录）。虚调用 = 通过 vptr 查一次表再间接跳转。</p>
 
 <div class="diagram-wrap">
 <svg width="700" height="220" viewBox="0 0 700 220" role="img" aria-label="含虚函数的对象内存布局：对象最前面是 8 字节的虚表指针 vptr，其后是 int 成员 x 与 4 字节填充；vptr 指向编译器生成的虚表，表内依次是 Base::foo 与 Base::bar 的地址。同一个类的所有实例共享同一张虚表，虚函数调用要先通过 vptr 查表再间接跳转，比普通调用多一次解引用">
@@ -549,7 +549,7 @@
   </div>
 
 <div class="card">
-<p>C++11 正式定义了<strong>多线程内存模型</strong>，解决了此前"未定义行为泛滥"的问题。核心概念如下：</p>
+<p>C++11 正式定义了<strong>多线程内存模型</strong>——一份关于「多线程程序里，谁的写、什么时候、按什么顺序对谁可见」的规则书，解决了此前"未定义行为泛滥"的问题。核心概念如下：</p>
 
 <h3>4.1 为什么需要内存模型？</h3>
 <div class="diagram-wrap">
@@ -621,14 +621,14 @@
 </div>
 
 <div class="tip">
-每个 CPU 核心有自己的缓存和 Store Buffer，写入不会立即对其他核心可见。C++ 内存模型通过 <code>std::atomic</code> 和内存序来控制这种可见性。
+每个 CPU 核心都有自己的缓存和 Store Buffer（写入缓冲区，本核的写先进这里排队，暂时不往外发），所以一次写入不会立即对其他核心可见。C++ 内存模型通过 <code>std::atomic</code> 和内存序来控制这种可见性——什么时候必须让别的线程看到。
 </div>
 </div>
 
 <div class="card">
 <h3>4.2 内存模型到底在「管」什么？</h3>
-<p>内存模型是一份契约：一个线程的写，<strong>何时、以何顺序</strong>被另一线程看见。单线程永远感觉不到重排（as-if-serial）；问题只在<strong>共享同一块内存的多个执行流</strong>上。</p>
-<p>三层叠加让「源码顺序」≠「对方看见的顺序」：编译器重排、CPU 乱序、以及下图的 <strong>store buffer</strong>。x86 的 TSO 只允许这一种跨核重排（StoreLoad）；挡住它需要 seq_cst，见 §7。</p>
+<p>内存模型是一份契约：一个线程的写，<strong>何时、以何顺序</strong>被另一线程看见。单线程永远感觉不到重排（as-if-serial，编译器保证单线程观测结果如同逐条顺序执行）；问题只出现在<strong>共享同一块内存的多个执行流</strong>之间。</p>
+<p>三层因素叠加，让「源码顺序」≠「对方看见的顺序」：编译器重排、CPU 乱序、以及下图的 <strong>store buffer</strong>。x86 的 TSO（Total Store Order，全序存储模型）只允许这一种跨核重排（StoreLoad，先写后读被颠倒）；挡住它需要 seq_cst，见 §7。</p>
 <div class="fig">
 <svg viewBox="0 0 720 220" style="min-width:640px;height:auto" role="img" aria-label="Store buffer：核 A 把 x=1 写入私有缓冲后立刻读自己的 x 得到 1，核 B 此时仍从缓存读到旧值 0">
   <defs>
@@ -660,7 +660,7 @@
   <text class="ts" x="530" y="180" text-anchor="middle">双方都「先写后读」，可同时看到对方旧值</text>
 </svg>
 </div>
-<p>编译器还能把无依赖的 <code>x=1; r1=y;</code> 调成先读后写；CPU 流水线也会让 load 先完成。防线分别是原子操作（编译器屏障）和 CPU fence。seq_cst 才能挡住 StoreLoad，见 §7 短例。</p>
+<p>编译器还能把无依赖的 <code>x=1; r1=y;</code> 调成先读后写；CPU 流水线也会让后面的 load 先完成。针对这两层，防线分别是原子操作（同时充当编译器屏障，禁止编译器乱排）和 CPU fence（禁止处理器乱排）。只有 seq_cst 才能挡住 StoreLoad，见 §7 短例。</p>
 </div>
 
 <div class="card">
@@ -783,7 +783,7 @@
   </div>
 
 <div class="card">
-<p><strong>Happens-before</strong>：若 A happens-before B，则 A 的副作用对 B 可见。它是程序序 + synchronizes-with 的传递闭包。</p>
+<p><strong>Happens-before</strong>（「先发生」关系）：若 A happens-before B，则 A 的副作用对 B 可见。它由程序序（同线程内的先后）加 synchronizes-with（跨线程的配对同步）做传递闭包得来——好比多米诺，前一张推倒后一张，可见性沿这条链一路传下去。</p>
 <div class="fig">
 <svg viewBox="0 0 680 260" style="min-width:600px;height:auto" role="img" aria-label="Happens-before 边：线程 A 程序序 data=42 到 release store，跨线程 synchronizes-with 到 B 的 acquire load，再程序序到 assert">
   <defs>
@@ -810,7 +810,7 @@
   <text class="ts" x="528" y="200">程序序</text>
 </svg>
 </div>
-<p>①→② 程序序，②→③ 配对同步，③→④ 程序序，因此 ① happens-before ④。没有这条边，B 读到 <code>ready==true</code> 仍可能看见 <code>data</code> 的旧值——那不是「慢一点」，而是数据竞争或半成品。</p>
+<p>①→② 程序序，②→③ 配对同步，③→④ 程序序，因此 ① happens-before ④。没有这条边，B 读到 <code>ready==true</code> 时仍可能看见 <code>data</code> 的旧值——那不是「慢一点才看到新值」，而是数据竞争或读到半成品：结果在标准里根本没有定义。</p>
 <table>
   <tr><th>来源</th><th>建立的边</th><th>工程含义</th></tr>
   <tr><td>程序序</td><td>同一线程里分号前后（sequenced-before）</td><td>单线程 as-if-serial，对方看不见这层</td></tr>
@@ -836,7 +836,7 @@
   </div>
 
 <div class="card">
-<p>六档 <code>memory_order</code>：越往右约束越强、越慢。工程上常用三档——relaxed / acquire-release / seq_cst。</p>
+<p>六档 <code>memory_order</code>（内存序，标注在一次原子操作上、指示「这次操作要多严格」的开关）：越往右约束越强、也越慢。工程上常用三档——relaxed / acquire-release / seq_cst。</p>
 <div class="fig">
 <svg viewBox="0 0 720 200" style="min-width:640px;height:auto" role="img" aria-label="六档 memory_order 光谱：从左到右 relaxed、consume、acquire、release、acq_rel、seq_cst，约束递增">
   <text class="ts" x="360" y="18" text-anchor="middle">← 更快 / 约束弱　　　　　　　　　　更强 / 更慢 →</text>
@@ -897,7 +897,7 @@
   <tr><td>acq_rel</td><td>一次 RMW 同时带读写屏障</td><td>全局总序</td><td>自旋锁 TAS、<code>fetch_sub</code> 到零再析构</td></tr>
   <tr><td>seq_cst</td><td>所有 seq_cst 操作共享一条全局时间线</td><td>—</td><td>Dekker / Peterson、默认、尚未 profile</td></tr>
 </table>
-<p>配对必须成对：一边 release 一边 relaxed，对面看不到 payload。RMW 默认 seq_cst；引用计数 <code>++</code> 可 relaxed，<code>--</code> 到零析构必须 acq_rel，否则可能看见半成品对象。</p>
+<p>配对必须成对出现：一边用 release 写、另一边却用 relaxed 读，对面就看不到 payload。RMW（Read-Modify-Write，读改写操作，如 fetch_add / test_and_set）默认 seq_cst；引用计数的 <code>++</code> 可以 relaxed，但 <code>--</code> 到零后析构必须 acq_rel，否则可能看见半成品对象。</p>
 </div>
 
 <!-- ============================================ -->
@@ -939,7 +939,7 @@
 void inc() { for (int i = 0; i &lt; 1000; ++i)
     counter.fetch_add(1, std::memory_order_relaxed); }
 // 两线程 join 后 counter 一定是 2000；不要用它同步别的数据</code></pre>
-<p><code>join</code> 之后读 counter 安全：线程结束 happens-before join 返回。relaxed 只保证「加出来的和是 2000」，不能拿这次 <code>fetch_add</code> 去发布旁边的 payload——那是 §7.2 的活。</p>
+<p><code>join</code> 之后读 counter 是安全的：线程结束 happens-before join 返回。但 relaxed 只保证「加出来的和是 2000」，不能拿这次 <code>fetch_add</code> 去发布旁边的 payload——同步别的数据是 §7.2 的活。</p>
 </div>
 
 <div class="card">
@@ -996,7 +996,7 @@ int r1 = 0, r2 = 0;
 // B: y.store(true);  r2 = x.load();
 // seq_cst：r1==0 &amp;&amp; r2==0 不可能
 // 改 relaxed 或 release/acquire：可能（store buffer）</code></pre>
-<p>自旋锁就是 acquire 的 <code>test_and_set</code> + release 的 <code>clear</code>，临界区不会漏出锁范围。DCLP 见 §13.4。</p>
+<p>自旋锁就是 acquire 的 <code>test_and_set</code> 加 release 的 <code>clear</code>：拿锁用 acquire 挡住后面的读往前抢，放锁用 release 保证临界区的写全部落地，临界区因此不会漏出锁范围。DCLP 见 §13.4。</p>
 </div>
 
 <!-- ============================================ -->
@@ -1037,7 +1037,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 
 <h3 id="s8-1">8.1 单核也会有多线程 bug</h3>
 <div class="card">
-<p>「单核同时只能执行一条指令」<strong>不等于</strong>「一个 C++ 语句是原子的」。 <code>count++</code> 在汇编里通常是 <strong>load → add → store</strong> 三步，中间随时可以被时钟中断抢走。</p>
+<p>「单核同时只能执行一条指令」<strong>不等于</strong>「一个 C++ 语句是不可拆分的原子步骤」。 <code>count++</code> 在汇编里通常是 <strong>load → add → store</strong> 三步，中间任何一步都可能被时钟中断抢走 CPU。</p>
 <div class="diagram-wrap">
 <svg viewBox="0 0 700 200" width="700" height="200" role="img" aria-label="两次 count++ 交错结果变成 1">
   <rect x="8" y="8" width="684" height="184" rx="10" fill="var(--bg-card)" stroke="var(--border)"/>
@@ -1171,7 +1171,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 <tr><td>读 / 写 / RMW，需要同步？</td><td>acquire / release / acq_rel</td></tr>
 <tr><td>所有线程必须看见同一全局序（Dekker）？</td><td>seq_cst</td></tr>
 </table>
-<p>黄金法则：先 seq_cst 保证正确，profile 出热点再降档。过早抠内存序是万恶之源。</p>
+<p>黄金法则：先 seq_cst 保证正确，用 profile 找出真正的热点后再降档。过早抠内存序细节是万恶之源。</p>
 </div>
 </section>
 
@@ -1198,7 +1198,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
   <tr><td>RISC-V</td><td>LW/SW</td><td>LW + fence r,rw</td><td>fence rw,w + SW</td><td>fence + SW + fence</td></tr>
 </table>
 <p>先 seq_cst 保证正确；profile 出热点再降档。x86 上 acquire/release 几乎免费，seq_cst 只在 store 上多一条 fence。</p>
-<p>数字不要当绝对值：同一台机器上 seq_cst store 相对 relaxed 大约慢一个数量级，但 x86 的 acquire/release 几乎就是 MOV。真正拉开差距的是弱序 ARM：没有 TSO 白送，flag 发布必须 <code>ldar</code>/<code>stlr</code>，seq_cst 再叠全屏障。所以「在笔记本 x86 上测过」既不能证明弱序机器上的<strong>正确</strong>，也不能代表那里的<strong>性能</strong>。</p>
+<p>数字不要当绝对值：同一台机器上 seq_cst store 相对 relaxed 大约慢一个数量级，但 x86 的 acquire/release 几乎就是一条 MOV。真正拉开差距的是弱序的 ARM：没有 TSO 白送，flag 发布必须 <code>ldar</code>/<code>stlr</code>，seq_cst 还要再叠全屏障。所以「在笔记本 x86 上测过」既不能证明弱序机器上的<strong>正确</strong>，也不能代表那里的<strong>性能</strong>。</p>
 </div>
 
 <!-- ============================================ -->
@@ -1346,7 +1346,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 
 <h3 id="s13-1">13.1 Cache 一致性 — MESI 协议</h3>
 <div class="card">
-<p>多核 CPU 每个核都有自己的 L1/L2，Cache line（通常 64B）通过 <strong>MESI</strong> 协议保持一致：</p>
+<p>多核 CPU 每个核都有自己的 L1/L2 缓存，Cache line（缓存行，CPU 搬运内存的最小单位，通常 64B）通过 <strong>MESI</strong> 协议（用 Modified / Exclusive / Shared / Invalid 四个状态标记每条缓存行归属的一致性协议）保持一致：</p>
 <table>
 <tr><th>状态</th><th>含义</th><th>写操作代价</th></tr>
 <tr><td><b style="color:var(--red)">M</b>odified</td><td>本核独占、已脏（与内存不一致）</td><td>直接写</td></tr>
@@ -1378,7 +1378,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
   <text class="ts" x="624" y="114" text-anchor="middle">读：先填行</text>
 </svg>
 </div>
-<p>写 Shared 行代价远高于写独占行。两个无关变量挤在同一 64B 行 → <strong>false sharing</strong>。</p>
+<p>写 Shared 行的代价远高于写独占行：要通知所有持有副本的核作废。两个逻辑上无关的变量若挤在同一 64B 行里，就会互相触发这种作废 → <strong>false sharing</strong>（伪共享，变量没共享，缓存行却共享了）。</p>
 <div class="fig">
 <svg viewBox="0 0 720 150" style="min-width:640px;height:auto" role="img" aria-label="False sharing：同一 64 字节缓存行上 a 和 b 被两核分别写，互相 Invalidate；alignas 64 拆成两行后各写各的">
   <rect class="box-r" x="16" y="16" width="330" height="118" rx="8"/>
@@ -1397,10 +1397,10 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 </div>
 
 <h4 id="s13-1-vis">写先到本核，另一核先看自己的 L1</h4>
-<p>一次 store 通常先进入本核的 <strong>store buffer / L1</strong>，并不立刻出现在 DRAM 或别的核上。另一核读同一个变量时，<strong>先查自己的 L1</strong>。MESI 保证的是<strong>最终一致</strong>：不会永远读到互相矛盾的稳定值。它<strong>不保证立刻</strong>，也<strong>不保证源码顺序</strong>（store buffer、乱序执行）。这就是 C++ 需要 <code>atomic</code> / 锁（acquire-release）的原因：协议管缓存行，不管你的程序顺序。</p>
+<p>一次 store 通常先进入本核的 <strong>store buffer / L1</strong>，并不立刻出现在 DRAM 或别的核上。另一核读同一个变量时，<strong>先查自己的 L1</strong>。MESI 保证的是<strong>最终一致</strong>：不会永远读到互相矛盾的稳定值。但它<strong>不保证立刻</strong>可见，也<strong>不保证按源码顺序</strong>可见（store buffer 排队、乱序执行都会插手）。这就是 C++ 还需要 <code>atomic</code> / 锁（acquire-release）的原因：协议只管缓存行归谁，不管你程序的先后顺序。</p>
 
 <h4 id="s13-1-inv">「A 只改自己的 L1，为什么 B 的 L1 作废？」</h4>
-<p>B 可能已经有同一条 64B 行的 <strong>Shared</strong> 副本。A 要写之前必须<strong>独占</strong>这条行（Invalidate 或 Read-for-Ownership / RFO），B 上整行变成 <strong>I</strong>。否则 B 会继续读到旧的 <code>count_a</code>。</p>
+<p>B 可能已经有同一条 64B 行的 <strong>Shared</strong> 副本。A 要写之前必须先<strong>独占</strong>这条行（发出 Invalidate，或 Read-for-Ownership / RFO，即「读并夺走所有权」），B 上整行随之变成 <strong>I</strong>。否则 B 会继续读到旧的 <code>count_a</code>。</p>
 <ul>
   <li>作废的是 B 手里那份<strong>过期副本</strong>，不是「改了 B 自己的变量」。</li>
   <li>粒度是<strong>缓存行</strong>不是 C++ 变量 → 同一行上的 <code>count_b</code> 被连带作废 = <strong>false sharing</strong>。perf 里常见 HITM（Hit Modified，从别核脏行来的命中）。</li>
@@ -1423,7 +1423,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 </div>
 
 <h4 id="s13-1-fs">False sharing 典型病理几乎只在多核</h4>
-<p>痛的是<strong>同一行在两套私有 L1 之间 ping-pong</strong>。单核上两个线程轮流用同一套 L1，没有核间一致性流量，所以几乎无感。超线程通常共享 L1，也不是经典乒乓。</p>
+<p>痛的是<strong>同一行在两套私有 L1 之间 ping-pong</strong>（乒乓式来回失效）。单核上两个线程轮流用同一套 L1，没有核间一致性流量，所以几乎无感。超线程通常共享 L1，也不是经典乒乓。</p>
 <table>
 <tr><th></th><th>数据竞争（正确性）</th><th>False sharing（性能）</th></tr>
 <tr><td>单核两线程</td><td>有：<code>count++</code> 可被交错（§8.1）</td><td>几乎无：没有核间 HITM</td></tr>
@@ -1440,7 +1440,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 <tr><td><b>ARMv8 / POWER</b></td><td>弱序 (Weak)</td><td>允许几乎所有重排</td><td>需插入 <code>ldar</code>/<code>stlr</code>（load-acquire / store-release）</td><td>需 <code>dmb ish</code> 全屏障</td></tr>
 <tr><td><b>Alpha</b>（历史）</td><td>极弱</td><td>甚至依赖读也可重排</td><td>需显式屏障</td><td>需 <code>mb</code></td></tr>
 </table>
-<p>x86 上「能跑」的裸 <code>bool ready</code> 发布，搬到 ARM 会崩——必须按 C++ 模型写，别赌 TSO。正确写法见 §7.2。云原生、手机、M 系列 Mac 都是弱序；x86 单平台压测过的无锁代码，在 Graviton / Apple Silicon 上是另一套硬件。</p>
+<p>x86 上「能跑」的裸 <code>bool ready</code> 发布，搬到 ARM 可能直接崩——必须按 C++ 模型写，别赌 TSO 给的运气。正确写法见 §7.2。云原生、手机、M 系列 Mac 都是弱序架构；只在 x86 单平台压测过的无锁代码，到了 Graviton / Apple Silicon 上面对的是另一套硬件规则。</p>
 </div>
 
 <h3>13.3 内存屏障 — 编译器屏障 vs CPU 屏障</h3>
@@ -1450,7 +1450,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 <tr><td><b>编译器屏障</b></td><td>编译器指令重排</td><td><code>asm volatile("" ::: "memory")</code> / <code>std::atomic_signal_fence</code></td></tr>
 <tr><td><b>CPU 屏障</b></td><td>CPU 乱序执行 + store buffer</td><td>x86: <code>mfence/lfence/sfence</code>；ARM: <code>dmb</code>；<code>std::atomic_thread_fence</code></td></tr>
 </table>
-<p>独立 <code>atomic_thread_fence</code> 很少用；优先把 order 写在原子操作上。x86 上 acquire/release fence 往往只是编译器屏障，seq_cst fence 才生成 <code>mfence</code>。</p>
+<p>独立 <code>atomic_thread_fence</code>（单独插一道屏障指令）很少用；优先把 order 直接写在原子操作上。x86 上 acquire/release fence 往往只是编译器屏障（不生成指令），seq_cst fence 才会真的生成 <code>mfence</code>。</p>
 <div class="fig">
 <svg viewBox="0 0 720 160" style="min-width:640px;height:auto" role="img" aria-label="独立 fence 对比带序原子：左边 relaxed store 夹一条 release fence；右边直接 store(release)，语义等价但后者更常见">
   <rect class="box-y" x="16" y="16" width="330" height="128" rx="8"/>
@@ -1486,7 +1486,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
   <text class="ts" x="626" y="80" text-anchor="middle">编译器插 guard</text>
 </svg>
 </div>
-<p>若必须手写 DCL：acquire 读指针、release 发指针，避免对面看到 <code>inst != nullptr</code> 但对象还没构造完。</p>
+<p>若必须手写 DCL：acquire 读指针、release 发指针——这样对面要么看到 <code>inst == nullptr</code>，要么看到一个完全构造好的对象，绝不会看到「指针非空但对象还没构造完」的半成品。</p>
 </div>
 
 <h3>13.5 无锁数据结构 & ABA 问题</h3>
@@ -1499,12 +1499,12 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 <tr><td><b>Wait-free</b></td><td>保证<em>每个</em>线程在有限步内完成</td><td>★★★★★</td></tr>
 </table>
 <h4>ABA 问题（CAS 的经典陷阱）</h4>
-<p>T1 读到 head=A 准备 CAS(A→B)；T2 弹出 A、B 再把 A 推回去。T1 的 CAS 成功，但 A→next 已不是 B，链表损坏。解法：tagged pointer（版本号）、Hazard Pointer / RCU 延迟回收。细节见 §14。</p>
+<p>T1 读到 head=A，准备 CAS(A→B)；T2 抢先弹出 A、B，又把 A 推回去。T1 的 CAS 一看「现在还是 A」，成功了——但此时 A→next 已经不是 B，链表就此损坏。这就是 ABA 问题（值看着没变，世界已经变了）。解法：tagged pointer（附带版本号一起比较）、Hazard Pointer / RCU 延迟回收。细节见 §14。</p>
 </div>
 
 <h3>13.6 thread_local 与 TLS 实现</h3>
 <div class="card">
-<p><code>thread_local</code> 是第四种存储期：名字像全局变量，每个线程各持一份。全局是公用白板（要锁）；TLS 是每人一本笔记本。</p>
+<p><code>thread_local</code> 是第四种存储期（storage duration，变量「活在哪、活多久」的类别）：名字用起来像全局变量，实际每个线程各持一份互不干扰。全局是公用白板（写要锁）；TLS 是每人一本笔记本。</p>
 <table>
 <tr><th>存储期</th><th>有几份</th><th>活多久</th></tr>
 <tr><td>automatic</td><td>每次调用一份</td><td>作用域结束</td></tr>
@@ -1547,7 +1547,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
 <tr><td><code>atomic&lt;__int128&gt;</code></td><td>依赖平台</td><td>x86-64 需 <code>-mcx16</code> 才有 cmpxchg16b</td></tr>
 <tr><td><code>atomic&lt;BigStruct&gt;</code></td><td>❌</td><td>库内部用 <strong>自旋锁表</strong>（spinlock table）模拟</td></tr>
 </table>
-<p><strong>性能陷阱</strong>：<code>atomic&lt;LargeStruct&gt;</code> 看起来无锁，其实可能串行化——务必检查 <code>is_lock_free()</code> 或用 <code>is_always_lock_free</code>（编译期）。跨进程共享内存时这条是硬约束：内部自旋锁表在本进程私有堆上，对面进程看不见。共享内存里的 <code>atomic&lt;T&gt;</code> 必须 lock-free，否则同步语义直接垮掉。</p>
+<p><strong>性能陷阱</strong>：<code>atomic&lt;LargeStruct&gt;</code> 看起来无锁，其实内部可能用自旋锁悄悄串行化——务必检查 <code>is_lock_free()</code> 或用 <code>is_always_lock_free</code>（编译期可知）。跨进程共享内存时这条是硬约束：内部自旋锁表放在本进程私有堆上，对面进程根本看不见。共享内存里的 <code>atomic&lt;T&gt;</code> 必须 lock-free，否则同步语义直接垮掉。</p>
 </div>
 
 <h3>13.8 高频面试 Q&amp;A</h3>
@@ -1654,7 +1654,7 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
   </div>
 
 <div class="card" style="border-left:4px solid var(--orange); background:rgba(251,146,60,.05)">
-<p>无锁编程是内存模型最深的应用。核心只有 <strong>CAS + 内存序</strong>，陷阱在回收与 ABA。绝大多数量 mutex 就够；热路径再 lock-free；实时/HFT 才值得 wait-free——过早追求 wait-free 往往单次更慢、总吞吐更差。</p>
+<p>无锁编程是内存模型最深的应用。核心只有 <strong>CAS + 内存序</strong>两件事，陷阱集中在内存回收与 ABA。绝大多数量级用 mutex 就够；热路径再上 lock-free；实时 / HFT（高频交易）才值得 wait-free——过早追求 wait-free 往往单次更慢、总吞吐更差。</p>
 </div>
 
 <div class="tip">本章讲的是<strong>内存序层面的原理与选型</strong>。想看完整可编译的实现，去
@@ -1692,12 +1692,12 @@ C++ 标准的定义：当两个线程同时访问同一内存位置，且至少�
   <text x="595" y="180" text-anchor="middle" fill="#f87171" font-size="11" font-weight="bold">★★★★★ 极难</text>
 </svg>
 </div>
-<p><strong>工程选择</strong>：绝大多数场景 <b>mutex 够用</b>；热路径用 lock-free；实时系统（音频、内核、HFT）追求 wait-free。过早追求 wait-free 通常得不偿失——单次操作更慢，总吞吐反而降低。</p>
+<p><strong>工程选择</strong>：绝大多数场景 <b>mutex 够用</b>；热路径再考虑 lock-free；实时系统（音频、内核、HFT）才追求 wait-free。过早追求 wait-free 通常得不偿失——单次操作更慢，总吞吐反而降低。</p>
 </div>
 
 <h3>14.2 CAS — 无锁编程的"汇编指令"</h3>
 <div class="card">
-<p><code>compare_exchange_weak</code> 允许伪失败（ARM/POWER 的 LL/SC 被打断就会 SC 失败）。循环里用 weak；单次检查用 strong。失败时 <code>expected</code> 已被写成最新值，不要再 load。</p>
+<p><code>compare_exchange_weak</code>（CAS，compare-and-swap，「值还是我以为的吗？是就换成新值」的硬件原子指令）允许伪失败（spurious failure，明明没人竞争也报告失败——ARM/POWER 的 LL/SC 被打断就会这样）。所以循环里用 weak（反正失败了再转一圈）；单次检查用 strong。失败时 <code>expected</code> 已被自动写成最新值，不要再手动 load 一遍。</p>
 <div class="fig">
 <svg viewBox="0 0 720 170" style="min-width:640px;height:auto" role="img" aria-label="RMW 循环：load 当前值、计算新值、compare_exchange_weak，失败则用更新后的 expected 重试，成功则 release 发布">
   <defs>
@@ -1748,14 +1748,14 @@ while (!v.compare_exchange_weak(expected, desired,
 
 <h3>14.4–14.7 无锁结构怎么选</h3>
 <div class="card">
-<p>Treiber 栈是 CAS 换链表头；pop 时读 <code>old-&gt;next</code> 若节点已被回收就是 use-after-free，必须配 Hazard Pointer / RCU。ABA：指针值回到 A，但背后的世界已经变了——tagged pointer 防 ABA，回收方案防 UAF。链表版 Michael-Scott 正确但分配多；数组版 Vyukov 用槽位序号做同步，cache 更友好。SPSC 是最快的无锁结构：单产单消，两个 atomic 指针即可，完全不需要 CAS；音频回调、日志消费者是典型场景。</p>
+<p>Treiber 栈的原理就是用 CAS 换链表头；但 pop 时要读 <code>old-&gt;next</code>，若节点已被别人回收，这一步就是 use-after-free，必须配 Hazard Pointer / RCU。ABA：指针值回到 A，但背后的世界已经变了——tagged pointer 防 ABA，回收方案防 UAF。链表版 Michael-Scott 正确但分配多；数组版 Vyukov 用槽位序号做同步，cache 更友好。SPSC（单生产者单消费者）是最快的无锁结构：单产单消，两个 atomic 指针即可，完全不需要 CAS；音频回调、日志消费者是典型场景。</p>
 <table>
 <tr><th>结构</th><th>要点</th><th>典型实现</th></tr>
 <tr><td>MPMC 链表（Michael-Scott）</td><td>教科书正确，new/delete + cache miss 多</td><td>教学 / 无界队列</td></tr>
 <tr><td>MPMC 环形（Vyukov）</td><td>槽位 seq + CAS 推进，零分配</td><td>moodycamel::ConcurrentQueue</td></tr>
 <tr><td>SPSC 环</td><td>单产单消，两个 atomic 指针即可，<strong>不用 CAS</strong></td><td>DPDK / Disruptor / boost spsc</td></tr>
 </table>
-<p>SPSC 热路径约 10–20 ns 量级；head/tail 必须各占一行，避免假共享。</p>
+<p>SPSC 热路径约 10–20 ns 量级；head/tail 必须各占一条 cache line，避免两个指针互相假共享。</p>
 <table>
 <tr><th>ABA / UAF 解法</th><th>原理</th><th>代价</th></tr>
 <tr><td>Tagged Pointer / DCAS</td><td>指针 + 版本号一起 CAS</td><td>x86 需 <code>cmpxchg16b</code>；只防 ABA，不防 UAF</td></tr>
@@ -1767,7 +1767,7 @@ while (!v.compare_exchange_weak(expected, desired,
 
 <h3>14.8 节点回收</h3>
 <div class="card">
-<p>无锁最大的坑不是 CAS，是<strong>何时 delete</strong>。三种延后回收本质相同：读者声明「我还在用」，写者等声明消失再释放。</p>
+<p>无锁最大的坑不是 CAS，而是<strong>何时 delete</strong>——你不知道还有没有别的线程正拿着这个节点。三种延后回收方案本质相同：读者声明「我还在用」，写者等所有声明消失后再释放。</p>
 <table>
 <tr><th>RCU 实现</th><th>grace period 怎么探测</th><th>读端开销</th></tr>
 <tr><td>Classic / sleepable</td><td>等所有 CPU 经历一次上下文切换</td><td>零（内核里禁抢占）</td></tr>
@@ -1782,7 +1782,7 @@ while (!v.compare_exchange_weak(expected, desired,
 <tr><td><code>atomic&lt;shared_ptr&gt;</code></td><td>原子 refcount</td><td>非热路径、求简单</td><td>C++20</td></tr>
 </table>
 <p>C++26 落地前用 <a href="https://github.com/facebook/folly" style="color:var(--accent)">folly::hazptr / folly::rcu</a> 或 <a href="https://liburcu.org/" style="color:var(--accent)">liburcu</a>。生产上优先成熟库，自己写无锁几乎必有 bug。</p>
-<p>Hazard Pointer 的读端关键是<strong>双重检查</strong>：把指针写入本线程 hazard slot 之后，必须再 load 一次源指针，确认登记期间没被换走。RCU 写端用 <code>synchronize_rcu()</code> 阻塞等 grace period，或 <code>call_rcu</code> 把释放丢给后台。选型：读极重写罕见 → RCU；读写接近且指针复杂 → Hazard Pointer；非热路径 → <code>atomic&lt;shared_ptr&gt;</code>。</p>
+<p>Hazard Pointer 的读端关键是<strong>双重检查</strong>：把指针写入本线程 hazard slot（每线程的「我正在用这个节点」登记位）之后，必须再 load 一次源指针，确认登记期间没被换走。RCU 写端用 <code>synchronize_rcu()</code> 阻塞等 grace period（宽限期，等所有老读者退出），或 <code>call_rcu</code> 把释放丢给后台。选型：读极重写罕见 → RCU；读写接近且指针复杂 → Hazard Pointer；非热路径 → <code>atomic&lt;shared_ptr&gt;</code>。</p>
 </div>
 
 <h3>14.9 无锁编程性能陷阱</h3>

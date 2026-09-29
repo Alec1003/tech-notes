@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Breakpoint：断点与程序执行控制 · break / watch / condition / step vs next / finish</title>
-<meta name="description" content="Breakpoint：断点与程序执行控制：调试的本质是 「在正确的地方停下来，然后用正确的步幅往前走」。这一篇把 GDB 最核心的能力讲透：怎么在函数、行号、条件下设断点，怎么管理和禁用它们，以及 next / step / finish / until 这套执行控制指令各自「走多远」">
+<meta name="description" content="GDB 断点怎么用？本篇白话讲清 break 设断点、tbreak 临时断点、条件断点、ignore 跳过次数、watchpoint 观察数据变化，以及 next、step、finish、until 各自走多远。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/gdb_breakpoints.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/gdb_breakpoints.html">
 <meta property="og:title" content="Breakpoint：断点与程序执行控制 · break / watch / condition / step vs next / finish">
-<meta property="og:description" content="Breakpoint：断点与程序执行控制：调试的本质是 「在正确的地方停下来，然后用正确的步幅往前走」。这一篇把 GDB 最核心的能力讲透：怎么在函数、行号、条件下设断点，怎么管理和禁用它们，以及 next / step / finish / until 这套执行控制指令各自「走多远」">
+<meta property="og:description" content="GDB 断点怎么用？本篇白话讲清 break 设断点、tbreak 临时断点、条件断点、ignore 跳过次数、watchpoint 观察数据变化，以及 next、step、finish、until 各自走多远。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Breakpoint：断点与程序执行控制 · break / watch / condition / step vs next / finish">
-<meta name="twitter:description" content="Breakpoint：断点与程序执行控制：调试的本质是 「在正确的地方停下来，然后用正确的步幅往前走」。这一篇把 GDB 最核心的能力讲透：怎么在函数、行号、条件下设断点，怎么管理和禁用它们，以及 next / step / finish / until 这套执行控制指令各自「走多远」">
+<meta name="twitter:description" content="GDB 断点怎么用？本篇白话讲清 break 设断点、tbreak 临时断点、条件断点、ignore 跳过次数、watchpoint 观察数据变化，以及 next、step、finish、until 各自走多远。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -199,7 +199,7 @@
           <p class="sub">从「让程序跑完」到「让程序停在我想看的地方」</p>
         </div>
       </div>
-      <p>没有断点，程序只有两种状态：跑着，或跑完了 —— 你什么现场都抓不到。<strong>断点（breakpoint）</strong>让你在指定位置把程序<strong>冻结</strong>，此刻所有变量、调用栈、寄存器都定格，可以从容检查。断点之后配合<strong>单步执行</strong>，你就能像慢放录像一样，看着程序一步步走向出错的那一刻。</p>
+      <p>没有断点，程序只有两种状态：跑着，或跑完了 —— 你什么现场都抓不到。<strong>断点（breakpoint）</strong>让你在指定位置把程序<strong>冻结</strong>，此刻所有变量、调用栈、寄存器都定格，可以从容检查。断点之后配合<strong>单步执行</strong>（一次只让程序往前走一行或一条指令），你就能像慢放录像一样，看着程序一步步走向出错的那一刻。</p>
 
       <div class="info-box">
         <div class="title">生活类比：给流水线装急停按钮 + 单帧慢放</div>
@@ -260,7 +260,7 @@ Breakpoint 2 at 0x11a0: file flow.cpp, line 14.
 
       <div class="info-box">
         <div class="title"><code>break foo</code> 与 <code>break flow.cpp:14</code> 的区别</div>
-        <p><strong>函数断点</strong>停在函数体第一条<em>可执行语句</em>（跳过序言），无论从哪里被调用都会命中，适合「我关心这个函数被谁怎么调用」。<strong>行号断点</strong>钉死在某一行，适合「我关心这一行执行时的状态」。同一个函数被调用 100 次，函数断点会停 100 次 —— 这正是条件断点要解决的痛点。</p>
+        <p><strong>函数断点</strong>停在函数体第一条<em>可执行语句</em>（跳过序言——序言指函数开头那几条「布置现场」的指令，比如腾出栈空间、保存寄存器），无论从哪里被调用都会命中，适合「我关心这个函数被谁怎么调用」。<strong>行号断点</strong>钉死在某一行，适合「我关心这一行执行时的状态」。同一个函数被调用 100 次，函数断点会停 100 次 —— 这正是条件断点要解决的痛点。</p>
       </div>
     </section>
 
@@ -285,7 +285,7 @@ Num  Type       Disp Enb Address    What
 <span class="prompt">(gdb)</span> delete                  <span class="comment"># 不带编号：删除全部断点</span></code></pre>
       <div class="info-box">
         <div class="title">看到结果后怎么分析</div>
-        <p><code>info breakpoints</code> 里的 <strong>「already hit N times」</strong>很有用：如果你以为某函数只该被调 1 次却显示 hit 了 50 次，问题往往就藏在「谁在反复调它」。<code>disable</code> 与 <code>delete</code> 的区别是<strong>「先留着以后还用」还是「不要了」</strong> —— 复杂调试中常把暂时不关心的断点 <code>disable</code> 而非删掉，避免反复重设。</p>
+        <p><code>info breakpoints</code> 里的 <strong>「already hit N times」</strong>很有用：如果你以为某函数只该被调 1 次却显示 hit 了 50 次，问题往往就藏在「谁在反复调它」。<code>disable</code> 与 <code>delete</code> 的区别是<strong>「先留着以后还用」还是「不要了」</strong> —— 复杂调试中常把暂时不关心的断点 <code>disable</code> 而非删掉，避免反复重设。好比家里的电闸：disable 是拉闸断电、线路还在，delete 是直接把线拆了。</p>
       </div>
     </section>
 
@@ -299,7 +299,7 @@ Num  Type       Disp Enb Address    What
         </div>
       </div>
 
-      <p>最能体现调试功力的，是<strong>不在错误的地方浪费时间</strong>。当一个函数被调用无数次、只有特定输入才出问题时，无脑断点会让你按爆 <code>continue</code>。两种武器：</p>
+      <p>最能体现调试功力的，是<strong>不在错误的地方浪费时间</strong>。当一个函数被调用无数次、只有特定输入才出问题时，无脑断点会让你按爆 <code>continue</code>（比如循环第 10000 次才出错，你就得手动敲 9999 次放行）。两种武器：</p>
 
       <h3>条件断点：满足条件才停</h3>
       <pre><code><span class="comment"># 设断点时直接带条件</span>
@@ -308,7 +308,7 @@ Num  Type       Disp Enb Address    What
 <span class="prompt">(gdb)</span> condition 1 a == 9 &amp;&amp; b == 3
 <span class="comment"># 取消条件</span>
 <span class="prompt">(gdb)</span> condition 1</code></pre>
-      <p>条件表达式用的是 <strong>C/C++ 语法</strong>，可以引用当前作用域里的变量、成员、指针解引用，例如 <code>break process if node-&gt;id == 42</code>、<code>break f if strcmp(name,"bug")==0</code>。</p>
+      <p>条件表达式用的是 <strong>C/C++ 语法</strong>，可以引用当前作用域里的变量、成员、指针解引用，例如 <code>break process if node-&gt;id == 42</code>、<code>break f if strcmp(name,"bug")==0</code>。也就是说，条件断点就是给断点加了一句「只有满足这个条件才算命中」。</p>
 
       <h3>ignore：先跳过前 N 次命中</h3>
       <pre><code><span class="prompt">(gdb)</span> ignore 1 9999           <span class="comment"># 1 号断点前 9999 次命中都忽略，第 10000 次才停</span>
@@ -328,7 +328,7 @@ Will ignore next 9999 crossings of breakpoint 1.</code></pre>
           <p class="sub">断点盯「代码位置」，观察点盯「数据」</p>
         </div>
       </div>
-      <p><strong>watchpoint（观察点）</strong>换了个维度：它不关心程序走到哪一行，而是盯住<strong>某个变量/内存</strong>，<strong>一旦它的值被改变就立刻暂停</strong>。这对「这个变量到底是被谁改坏的？」这类问题是杀手锏 —— 你不用知道是哪行代码改的，GDB 会替你抓现行。</p>
+      <p><strong>watchpoint（观察点）</strong>换了个维度：它不关心程序走到哪一行，而是盯住<strong>某个变量/内存</strong>，<strong>一旦它的值被改变就立刻暂停</strong>。这对「这个变量到底是被谁改坏的？」这类问题是杀手锏 —— 你不用知道是哪行代码改的，GDB 会替你抓现行。好比给保险柜装了个震动报警器：不管谁碰它，警铃立刻响。</p>
       <pre><code><span class="prompt">(gdb)</span> watch sum               <span class="comment"># sum 被写入新值时停</span>
 Hardware watchpoint 3: sum
 <span class="prompt">(gdb)</span> rwatch flag             <span class="comment"># 被读取时停</span>
@@ -339,7 +339,7 @@ Old value = 0
 New value = 1                    <span class="comment"># GDB 直接告诉你新旧值和改它的位置</span></code></pre>
       <div class="info-box warning">
         <div class="title">break 与 watch 的本质区别（高频面试）</div>
-        <p><strong><code>break</code> 是「位置断点」</strong>：程序执行流到达某地址就停。<strong><code>watch</code> 是「数据断点」</strong>：某块内存的值发生变化才停，与代码走到哪无关。现代 CPU 提供调试寄存器（如 x86 的 DR0–DR3），GDB 用它们实现<strong>硬件 watchpoint</strong>，几乎零开销；但硬件寄存器数量有限（通常 4 个）、监视范围受限，超出时 GDB 退化为<strong>软件 watchpoint</strong>（每步都检查），会极慢。watchpoint 还受作用域限制：被监视的局部变量一旦离开作用域，观察点自动失效。</p>
+        <p><strong><code>break</code> 是「位置断点」</strong>：程序执行流到达某地址就停。<strong><code>watch</code> 是「数据断点」</strong>：某块内存的值发生变化才停，与代码走到哪无关。现代 CPU 提供调试寄存器（如 x86 的 DR0–DR3，CPU 里专门留给调试用的几个特殊寄存器），GDB 用它们实现<strong>硬件 watchpoint</strong>，几乎零开销；但硬件寄存器数量有限（通常 4 个）、监视范围受限，超出时 GDB 退化为<strong>软件 watchpoint</strong>（每步都检查一遍值变没变），会极慢。watchpoint 还受作用域限制：被监视的局部变量一旦离开作用域，观察点自动失效。</p>
       </div>
     </section>
 
@@ -367,12 +367,12 @@ New value = 1                    <span class="comment"># GDB 直接告诉你新�
 
       <div class="info-box">
         <div class="title"><code>finish</code> 的妙用</div>
-        <p>你常会不小心 <code>step</code> 进一个不关心的库函数（比如 <code>std::cout</code> 的重载）。这时 <code>finish</code> 让它一口气执行完并<strong>回到调用它的地方</strong>，还会顺手打印这个函数的返回值 —— 既救场又能看返回结果。</p>
+        <p>你常会不小心 <code>step</code> 进一个不关心的库函数（比如 <code>std::cout</code> 的重载）。这时 <code>finish</code> 让它一口气执行完并<strong>回到调用它的地方</strong>，还会顺手打印这个函数的返回值 —— 既救场又能看返回结果。相当于电梯坐错了楼层：不用一层层下，直接按「直达出口」。</p>
       </div>
 
       <div class="info-box">
         <div class="title"><code>until</code> 治「循环单步之苦」</div>
-        <p>在 <code>for</code> 循环里用 <code>next</code>，每次只走一行，循环 1000 次就要按 1000 次。<code>until</code>（不带参数，在循环末行执行）会一直跑到<strong>循环真正结束、程序继续往下</strong>的那一行才停，一步跳出整个循环。</p>
+        <p>在 <code>for</code> 循环里用 <code>next</code>，每次只走一行，循环 1000 次就要按 1000 次。<code>until</code>（不带参数，在循环末行执行）会一直跑到<strong>循环真正结束、程序继续往下</strong>的那一行才停，一步跳出整个循环。原理是它盯着行号：只要目标行号比当前大，它就一直放行。</p>
       </div>
     </section>
 
@@ -414,7 +414,7 @@ foo () at flow.cpp:7
 
       <div class="info-box warning">
         <div class="title">一个关键前提：step 只对「有调试信息的函数」进得去</div>
-        <p>如果 <code>step</code> 那行调用的是<strong>没有调试信息的函数</strong>（比如标准库、系统调用），GDB 无源码可停，此时 <code>step</code> 的行为会<strong>退化得和 <code>next</code> 一样</strong> —— 直接跨过去。所以有时你 <code>step</code> 却没进去，不是 GDB 出错，而是那个函数没符号可进。可用 <code>set step-mode on</code> 强制在无行号处也停（会停在汇编层）。</p>
+        <p>如果 <code>step</code> 那行调用的是<strong>没有调试信息的函数</strong>（比如标准库、系统调用），GDB 无源码可停，此时 <code>step</code> 的行为会<strong>退化得和 <code>next</code> 一样</strong> —— 直接跨过去。所以有时你 <code>step</code> 却没进去，不是 GDB 出错，而是那个函数没符号可进——好比一扇没贴门牌号的门，你想进去看看，但工具根本不知道该在哪停。可用 <code>set step-mode on</code> 强制在无行号处也停（会停在汇编层）。</p>
       </div>
 
       <p>再看嵌套调用 <code>add(square(i), i)</code>：停在这行时，<code>step</code> 会先进入<strong>先被求值的那个调用</strong>（通常是参数里的 <code>square</code>，具体求值顺序由编译器决定），<code>finish</code> 回来后再 <code>step</code> 才进 <code>add</code>。想直接看 <code>add</code>、跳过 <code>square</code>，可以先 <code>break add</code> 再 <code>continue</code>。调用栈与栈帧的完整机制见 <a href="gdb_stack_frame_variables.html">第 03 篇</a>。</p>

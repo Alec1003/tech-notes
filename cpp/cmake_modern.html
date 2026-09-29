@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CMake 是什么 · 元构建 / Target / Presets / 跨平台 — Tech Notes</title>
-<meta name="description" content="CMake 是什么、干什么、为什么 C++ 项目需要它；再讲清 Target / PUBLIC·PRIVATE·INTERFACE、Generator Expression、依赖管理、CMake Presets 与跨平台工程实践。">
+<meta name="description" content="CMake 是帮 C++ 项目自动生成构建文件的工具：为什么需要它、配置和构建两步各干什么，再用真实项目讲 Target、PUBLIC/PRIVATE/INTERFACE、依赖管理、CMake Presets 与跨平台实践。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/cmake_modern.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/cmake_modern.html">
 <meta property="og:title" content="CMake 是什么 · 元构建 / Target / Presets / 跨平台">
-<meta property="og:description" content="CMake 是什么、干什么、为什么 C++ 项目需要它；再讲清 Target / PUBLIC·PRIVATE·INTERFACE、Generator Expression、依赖管理、CMake Presets 与跨平台工程实践。">
+<meta property="og:description" content="CMake 是帮 C++ 项目自动生成构建文件的工具：为什么需要它、配置和构建两步各干什么，再用真实项目讲 Target、PUBLIC/PRIVATE/INTERFACE、依赖管理、CMake Presets 与跨平台实践。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="CMake 是什么 · 元构建 / Target / Presets / 跨平台">
-<meta name="twitter:description" content="CMake 是什么、干什么、为什么 C++ 项目需要它；再讲清 Target / PUBLIC·PRIVATE·INTERFACE、Generator Expression、依赖管理、CMake Presets 与跨平台工程实践。">
+<meta name="twitter:description" content="CMake 是帮 C++ 项目自动生成构建文件的工具：为什么需要它、配置和构建两步各干什么，再用真实项目讲 Target、PUBLIC/PRIVATE/INTERFACE、依赖管理、CMake Presets 与跨平台实践。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/page-shell.css">
@@ -149,7 +149,7 @@
 
   <p>打开一个 C++ 仓库，根目录几乎总能看到 <code>CMakeLists.txt</code>。很多人的第一反应是「这就是编译命令」。这个印象差了一层：<strong>CMake 自己并不编译任何代码</strong>。</p>
 
-  <div class="def"><strong>CMake</strong>（Cross Platform Make）是一个<strong>元构建系统</strong>（meta-build system）。你写一份与平台无关的「菜谱」<code>CMakeLists.txt</code>，它先<strong>探测</strong>这台机器上有什么编译器、什么库，再<strong>生成</strong>这份机器真正能执行的构建文件（Ninja、Makefile、Visual Studio 解决方案……）。真正去调 <code>g++</code> / <code>clang++</code> / <code>cl.exe</code> 的，是后面那个原生构建工具。</div>
+  <div class="def"><strong>CMake</strong>（Cross Platform Make）是一个<strong>元构建系统</strong>（meta-build system）——「元」的意思是：它不直接构建，而是「生成构建文件」的构建系统。你写一份与平台无关的「菜谱」<code>CMakeLists.txt</code>，它先<strong>探测</strong>这台机器上有什么编译器、什么库，再<strong>生成</strong>这份机器真正能执行的构建文件（Ninja、Makefile、Visual Studio 解决方案……）。真正去调 <code>g++</code> / <code>clang++</code> / <code>cl.exe</code> 的，是后面那个原生构建工具。</div>
 
   <div class="analogy">把它想成餐厅后厨。<strong>食材</strong>是源码，<strong>炉灶</strong>是编译器，<strong>厨师</strong>是 Ninja / Make / MSBuild（真正炒菜的人）。CMake 是<strong>主厨写工单</strong>：同一份菜谱，到了中餐灶写一份、西餐灶另写一份——Linux 生成 Ninja，Windows 生成 <code>.sln</code>。你不会让主厨亲自颠勺，也不会给每间厨房各抄一份完全不同的菜谱。</div>
 
@@ -207,7 +207,7 @@
     </tbody>
   </table>
 
-  <p>所以「用 CMake 编译」这句话，精确说是两步：<strong>先配置（configure / generate），再构建（build）</strong>。下一节讲为什么不能省掉 CMake，直接敲 <code>g++</code>。</p>
+  <p>所以「用 CMake 编译」这句话，精确说是两步：<strong>先配置（configure / generate，即读菜谱、探环境、写出构建文件），再构建（build，即让 Ninja/Make 去真正调编译器）</strong>。下一节讲为什么不能省掉 CMake，直接敲 <code>g++</code>。</p>
 </section>
 
 <section class="chapter" id="s2">
@@ -221,7 +221,7 @@
 
   <p>一个文件的玩具程序，CMake 是多余的：</p>
   <p><code>g++ -std=c++20 -O2 hello.cpp -o hello</code></p>
-  <p>真实项目要同时记住的事情会立刻炸开：哪些 <code>.cpp</code> 编进哪个库、头文件在哪、Boost / OpenSSL 装在哪、Debug 加 <code>-g -O0</code> 而 Release 加 <code>-O3 -DNDEBUG</code>、Linux 链 <code>-ldl</code> 而 Windows 链 <code>ws2_32</code>、你用 VS Code + Ninja、同事用 Visual Studio、CI 用 Ubuntu 容器。每一维都是乘法。<a href="#s4">下一节的配置代理</a>把这个乘法具象成：三个模块 × 本机/交叉编译 × 产品二进制/UT/MT × 是否开 sanitizer。</p>
+  <p>真实项目要同时记住的事情会立刻炸开：哪些 <code>.cpp</code> 要编进哪个库？头文件放在哪？Boost / OpenSSL 装在这台机器的哪个路径？Debug 版要加 <code>-g -O0</code>（带调试信息、不优化），Release 版要加 <code>-O3 -DNDEBUG</code>（开足优化、关掉断言）——两套参数不能弄混。平台也不同：Linux 要链 <code>-ldl</code>，Windows 要链 <code>ws2_32</code>。人和环境还各不一样：你用 VS Code + Ninja，同事用 Visual Studio，CI 跑在 Ubuntu 容器里。这些维度是相乘的关系——每多一种组合，你就得多维护一套命令。<a href="#s4">下一节的配置代理</a>把这个乘法具象成：三个模块 × 本机/交叉编译 × 产品二进制/UT/MT × 是否开 sanitizer。</p>
 
   <div class="diag">
     <svg viewBox="0 0 880 300" width="880" height="300" role="img" aria-label="C++ 项目的决策维数：平台、生成器、配置、依赖相乘，CMake 用一份菜谱覆盖">
@@ -269,7 +269,7 @@
   <p>CMake 要解决的，不是「能不能编译」，而是这四件事：</p>
   <ol>
     <li><strong>跨平台、跨 IDE。</strong> 一份描述，生成 Ninja、Makefile 或 Visual Studio 工程。CLion / VS Code / Visual Studio 都认 CMake。</li>
-    <li><strong>依赖图与增量。</strong> 改一个头文件，只重编真正依赖它的翻译单元。这是 Ninja 的强项，CMake 负责把图建对。</li>
+    <li><strong>依赖图与增量。</strong> 改一个头文件，只重编真正依赖它的翻译单元（translation unit，一个 <code>.cpp</code> 加上它 include 进来的所有头，编译的基本单位）。这是 Ninja 的强项，CMake 负责把图建对。</li>
     <li><strong>把「这个库需要什么」写成可传递的属性。</strong> 下游 <code>target_link_libraries(app PRIVATE foo)</code> 之后，include 路径、宏、链接库自动跟上——这就是后文的 Target 模型。</li>
     <li><strong>可复现。</strong> 新人、CI、发布机器敲同一组命令，而不是「问张三他本机那个神秘脚本」。</li>
   </ol>
@@ -309,11 +309,11 @@
     </tbody>
   </table>
 
-  <div class="def"><strong>源码外构建（out-of-source build）</strong>：<code>-B build</code> 把所有生成物丢进单独目录，源码树保持干净，也方便删掉重来。<code>build/</code> 进 <code>.gitignore</code>。绝对不要在源码目录里直接 <code>cmake .</code>——生成文件会和源码缠在一起，清不掉。</div>
+  <div class="def"><strong>源码外构建（out-of-source build）</strong>：所有生成物都丢进 <code>-B</code> 指定的单独目录（比如 <code>build/</code>），源码树保持干净，也方便整个删掉重来。<code>build/</code> 进 <code>.gitignore</code>。绝对不要在源码目录里直接 <code>cmake .</code>——生成文件会和源码缠在一起，清不掉。</div>
 
   <h3 id="s3-2">单配置 vs 多配置：为什么会有 generator expression</h3>
 
-  <p>这里有个后面会反复撞上的坑。<strong>Ninja / Makefile 是单配置生成器</strong>：配置时就要选定 <code>CMAKE_BUILD_TYPE=Debug|Release</code>。<strong>Visual Studio / Xcode 是多配置生成器</strong>：一份工程里同时带着 Debug 和 Release，真正编译时才选。所以你不能在 <code>CMakeLists.txt</code> 里写死 <code>-O0</code>——配置 VS 工程的那一刻，两种配置都还在。CMake 用 <code>$&lt;CONFIG:Debug&gt;</code> 这种<strong>生成器表达式</strong>，把「到生成 / 构建时再求值」的逻辑写进属性。<a href="#s6">§6</a> 会用到。</p>
+  <p>这里有个后面会反复撞上的坑。<strong>Ninja / Makefile 是单配置生成器</strong>（generator，CMake 生成构建文件时选的目标格式）：配置时就要选定 <code>CMAKE_BUILD_TYPE=Debug|Release</code>，选完这一份构建文件只服务这一个配置。<strong>Visual Studio / Xcode 是多配置生成器</strong>：一份工程里同时带着 Debug 和 Release，真正编译时才选。所以你不能在 <code>CMakeLists.txt</code> 里写死 <code>-O0</code>——配置 VS 工程的那一刻，两种配置都还在，写死就等于替两种配置都做了决定。CMake 用 <code>$&lt;CONFIG:Debug&gt;</code> 这种<strong>生成器表达式</strong>（generator expression，一种延后求值的占位符——配置时不展开，等到生成/构建那一刻才根据「现在是什么配置、什么编译器」算出真正的值），把「到生成 / 构建时再求值」的逻辑写进属性。<a href="#s6">§6</a> 会用到。</p>
 
   <h3 id="s3-3">最小可运行项目</h3>
 
@@ -335,9 +335,9 @@ target_compile_features(myapp PRIVATE cxx_std_20)</pre>
   <p>然后：</p>
   <p><code>cmake -S . -B build &amp;&amp; cmake --build build &amp;&amp; ./build/myapp</code></p>
 
-  <p>这三行各自的含义：<code>-S</code> 是源码根（<code>CMakeLists.txt</code> 所在处），<code>-B</code> 是构建目录；第二句让 Ninja/Make 去编译；第三句跑产物。指定生成器用 <code>-G Ninja</code>（推荐，增量远快于 Make）。指定 Debug：<code>-DCMAKE_BUILD_TYPE=Debug</code>（仅单配置生成器）。</p>
+  <p>这三行各自的含义：<code>-S</code> 是源码根（<code>CMakeLists.txt</code> 所在处），<code>-B</code> 是构建目录；第二句让 Ninja/Make 去编译；第三句跑产物。指定生成器用 <code>-G Ninja</code>（推荐，增量远快于 Make）。指定 Debug：<code>-DCMAKE_BUILD_TYPE=Debug</code>（仅单配置生成器有效）。</p>
 
-  <div class="box info">上面刻意<strong>没写</strong> <code>set(CMAKE_CXX_STANDARD 20)</code> 这种目录级变量，而是 <code>target_compile_features(myapp PRIVATE cxx_std_20)</code>。效果类似，但属性挂在 target 上，不会污染后来 <code>add_subdirectory</code> 进来的别的项目。真实仓库很少这么干净——下一节用一个配置代理工程，看「能跑的老菜谱」长什么样。</div>
+  <div class="box info">上面刻意<strong>没写</strong> <code>set(CMAKE_CXX_STANDARD 20)</code> 这种目录级变量，而是 <code>target_compile_features(myapp PRIVATE cxx_std_20)</code>。两者效果类似，但区别在作用范围：前一种改的是目录级变量，它会影响当前目录里<strong>之后</strong>定义的所有 target；后一种把属性挂在 <code>myapp</code> 这一个 target 上，不会污染后来 <code>add_subdirectory</code> 进来的别的项目。真实仓库很少这么干净——下一节用一个配置代理工程，看「能跑的老菜谱」长什么样。</div>
 </section>
 
 <section class="chapter" id="s4">
@@ -349,7 +349,7 @@ target_compile_features(myapp PRIVATE cxx_std_20)</pre>
     </div>
   </div>
 
-  <p>前面三节用玩具项目讲概念。下面用一个<strong>设备侧 NETCONF 配置代理</strong>（文中二进制叫 <code>agent</code>）把同一套概念落到目录上。这个进程干的事很具体：对上走 NETCONF/YANG（开源栈 <code>libnetconf2</code> + <code>libyang</code> + SSH），对下改设备里的配置、性能、故障、账号。CMake 要解决的不是「怎么编译一个 <code>main.cpp</code>」，而是：<strong>几百个 <code>.cpp</code>、十几个平台库、本机和交叉编译、产品二进制和两套测试，共用同一份菜谱。</strong></p>
+  <p>前面三节用玩具项目讲概念。下面用一个<strong>设备侧 NETCONF 配置代理</strong>（NETCONF 是网络设备的标准配置管理协议；文中二进制叫 <code>agent</code>）把同一套概念落到目录上。这个进程干的事很具体：对上走 NETCONF/YANG（YANG 是描述配置数据结构的建模语言；开源栈 <code>libnetconf2</code> + <code>libyang</code> + SSH），对下改设备里的配置、性能、故障、账号。CMake 要解决的不是「怎么编译一个 <code>main.cpp</code>」，而是：<strong>几百个 <code>.cpp</code>、十几个平台库、本机和交叉编译、产品二进制和两套测试，共用同一份菜谱。</strong></p>
 
   <div class="box tip">文中的模块名、平台库名、板卡代号、安装前缀都做了<strong>脱敏</strong>：开源协议栈保留真名（否则讲不清这个进程是干什么的）；内部运行时、硬件 API、板型换成角色名。结构、OBJECT 库拼法、pkg-config 找库、Yocto sysroot 交叉编译，都按真实工程来。</div>
 
@@ -372,7 +372,7 @@ agent/ <span class="muted">← 源码根，这里有顶层 CMakeLists.txt</span>
 └── build-host/ <span class="muted">本机构建目录，不进 git</span>
   </div>
 
-  <p>九份 <code>CMakeLists.txt</code> 不是重复，是<strong>一张图拆开写</strong>：顶层管「项目有什么约束」，<code>src/</code> 管「怎么拼出可执行文件」，子目录各管一块 OBJECT 库，<code>test/</code> 管测试怎么链同一批 <code>.o</code>。</p>
+  <p>九份 <code>CMakeLists.txt</code> 不是重复，是<strong>一张图拆开写</strong>：顶层管「项目有什么约束」，<code>src/</code> 管「怎么拼出可执行文件」，子目录各管一块 OBJECT 库（OBJECT 库：只把源码编成 <code>.o</code> 目标文件、不打包成 <code>.a</code>/<code>.so</code> 的库，下一小节详说），<code>test/</code> 管测试怎么链同一批 <code>.o</code>。</p>
 
   <table>
     <thead><tr><th>文件</th><th>它在图上的职责</th></tr></thead>
@@ -387,7 +387,7 @@ agent/ <span class="muted">← 源码根，这里有顶层 CMakeLists.txt</span>
 
   <h3 id="s4-2">配置阶段在找什么</h3>
 
-  <p>你敲 <code>cmake -S . -B build-host</code> 时，CMake <strong>还不编译任何业务代码</strong>。它在做三件事：读菜谱、探测这台机器 / sysroot 里有什么、写出 Makefile 或 Ninja 文件。对这个代理来说，「有什么」分两桶：</p>
+  <p>你敲 <code>cmake -S . -B build-host</code> 时，CMake <strong>还不编译任何业务代码</strong>。它在做三件事：读菜谱、探测这台机器 / sysroot（交叉编译时目标板那套头文件和库所在的「假根目录」，CMake 只在里面找东西）里有什么、写出 Makefile 或 Ninja 文件。对这个代理来说，「有什么」分两桶：</p>
 
   <table>
     <thead><tr><th>桶</th><th>例子（脱敏后）</th><th>谁提供</th><th>找不到会怎样</th></tr></thead>
@@ -397,13 +397,13 @@ agent/ <span class="muted">← 源码根，这里有顶层 CMakeLists.txt</span>
     </tbody>
   </table>
 
-  <p><code>pkg_check_modules(LIBYANG REQUIRED libyang)</code> 等价于问 pkg-config：「<code>libyang.pc</code> 在哪？头文件路径、链接参数、额外宏是什么？」然后把答案塞进 <code>LIBYANG_INCLUDE_DIRS</code> / <code>LIBYANG_LIBRARIES</code> 这类变量。这是 Linux 嵌入式的主流找库方式，和 <code>find_package(OpenSSL)</code> 是亲戚：都在<strong>配置期</strong>解析，不在编译期现找。</p>
+  <p><code>pkg_check_modules(LIBYANG REQUIRED libyang)</code> 等价于问 pkg-config（一个登记各库「头文件在哪、链接参数是什么」的小工具）：「<code>libyang.pc</code> 在哪？头文件路径、链接参数、额外宏是什么？」然后把答案塞进 <code>LIBYANG_INCLUDE_DIRS</code> / <code>LIBYANG_LIBRARIES</code> 这类变量。这是 Linux 嵌入式的主流找库方式，和 <code>find_package(OpenSSL)</code> 是亲戚：都在<strong>配置期</strong>解析，不在编译期现找。</p>
 
-  <p><code>ARCH</code> 是这份菜谱的「哪间厨房」开关。本机 <code>x86_64</code> 编开发/测试；<code>arm</code> / <code>aarch64</code> / <code>mips</code> 走交叉工具链；还有一种纯软件部署（文中叫 <code>vdu</code>）<strong>不链硬件 API</strong>，并加一个 <code>IS_VDU</code> 宏让源码 <code>#ifdef</code> 掉单板路径。CMake 在这里的作用就是：<strong>同一份源码，按 ARCH 换依赖集合和编译器</strong>，而不是维护三份工程文件。</p>
+  <p><code>ARCH</code> 是这份菜谱的「哪间厨房」开关。本机 <code>x86_64</code> 编开发/测试版本；<code>arm</code> / <code>aarch64</code> / <code>mips</code> 走交叉工具链（在 x86 开发机上用另一套编译器，编出给 ARM 单板跑的代码）；还有一种纯软件部署（文中叫 <code>vdu</code>）<strong>不链硬件 API</strong>，并加一个 <code>IS_VDU</code> 宏让源码 <code>#ifdef</code> 掉单板路径。CMake 在这里的作用就是：<strong>同一份源码，按 ARCH 换依赖集合和编译器</strong>，而不是维护三份工程文件。</p>
 
   <h3 id="s4-3">OBJECT 库如何拼出二进制</h3>
 
-  <p>这个仓库最容易让人懵的一句是：<code>add_library(agent-Core OBJECT …)</code>。它<strong>不生成 <code>.a</code> / <code>.so</code></strong>，只是给这批 <code>.cpp</code> 起个名字，编译成一堆 <code>.o</code>，供后面多次引用。原因：产品二进制要 <code>main.cpp</code>，UT/MT <strong>不要</strong>产品 <code>main</code>，但要同一批业务 <code>.o</code>。先做成 OBJECT，再按需组装，比把几百个文件名抄进两个 <code>add_executable</code> 少出错。</p>
+  <p>这个仓库最容易让人懵的一句是：<code>add_library(agent-Core OBJECT …)</code>。它<strong>不生成 <code>.a</code> / <code>.so</code></strong>，只是给这批 <code>.cpp</code> 起个名字，编译成一堆 <code>.o</code>（目标文件，单个源码编译出来的半成品），供后面多次引用。为什么这么做？因为产品二进制要 <code>main.cpp</code>，而 UT/MT（单元测试/模块测试）<strong>不要</strong>产品 <code>main</code>——测试有自己的入口——但两者都要同一批业务 <code>.o</code>。先做成 OBJECT，再按需组装，比把几百个文件名抄进两个 <code>add_executable</code> 少出错。</p>
 
   <div class="diag">
     <svg viewBox="0 0 880 340" width="880" height="340" role="img" aria-label="配置代理的构建图：三块 OBJECT 库和生成代码汇入产品二进制，测试二进制复用同一批目标文件但不包含产品 main">
@@ -480,7 +480,7 @@ target_link_libraries(agent
 
   <p>配置成功之后，CMake 已经把这张图写成了 Ninja/Make 的边。<code>cmake --build</code> 只是让厨师按图炒菜：每个 <code>.cpp</code> 一次 <code>g++</code> <code>-c</code>，最后一次链接。具体命令长什么样，见 <a href="./compilation_guide.html#s6">编译步骤 §6</a>。</p>
 
-  <p>产品构建还有一步后处理：用 <code>objcopy</code> 把调试符号剥到 <code>agent.debug</code>，二进制本身 <code>strip</code> 掉，再写上 debuglink。设备上跑的是瘦的，出了崩溃拿 <code>.debug</code> 回来对。这不是 CMake 语言的功能，是 <code>add_custom_command(… POST_BUILD)</code> 在链接成功后插的壳命令。</p>
+  <p>产品构建还有一步后处理：用 <code>objcopy</code> 把调试符号（编译器记录的「第几行对应哪条指令、变量叫什么」的信息）剥到单独的 <code>agent.debug</code> 文件，二进制本身 <code>strip</code> 掉，再写上 debuglink（两者之间的关联记录）。这样设备上跑的是瘦的，出了崩溃拿 <code>.debug</code> 回来对。这不是 CMake 语言的功能，是 <code>add_custom_command(… POST_BUILD)</code>（链接成功后追加执行的壳命令）插的一步。</p>
 
   <h3 id="s4-4">你敲的命令对应哪一步</h3>
 
@@ -497,7 +497,7 @@ target_link_libraries(agent
     </tbody>
   </table>
 
-  <div class="def"><strong>为什么要两个 <code>-B</code> 目录？</strong> 本机 Debug+测试 和 交叉 Release 的 cache（编译器路径、是否 <code>IS_VDU</code>、有没有 <code>hw-api</code>）完全不同。混在一个 <code>build/</code> 里，换 ARCH 就要删 cache 重配。源码外构建的真正好处在这里：厨房可以并排几间，菜谱还是那一份。</div>
+  <div class="def"><strong>为什么要两个 <code>-B</code> 目录？</strong> 本机 Debug+测试 和 交叉 Release 的 cache（即 <code>CMakeCache.txt</code>，配置时记下「用的什么编译器、开了哪些开关」的存档，下次配置直接复用）完全不同。混在一个 <code>build/</code> 里，换 ARCH 就要删 cache 重配。源码外构建的真正好处在这里：厨房可以并排几间，菜谱还是那一份。</div>
 
   <h3 id="s4-5">对照：为什么这份菜谱难读</h3>
 
@@ -526,10 +526,10 @@ target_link_libraries(agent
     </div>
   </div>
 
-  <p>CMake 1999 年诞生，补丁和功能叠了二十多年，<strong>三种范式同时活在文档和 Stack Overflow 上</strong>。上一节的配置代理是第一种的活标本：能编过，但全局 flag 和 <code>include_directories</code> 让图看不清。</p>
+  <p>CMake 1999 年诞生，补丁和功能叠了二十多年，<strong>三种写法（范式）同时活在文档和 Stack Overflow 上</strong>。上一节的配置代理是第一种的活标本：能编过，但全局 flag 和 <code>include_directories</code> 让图看不清。</p>
   <ul>
     <li><strong>变量时代</strong>（2.x）：<code>include_directories</code> / <code>link_libraries</code> / 拼 <code>CMAKE_CXX_FLAGS</code>，作用域是「当前目录及子目录」，一个 target 的设置会漏到所有邻居。</li>
-    <li><strong>Target 时代</strong>（约 2014 起，Daniel Pfeifer 在 CppCon 的 <em>Effective CMake</em>）：一切属性挂在 target 上，用 PUBLIC / PRIVATE / INTERFACE 声明传递性。这就是「Modern CMake」。</li>
+    <li><strong>Target 时代</strong>（约 2014 起，Daniel Pfeifer 在 CppCon 的 <em>Effective CMake</em>）：一切属性挂在 target（构建图上的一个节点——库或可执行文件，自带「我需要哪些头文件、链哪些库」的信息）上，用 PUBLIC / PRIVATE / INTERFACE 声明传递性（属性要不要跟着传给链接我的人）。这就是「Modern CMake」。</li>
     <li><strong>工程化时代</strong>（3.19+）：<code>CMakePresets.json</code>、更好的 <code>FILE_SET</code>、C++20 Modules（3.28+）。</li>
   </ul>
   <p>新人搜到的答案经常是第一种。命令还在，能跑，但在中型以上项目里会把 include 路径和宏污染成一团。本文后面只讲第二种以后。</p>
@@ -546,7 +546,7 @@ target_link_libraries(agent
 
   <h3>版本底线</h3>
   <p>2026 写新项目用 <strong>CMake ≥ 3.25</strong>。理由不是「越新越好」，而是这几个能力已经默认该有：完整的生成器表达式、3.21+ 的 <code>FILE_SET</code>、3.19+ 的 Presets。要 C++20 Modules 再升到 <strong>3.28+</strong>，并配 Ninja 1.11+。</p>
-  <p><code>cmake_minimum_required(VERSION 3.25)</code> 会把政策（policy）切到该版本的行为。写低了，新命令在老 CMake 上会以奇怪方式退化；写高了，老发行版的包管理器装不到。对开源项目这是一道真实的兼容门槛。</p>
+  <p><code>cmake_minimum_required(VERSION 3.25)</code> 会把政策（policy，CMake 对「某些历史行为按老规则还是新规则执行」的开关集）切到该版本的行为。写低了，新命令在老 CMake 上会以奇怪方式退化；写高了，老发行版的包管理器装不到。对开源项目这是一道真实的兼容门槛。</p>
 </section>
 
 <section class="chapter" id="s6">
@@ -558,7 +558,7 @@ target_link_libraries(agent
     </div>
   </div>
 
-  <p>Modern CMake 的全部技巧可以收成一句：<strong>你在描述一张图</strong>。节点是 target，边是 <code>target_link_libraries</code>，边上标注「这条边上哪些属性要跟着走」。</p>
+  <p>Modern CMake 的全部技巧可以收成一句：<strong>你在描述一张图</strong>。节点是 target，边是 <code>target_link_libraries</code>（声明「我链接谁」的命令，相当于在图上画一条边），边上标注「这条边上哪些属性要跟着走」。</p>
 
   <table>
     <thead><tr><th>类型</th><th>命令</th><th>磁盘上有没有二进制</th><th>典型用途</th></tr></thead>
@@ -571,7 +571,7 @@ target_link_libraries(agent
 
   <h3>PUBLIC / PRIVATE / INTERFACE</h3>
 
-  <p>每个 <code>target_include_directories</code> / <code>target_link_libraries</code> / <code>target_compile_definitions</code> 都要标可见性。规则只有三句：</p>
+  <p>每个 <code>target_include_directories</code> / <code>target_link_libraries</code> / <code>target_compile_definitions</code> 都要标可见性（visibility，即「这条属性谁能看见」）。规则只有三句：</p>
   <ul>
     <li><strong>PRIVATE</strong>：只给<strong>本 target 编译自己时</strong>用，不传给链接我的人。</li>
     <li><strong>INTERFACE</strong>：本 target 自己编译时<strong>不用</strong>（通常因为没有 <code>.cpp</code>），但链接我的人要用。</li>
@@ -665,7 +665,7 @@ target_link_libraries(agent
     <li>这个依赖是否出现在我的<strong>公开头文件</strong>里（<code>#include</code>，或作为公开 API 的参数 / 返回值 / 成员类型）？是 → <strong>PUBLIC</strong>。</li>
     <li>只在 <code>.cpp</code> 里用？→ <strong>PRIVATE</strong>。</li>
   </ol>
-  <p>标错的代价不对称：该 PRIVATE 标成 PUBLIC，下游会多链一个库、多一份 include——能编过，但依赖膨胀、有时 ABI 泄漏。该 PUBLIC 标成 PRIVATE，下游编译到你的头文件时会报找不到头 / 未定义类型——立刻失败。拿不准时先 PRIVATE，公开头编译不过再改 PUBLIC。</p>
+  <p>标错的代价不对称：该 PRIVATE 标成 PUBLIC，下游会多链一个库、多一份 include——能编过，但依赖膨胀、有时 ABI 泄漏（ABI，Application Binary Interface，二进制层面的接口约定——库的内存布局变了，下游没重编就可能悄悄崩）。该 PUBLIC 标成 PRIVATE，下游编译到你的头文件时会报找不到头 / 未定义类型——立刻失败。拿不准时先 PRIVATE，公开头编译不过再改 PUBLIC。</p>
 
 <pre><span class="cm"># 一个库 + 一个可执行文件。注意可见性与 BUILD/INSTALL 两套 include</span>
 add_library(foo SHARED src/foo.cpp)
@@ -687,7 +687,7 @@ add_executable(myapp main.cpp)
 target_link_libraries(myapp PRIVATE foo)
 <span class="cm"># myapp 自动获得 foo 的 PUBLIC include 和 fmt；看不到 src/ 和 spdlog</span></pre>
 
-  <p><code>$&lt;BUILD_INTERFACE:…&gt;</code> 只在本树构建时生效，指向源码里的 <code>include/</code>；<code>$&lt;INSTALL_INTERFACE:include&gt;</code> 在安装之后生效，指向安装前缀。同一条 PUBLIC include 因此能同时服务「开发自己」和「别人 <code>find_package</code>」。漏掉这一对，是开源库「本机能编、装完别人编不过」的头号原因。</p>
+  <p><code>$&lt;BUILD_INTERFACE:…&gt;</code> 只在本树构建时生效，指向源码里的 <code>include/</code>；<code>$&lt;INSTALL_INTERFACE:include&gt;</code> 在安装之后生效，指向安装前缀（install prefix，<code>make install</code> 时拷贝目标的根目录）。同一条 PUBLIC include 因此能同时服务「开发自己」和「别人 <code>find_package</code>」。漏掉这一对，是开源库「本机能编、装完别人编不过」的头号原因。</p>
 
   <h3>生成器表达式</h3>
   <p><code>$&lt;…&gt;</code> 在<strong>生成原生构建文件时</strong>（多配置生成器则更晚）才求值，所以同一份 <code>CMakeLists.txt</code> 能表达「Debug 加这个宏、GCC 加这组警告、MSVC 加那组」：</p>
@@ -708,14 +708,14 @@ target_link_libraries(myapp PRIVATE foo)
     </div>
   </div>
 
-  <p>CMake 能<strong>声明「我需要这个库」并接到 target 图上</strong>，但默认不负责下载、缓存、二进制复用。四条路的差别在「库从哪来」。</p>
+  <p>CMake 能<strong>声明「我需要这个库」并接到 target 图上</strong>，但默认不负责下载、缓存、二进制复用——那三件事是包管理器（帮你下载、存好、复用依赖库的工具，如 Conan / vcpkg）的工作。四条路的差别在「库从哪来」。</p>
 
   <h3 id="s7-1">find_package（系统里已经有的大库）</h3>
-  <p>在系统 / 指定前缀里找已安装的包，得到 <strong>imported target</strong>（如 <code>OpenSSL::SSL</code>、<code>Boost::thread</code>）。这是现代写法；老代码里的 <code>${Boost_LIBRARIES}</code> 变量不要再用——变量不会带着 include 路径和传递依赖走。</p>
+  <p>在系统 / 指定前缀里找已安装的包，得到 <strong>imported target</strong>（导入目标，如 <code>OpenSSL::SSL</code>、<code>Boost::thread</code>——CMake 替你预先建好的节点，自带正确的 include 路径和链接信息）。这是现代写法；老代码里的 <code>${Boost_LIBRARIES}</code> 变量不要再用——变量不会带着 include 路径和传递依赖走。</p>
   <p>适合：OpenSSL、Boost、Qt、CUDA、ROS，以及发行版已经打包好的一切。嵌入式 / Yocto 交叉编译也走这条：sysroot 里有什么就 find 什么。<a href="#s4-2">配置代理 §4.2</a> 里那一长串是 <code>pkg_check_modules</code>，机制相同，只是查询的是 <code>*.pc</code> 而不是 CMake Config 文件。</p>
 
   <h3 id="s7-2">FetchContent（构建时拉源码，适合小库）</h3>
-  <p>配置阶段 clone 指定 tag，当子项目 <code>add_subdirectory</code> 进来。适合 fmt、nlohmann/json、Catch2、spdlog 这种小库或 header-only。缺点：首次配置要联网、大库会把你的构建时间拖垮、版本冲突要自己解。开源项目常写成「先 <code>find_package</code>，找不到再 FetchContent」给发行版用户一条退路。</p>
+  <p>配置阶段 clone 指定 tag，当子项目 <code>add_subdirectory</code>（把另一个目录的 CMakeLists 挂进当前构建图）进来。适合 fmt、nlohmann/json、Catch2、spdlog 这种小库或 header-only（只有头文件、没有 <code>.cpp</code> 要编的库）。缺点：首次配置要联网、大库会把你的构建时间拖垮、版本冲突要自己解。开源项目常写成「先 <code>find_package</code>，找不到再 FetchContent」给发行版用户一条退路。</p>
 
 <pre><span class="kw">include</span>(FetchContent)
 FetchContent_Declare(fmt
@@ -726,7 +726,7 @@ FetchContent_MakeAvailable(fmt)
 target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
 
   <h3 id="s7-3">Conan 与 vcpkg（真正的包管理器）</h3>
-  <p>两者都在 CMake 之外解决「下载 + 按 triplet 预编译 + 缓存」，再通过 toolchain file 把 imported target 喂给 CMake。你的 <code>CMakeLists.txt</code> 仍然只写 <code>find_package</code> + <code>target_link_libraries</code>。</p>
+  <p>两者都在 CMake 之外解决「下载 + 按 triplet（平台组合，比如 x64-linux-debug 这样一组「架构+系统+配置」）预编译 + 缓存」，再通过 toolchain file（工具链文件，见 <a href="#s9">§9</a>）把 imported target 喂给 CMake。你的 <code>CMakeLists.txt</code> 仍然只写 <code>find_package</code> + <code>target_link_libraries</code>。</p>
 
   <table>
     <thead><tr><th>场景</th><th>推荐</th><th>原因</th></tr></thead>
@@ -751,7 +751,7 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
     </div>
   </div>
 
-  <p>CMake 3.19+ 的 Presets 解决的是这种对话：「你本地到底加了哪些 <code>-D</code>？用的 Ninja 还是 Make？构建目录叫 <code>build</code> 还是 <code>out</code>？」把常用配置写成声明，IDE（VS Code / CLion / Visual Studio）和 CI 读同一份文件。</p>
+  <p>CMake 3.19+ 的 Presets（预设，仓库根目录一份 <code>CMakePresets.json</code>）解决的是这种对话：「你本地到底加了哪些 <code>-D</code>？用的 Ninja 还是 Make？构建目录叫 <code>build</code> 还是 <code>out</code>？」把常用配置写成声明，IDE（VS Code / CLion / Visual Studio）和 CI 读同一份文件。</p>
 
 <pre>{
   "version": 6,
@@ -792,7 +792,7 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
   </table>
 
   <p>个人习惯（本机路径、额外开关）放 <code>CMakeUserPresets.json</code> 并 gitignore。仓库里只留团队公约。CI 用同一个 preset 名，开发机和流水线不会各写一套 <code>-D</code>。</p>
-  <p><code>CMAKE_EXPORT_COMPILE_COMMANDS=ON</code> 会在构建目录生成 <code>compile_commands.json</code>。clangd / clang-tidy 靠它知道每个文件的真实编译参数；这是「IDE 能跳转、能报对警告」的地基，新项目默认打开。</p>
+  <p><code>CMAKE_EXPORT_COMPILE_COMMANDS=ON</code> 会在构建目录生成 <code>compile_commands.json</code>（每个源文件实际编译命令的清单）。clangd / clang-tidy 靠它知道每个文件的真实编译参数；这是「IDE 能跳转、能报对警告」的地基，新项目默认打开。</p>
 </section>
 
 <section class="chapter" id="s9">
@@ -806,7 +806,7 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
 
   <p>本机多平台差异（Linux 链 <code>dl</code>、<code>Darwin</code> 链框架、Windows 定义 <code>NOMINMAX</code>）用 <code>CMAKE_SYSTEM_NAME</code> / <code>WIN32</code> 分支，并且<strong>仍然挂在 target 上</strong>，不要改全局 flag。</p>
 
-  <p>交叉编译（在 x86 上为 ARM 单板、Android、WebAssembly 出包）不要在 <code>CMakeLists.txt</code> 里写死 <code>arm-linux-gnueabihf-g++</code>。单独做一份 <strong>toolchain file</strong>，配置时传入：</p>
+  <p>交叉编译（cross-compile，在 x86 上为 ARM 单板、Android、WebAssembly 出包——编译机和运行机不是同一种架构）不要在 <code>CMakeLists.txt</code> 里写死 <code>arm-linux-gnueabihf-g++</code>。单独做一份 <strong>toolchain file</strong>（工具链文件，一份「这是什么系统、编译器叫什么、sysroot 在哪、find 只在 sysroot 里找」的声明），配置时传入：</p>
   <p><code>cmake -S . -B build-arm -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-linux-gnueabihf.cmake</code></p>
 
   <p>文件里只放「这是什么系统、编译器叫什么、sysroot 在哪、find 只在 sysroot 里找」。这样同一份菜谱可以：本机编一份、ARM 编一份、CI 再编一份，互不污染。<a href="#s4-4">配置代理</a> 用 <code>-B build-host</code> 和 <code>-B build-arm</code> 两套目录，正是这个意思；<code>ARCH</code> 只换依赖集合，不换源码树。</p>
@@ -833,16 +833,16 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
   </div>
 
   <h3>Sanitizer 与 LTO</h3>
-  <p>ASan / TSan / UBSan 是编译器功能，CMake 只负责把 flag 挂到指定 target。要点：</p>
+  <p>ASan / TSan / UBSan（统一叫 sanitizer，编译器自带的「运行时查错器」：ASan 抓越界/踩内存，TSan 抓数据竞争，UBSan 抓未定义行为）是编译器功能，CMake 只负责把 flag 挂到指定 target。要点：</p>
   <ul>
     <li>用 <code>option(ENABLE_ASAN …)</code> 控制，默认 OFF；preset <code>dev</code> / <code>asan</code> 再打开。</li>
     <li>ASan 与 TSan <strong>不能同时开</strong>。编译和链接两侧都要加 <code>-fsanitize=…</code>，只加一边会链失败或漏报。</li>
     <li>只给 GNU/Clang 加；MSVC 有自己的 sanitizer 开关，不要混写。</li>
   </ul>
-  <p>LTO（链接时优化）：<code>check_ipo_supported</code> 探测后再 <code>set_target_properties(… INTERPROCEDURAL_OPTIMIZATION TRUE)</code>，通常仅 Release。PGO 是「先插桩跑一趟代表性负载，再用 profile 重编」，CMake 没有一等公民封装，用两套构建目录 + 编译器自己的 <code>-fprofile-generate</code> / <code>-fprofile-use</code> 即可。细节与原理见 <a href="./sanitizer_internals.html">Sanitizer 内部</a>、<a href="./toolchain_landscape.html">工具链全景</a>。</p>
+  <p>LTO（Link Time Optimization，链接时优化——把优化推迟到链接阶段，让编译器跨文件看到全局再优化）：<code>check_ipo_supported</code> 探测后再 <code>set_target_properties(… INTERPROCEDURAL_OPTIMIZATION TRUE)</code>，通常仅 Release。PGO（Profile-Guided Optimization，按真实运行画像优化）是「先插桩跑一趟代表性负载，再用 profile 重编」，CMake 没有一等公民封装，用两套构建目录 + 编译器自己的 <code>-fprofile-generate</code> / <code>-fprofile-use</code> 即可。细节与原理见 <a href="./sanitizer_internals.html">Sanitizer 内部</a>、<a href="./toolchain_landscape.html">工具链全景</a>。</p>
 
   <h3>C++20 Modules</h3>
-  <p>CMake 3.28 + Ninja 1.11 + GCC 14 / Clang 17 / MSVC 19.30 可以工作：用 <code>target_sources(… FILE_SET CXX_MODULES FILES math.cppm)</code> 声明模块接口。跨库 <code>import</code>、标准库 <code>import std;</code>、Conan/vcpkg 仍有边角。新玩具项目可以试；生产大库建议再等一等，不要为了 Modules 把构建图赌进去。</p>
+  <p>CMake 3.28 + Ninja 1.11 + GCC 14 / Clang 17 / MSVC 19.30 可以工作：用 <code>target_sources(… FILE_SET CXX_MODULES FILES math.cppm)</code> 声明模块接口（module，C++20 用来替代头文件 include 的新机制）。跨库 <code>import</code>、标准库 <code>import std;</code>、Conan/vcpkg 仍有边角。新玩具项目可以试；生产大库建议再等一等，不要为了 Modules 把构建图赌进去。</p>
   <div class="box tip">这里只给「CMake 侧怎么声明」。Modules 本身的 BMI、module partition、header unit、
   <code>import std;</code>、以及从 <code>#include</code> 渐进迁移的 Shim 打法，见
   <a href="../architect/large_scale_engineering.html#ch5">大型 C++ 工程化 §5</a>；
@@ -851,7 +851,7 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
 
   <h3>install / export：让别人 find_package 到你</h3>
   <p>安装不是「把二进制拷走」这么简单。下游要的是一个 <strong>imported target</strong> <code>Foo::foo</code>，带着正确的 include 和链接接口。流程是：<code>install(TARGETS foo EXPORT FooTargets …)</code> → <code>install(EXPORT FooTargets FILE FooTargets.cmake NAMESPACE Foo:: …)</code> → 再配一份 <code>FooConfig.cmake</code>。用户侧就变成 <code>find_package(Foo 1.0)</code> + <code>target_link_libraries(app PRIVATE Foo::foo)</code>。</p>
-  <p>CPack 可以在此之上打 TGZ / DEB / RPM，命令是 <code>cmake --build build --target package</code>。包格式是发行问题；Config 文件对不对，才是 CMake 问题。</p>
+  <p>CPack（CMake 自带的打包器，把安装结果打成 TGZ / DEB / RPM 等发布包）可以在此之上打 TGZ / DEB / RPM，命令是 <code>cmake --build build --target package</code>。包格式是发行问题；Config 文件对不对，才是 CMake 问题。</p>
 
   <h3>CI</h3>
   <p>矩阵 = 操作系统 × preset。步骤就是仓库里开发者敲的那两句：<code>cmake --preset X</code> 然后 <code>cmake --build --preset X</code>，再 <code>ctest</code>。Windows 上排除 ASan preset 这类互斥组合。完整 GitHub Actions 模板见 <a href="../perf-debug/cmake_ci_guide.html">CMake &amp; CI 实战</a>。</p>
@@ -879,7 +879,7 @@ target_link_libraries(myapp PRIVATE fmt::fmt)</pre>
     </tbody>
   </table>
 
-  <p>ccache 的接法是把启动器设到编译器前面：找到 <code>ccache</code> 可执行文件后 <code>set(CMAKE_CXX_COMPILER_LAUNCHER …)</code>。不要去改 <code>CMAKE_CXX_COMPILER</code> 本身。</p>
+  <p>ccache 的接法是把启动器设到编译器前面：找到 <code>ccache</code> 可执行文件后 <code>set(CMAKE_CXX_COMPILER_LAUNCHER …)</code>（每次真正调编译器之前，先经过它这一层查缓存）。不要去改 <code>CMAKE_CXX_COMPILER</code> 本身。</p>
   <p>构建慢时先分清是<strong>配置慢</strong>（FetchContent clone、feature test）还是<strong>编译慢</strong>（模板、没有增量）。前者减网络依赖、钉死 tag；后者 Ninja + ccache + 少在公开头里塞实现。编译器内部在干什么，见 <a href="./compilation_guide.html">编译步骤</a>。</p>
 </section>
 

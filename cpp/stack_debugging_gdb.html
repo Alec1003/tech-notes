@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>栈溢出 · 递归 · GDB · ASan · 从 C++ 源码到寄存器与栈帧的调试串联</title>
-<meta name="description" content="栈溢出：系列收官。前五篇建立了完整的底层模型，这一篇从 真实问题 出发把它用起来：递归为何撑爆栈、局部数组多大算太大、如何用 GDB 的 bt / frame / info registers / disassemble 把 C++ 源码 → 汇编 → 寄存器 → 栈帧 一线串起">
+<meta name="description" content="栈溢出实战：递归为何撑爆栈、局部数组多大算太大、大对象该放堆还是栈，以及用 GDB 的 bt、frame、info registers、disassemble 命令把源码、汇编、寄存器、栈帧串起来调试，配合 AddressSanitizer 抓栈内存错误。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/stack_debugging_gdb.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/stack_debugging_gdb.html">
 <meta property="og:title" content="栈溢出 · 递归 · GDB · ASan · 从 C++ 源码到寄存器与栈帧的调试串联">
-<meta property="og:description" content="栈溢出：系列收官。前五篇建立了完整的底层模型，这一篇从 真实问题 出发把它用起来：递归为何撑爆栈、局部数组多大算太大、如何用 GDB 的 bt / frame / info registers / disassemble 把 C++ 源码 → 汇编 → 寄存器 → 栈帧 一线串起">
+<meta property="og:description" content="栈溢出实战：递归为何撑爆栈、局部数组多大算太大、大对象该放堆还是栈，以及用 GDB 的 bt、frame、info registers、disassemble 命令把源码、汇编、寄存器、栈帧串起来调试，配合 AddressSanitizer 抓栈内存错误。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="栈溢出 · 递归 · GDB · ASan · 从 C++ 源码到寄存器与栈帧的调试串联">
-<meta name="twitter:description" content="栈溢出：系列收官。前五篇建立了完整的底层模型，这一篇从 真实问题 出发把它用起来：递归为何撑爆栈、局部数组多大算太大、如何用 GDB 的 bt / frame / info registers / disassemble 把 C++ 源码 → 汇编 → 寄存器 → 栈帧 一线串起">
+<meta name="twitter:description" content="栈溢出实战：递归为何撑爆栈、局部数组多大算太大、大对象该放堆还是栈，以及用 GDB 的 bt、frame、info registers、disassemble 命令把源码、汇编、寄存器、栈帧串起来调试，配合 AddressSanitizer 抓栈内存错误。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -123,7 +123,7 @@
     <header class="hero">
       <div class="badge">Under the Hood · 函数调用与底层执行 · 系列 06 / 06</div>
       <h1>栈溢出、递归、GDB 与函数调用调试</h1>
-      <p class="sub">系列收官。前五篇建立了完整的底层模型，这一篇从<strong>真实问题</strong>出发把它用起来：递归为何撑爆栈、局部数组多大算太大、如何用 GDB 的 <code>bt / frame / info registers / disassemble</code> 把 <em>C++ 源码 → 汇编 → 寄存器 → 栈帧</em> 一线串起，以及 AddressSanitizer 如何自动逮住栈相关的内存 bug。</p>
+      <p class="sub">系列收官。前五篇搭好了完整的底层模型，这一篇从<strong>真实问题</strong>出发把它用起来：递归为何撑爆栈（栈——程序运行时存放函数调用现场的那块内存）？局部数组多大算太大？如何用 GDB（命令行调试器）的 <code>bt / frame / info registers / disassemble</code> 四组命令，把 <em>C++ 源码 → 汇编 → 寄存器 → 栈帧</em> 一线串起来？以及 AddressSanitizer（一个编译器自带的内存错误检测工具，简称 ASan）如何自动逮住栈相关的内存 bug。</p>
       <div class="meta-row">
         <span class="pill cyan">实战篇</span>
         <span class="pill green">阅读 ~10 min</span>
@@ -158,7 +158,7 @@
     foo();          <span class="comment">// 无终止条件的递归</span>
 }</code></pre>
 
-      <p>结合 <a href="call_ret_internals.html">03 篇</a>的栈帧模型：每次 <code>foo()</code> 调用都压入一个新栈帧（返回地址 + 局部数据），而它永远不返回，栈只增不减：</p>
+      <p>用 <a href="call_ret_internals.html">03 篇</a>的栈帧模型来看这段代码：每调用一次 <code>foo()</code>，栈上就压入一个新栈帧（装着返回地址和局部数据），可这个函数永远不返回，于是栈只见增长、从不见回收：</p>
 
       <div class="stackfig">
         <div class="cap">高地址 ↑</div>
@@ -170,15 +170,15 @@
       </div>
       <p class="grow-lo">▲ 栈持续向低地址生长，越过保护页即崩溃</p>
 
-      <p>Linux 主线程栈默认 <strong>8 MB</strong>。栈生长到边界会撞上一个<strong>不可访问的保护页（guard page）</strong>，触发 <code>SIGSEGV</code>，程序崩溃。这就是 Stack Overflow 的物理真相。</p>
+      <p>Linux 主线程的栈默认只有 <strong>8 MB</strong>。当栈一路生长到边界，会撞上一块<strong>不可访问的保护页（guard page——操作系统故意放在栈尽头、一碰就报警的一页内存）</strong>，CPU 触发 <code>SIGSEGV</code>（段错误信号，程序非法访问内存时操作系统发出的「死刑通知」），程序当场崩溃。这就是 Stack Overflow 的物理真相：不是玄学，是栈真的一寸寸撞到了墙上。</p>
 
       <div class="info-box"><div class="title">影响递归深度的因素</div>
       <ul>
         <li><strong>每帧大小</strong>：局部变量越多，单帧越大，能递归的层数越少；</li>
         <li><strong>栈总大小</strong>：可用 <code>ulimit -s</code> 查看/调整，或线程创建时设置；</li>
-        <li><strong>尾调用优化</strong>：若写成尾递归且编译器优化（复用同一帧），可能不再溢出 —— 但<strong>不可默认依赖</strong>，C++ 不保证 TCO。</li>
+        <li><strong>尾调用优化</strong>：若写成尾递归（递归调用恰好是函数最后一步）且编译器肯优化（让它复用同一帧），可能不再溢出——但<strong>不可默认依赖</strong>，C++ 标准并不保证 TCO（尾调用优化）一定发生。</li>
       </ul></div>
-      <div class="info-box warning"><p>工程建议：<strong>深度不可控的递归应改写为显式栈的迭代</strong>（把递归转成循环 + 手动栈），从根本上避免栈溢出，也便于设置容量上限。</p></div>
+      <div class="info-box warning"><p>工程建议：<strong>深度不可控的递归应改写为「显式栈的迭代」</strong>——把「函数自己调用自己」改成「循环 + 自己维护一个栈数据结构」，好比把压在系统栈上的担子搬到堆上自己管，从根本上避免栈溢出，也方便设置容量上限。</p></div>
     </section>
 
     <!-- S2 -->
@@ -193,7 +193,7 @@
     ...
 }</code></pre>
 
-      <p>局部数组分配在<strong>栈帧</strong>里。一个 1 MB 的 <code>buffer</code> 会让这一层栈帧直接 <code>sub rsp, 1MB</code>，几层就能耗尽 8 MB 的栈 —— 即使没有递归也会溢出。</p>
+      <p>局部数组是分配在<strong>栈帧</strong>里的。一个 1 MB 的 <code>buffer</code> 意味着这层栈帧一上来就要执行 <code>sub rsp, 1MB</code>（把栈顶指针直接挪走 1 MB），叠几层调用就能把 8 MB 的栈吃光——哪怕一行递归都没写，也会溢出。</p>
 
       <table>
         <thead><tr><th>维度</th><th>栈（Stack）</th><th>堆（Heap）</th></tr></thead>
@@ -206,7 +206,7 @@
         </tbody>
       </table>
 
-      <div class="info-box key"><p>经验法则：<strong>大缓冲区、大容器、生命周期不确定的对象放堆</strong>（<code>std::vector</code>、<code>new</code>、智能指针）；小而短命的放栈。把 1 MB 数组换成 <code>std::vector&lt;char&gt; buffer(1024*1024);</code>，数据就搬到堆上，栈帧只留一个几十字节的 vector 头。</p></div>
+      <div class="info-box key"><p>经验法则：<strong>大缓冲区、大容器、生命周期不确定的对象放堆</strong>（用 <code>std::vector</code>、<code>new</code>、智能指针）；小而短命的放栈。好比随身口袋只放钥匙零钱，大件行李该寄存。把 1 MB 数组换成 <code>std::vector&lt;char&gt; buffer(1024*1024);</code>，数据本体就搬到了堆上，栈帧里只剩一个几十字节的 vector 头。</p></div>
     </section>
 
     <!-- S3 -->
@@ -227,7 +227,7 @@
         </tbody>
       </table>
 
-      <p>以 <code>main → foo → bar → baz</code> 为例，在 <code>baz</code> 里断下后 <code>bt</code>：</p>
+      <p>拿 <code>main → foo → bar → baz</code> 这条调用链做例子：程序在 <code>baz</code> 里断下后执行 <code>bt</code>，GDB 会把「我是被谁一层层叫到这儿来的」整条链打印出来：</p>
       <pre><code>(gdb) bt
 #0  baz () at demo.cpp:9
 #1  bar () at demo.cpp:6
@@ -239,7 +239,7 @@
 (gdb) info frame          <span class="comment"># 看这帧的 RBP、返回地址在哪</span>
 (gdb) info locals         <span class="comment"># 看 bar 的局部变量</span></code></pre>
 
-      <div class="info-box"><p>回顾 <a href="call_ret_internals.html">03 篇</a>：这张 <code>#0…#3</code> 的表，正是 GDB 顺着<strong>栈上的返回地址链</strong>（有帧指针时用 RBP 链，否则用 DWARF CFI）逐层回溯、再用调试信息翻译出的结果。命令背后就是前面讲的机制。</p></div>
+      <div class="info-box"><p>回顾 <a href="call_ret_internals.html">03 篇</a>：这张 <code>#0…#3</code> 的表不是猜出来的，正是 GDB 顺着<strong>栈上的返回地址链</strong>（有帧指针时用 RBP 链一层层往上跳，否则用 DWARF CFI——编译器附带的栈帧布局说明）逐层回溯、再用调试信息把地址翻译成函数名的结果。命令背后跑的就是前面讲过的机制。</p></div>
     </section>
 
     <!-- S4 -->
@@ -255,7 +255,7 @@
 (gdb) p $rip  p $rsp  p $rbp   <span class="comment"># 打印关键寄存器</span>
 (gdb) si                   <span class="comment"># 单步一条机器指令，观察 RSP/RBP 变化</span></code></pre>
 
-      <p>把这些命令组合起来，就能亲眼见证前五篇讲的每一步：</p>
+      <p>把这些命令组合起来用，前五篇讲的每一步机制都能在运行现场亲眼见证：</p>
       <div class="chain">
         <div class="lv">C++ 源码 <span style="color:var(--text-muted)">disassemble /s</span></div>
         <div class="ar">↓</div>
@@ -266,7 +266,7 @@
         <div class="lv">Stack Frame <span style="color:var(--text-muted)">x/xg $rsp · info frame</span></div>
       </div>
 
-      <div class="info-box key"><p>操作流：在 <code>call</code> 处 <code>si</code> 步入，观察 <span class="reg">RSP</span> 减 8（压了返回地址，<a href="call_ret_internals.html">03 篇</a>）；进入序言看 <span class="reg">RBP</span> 被建立（<a href="stack_frame_deep_dive.html">02 篇</a>）；<code>info args</code> 看参数确实来自 <span class="reg">RDI/RSI</span>（<a href="calling_convention_abi.html">04 篇</a>）。至此，抽象模型与运行现场完全对上号。</p></div>
+      <div class="info-box key"><p>操作流走一遍：在 <code>call</code> 那条指令处用 <code>si</code>（单步执行一条机器指令）步入，观察 <span class="reg">RSP</span> 立刻减 8——这就是压入返回地址的动作（<a href="call_ret_internals.html">03 篇</a>）；接着进入函数序言，看 <span class="reg">RBP</span> 如何被建立成新帧的锚点（<a href="stack_frame_deep_dive.html">02 篇</a>）；再 <code>info args</code> 查看参数，确认它们确实来自 <span class="reg">RDI/RSI</span> 寄存器（<a href="calling_convention_abi.html">04 篇</a>）。至此，书本上的抽象模型与程序运行的真实现场完全对上了号。</p></div>
     </section>
 
     <!-- S5 -->
@@ -276,7 +276,7 @@
         <p class="sub">很多栈问题不会立刻崩，ASan 让它们当场暴露</p>
       </div></div>
 
-      <p>编译时加 <code>-fsanitize=address -g</code>，运行时 ASan 会在栈/堆对象周围插入<strong>红区（redzone）</strong>并监控访问，越界立刻报错并打印栈回溯。它擅长逮住三类<strong>栈相关</strong>问题：</p>
+      <p>编译时加上 <code>-fsanitize=address -g</code>，ASan（AddressSanitizer 的简称）就会在程序运行时给栈/堆对象周围铺一圈<strong>红区（redzone——被标记为「禁止触碰」的暗桩内存）</strong>并监控每一次访问，谁越界谁就当场报错，还会附上栈回溯。它特别擅长逮住三类<strong>栈相关</strong>的问题：</p>
 
       <table>
         <thead><tr><th>错误类型</th><th>含义</th><th>典型代码</th></tr></thead>
@@ -298,8 +298,8 @@ WRITE of size 4 at 0x... thread T0
     #1 0x... in main demo.cpp:12
   Address ... is located in stack of thread T0</code></pre>
 
-      <div class="info-box danger"><div class="title">为什么需要 ASan？</div><p>栈越界经常「碰巧不崩」—— 覆盖的是相邻变量或填充字节，程序继续跑，bug 潜伏很久。ASan 把「悄悄的破坏」变成「当场的报错 + 精确行号 + 栈回溯」，是排查栈内存问题的利器。代价是约 2× 运行变慢、内存增加，通常只在测试/CI 开启。</p></div>
-      <div class="info-box"><p>检测栈溢出（爆栈）本身，ASan 也能识别为 <code>stack-overflow</code>；配合 <a href="sanitizer_internals.html">Sanitizer 原理</a>一篇可深入其实现。</p></div>
+      <div class="info-box danger"><div class="title">为什么需要 ASan？</div><p>栈越界经常「碰巧不崩」——越界写到的可能只是相邻变量或编译器留的填充字节，程序照样往下跑，bug 就此潜伏很久。ASan 的价值在于把「悄悄的破坏」变成「当场的报错 + 精确行号 + 栈回溯」，好比在墙里预埋了警报器。代价是约 2 倍运行变慢、内存占用增加，所以通常只在测试/CI 环境开启。</p></div>
+      <div class="info-box"><p>检测栈溢出（爆栈）这件事本身，ASan 也能识别，报错类型就叫 <code>stack-overflow</code>；想深入了解其实现，可配合 <a href="sanitizer_internals.html">Sanitizer 原理</a>一篇阅读。</p></div>
     </section>
 
     <!-- S6 -->
@@ -310,7 +310,7 @@ WRITE of size 4 at 0x... thread T0
       </div></div>
       <div class="phase-card">
         <ol>
-          <li><strong>复现并抓崩溃</strong>：<code>ulimit -c unlimited</code> 开 core dump，或直接 <code>gdb ./demo</code> 运行到崩溃。</li>
+          <li><strong>复现并抓崩溃</strong>：<code>ulimit -c unlimited</code> 打开 core dump（程序崩溃时的内存现场快照，供事后解剖），或者干脆 <code>gdb ./demo</code> 直接运行到崩溃停下。</li>
           <li><strong>看调用栈</strong>：<code>bt</code>。若打印出成百上千层同名帧 → 无限递归 / 栈溢出（§01）。</li>
           <li><strong>看某帧</strong>：<code>frame N</code> + <code>info locals</code>，发现某个巨大局部数组 → 大对象爆栈（§02）。</li>
           <li><strong>下探指令</strong>：<code>disassemble /s</code> + <code>info registers</code>，确认 <span class="reg">RSP</span> 已越界、或返回地址被写坏（§03/§04）。</li>
@@ -318,7 +318,7 @@ WRITE of size 4 at 0x... thread T0
           <li><strong>修复</strong>：大对象搬堆、递归改迭代、修正越界索引、避免返回局部地址。</li>
         </ol>
       </div>
-      <div class="info-box key"><p>回到系列开篇的那个问题 —— <strong>「执行 foo(a,b) 时 CPU 到底发生了什么」</strong>：现在你能从参数进寄存器、<code>call</code> 压返回地址、建立栈帧、执行、返回值进 RAX、<code>ret</code> 恢复调用者，一路讲清；并能用 <code>g++ -S</code>、<code>objdump</code>、<code>gdb</code>、<code>-O0/-O2</code>、ASan 亲手观察与验证。底层认知模型就此闭环。</p></div>
+      <div class="info-box key"><p>回到系列开篇的那个问题——<strong>「执行 foo(a,b) 时 CPU 到底发生了什么」</strong>：现在你应该能一气呵成讲清楚——参数先进寄存器、<code>call</code> 压下返回地址、搭起栈帧、执行函数体、返回值放进 RAX、<code>ret</code> 恢复调用者现场；而且能用 <code>g++ -S</code>、<code>objdump</code>、<code>gdb</code>、<code>-O0/-O2</code>、ASan 这些工具亲手观察与验证每一步。底层认知模型就此闭环。</p></div>
     </section>
 
     <!-- S7 -->
@@ -329,7 +329,7 @@ WRITE of size 4 at 0x... thread T0
         <li><strong>大对象放堆、深递归改迭代</strong>，是避免栈溢出的根本手段。</li>
         <li><code>bt / frame / info frame / info registers / disassemble</code> 能把源码、汇编、寄存器、栈帧串成一条线。</li>
         <li><strong>GDB 回溯的本质</strong>是读栈上的返回地址链 + 调试信息，与前面机制一致。</li>
-        <li><strong>ASan</strong> 把潜伏的栈越界/悬垂变成当场报错，是测试期利器。</li>
+        <li><strong>ASan</strong> 把潜伏的栈越界/悬垂访问变成当场报错，是测试期的利器。</li>
       </ul></div>
     </section>
 

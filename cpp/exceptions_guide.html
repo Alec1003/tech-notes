@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected</title>
-<meta name="description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：从 throw / catch · 栈展开（stack unwinding） 的执行模型，到 异常安全三级保证 · noexcept">
+<meta name="description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：用白话讲清 throw / catch 与栈展开 stack unwinding 时发生了什么，异常安全三级保证怎么兑现，noexcept 何时标、标错为何 terminate">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/exceptions_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/exceptions_guide.html">
 <meta property="og:title" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected">
-<meta property="og:description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：从 throw / catch · 栈展开（stack unwinding） 的执行模型，到 异常安全三级保证 · noexcept">
+<meta property="og:description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：用白话讲清 throw / catch 与栈展开 stack unwinding 时发生了什么，异常安全三级保证怎么兑现，noexcept 何时标、标错为何 terminate">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected">
-<meta name="twitter:description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：从 throw / catch · 栈展开（stack unwinding） 的执行模型，到 异常安全三级保证 · noexcept">
+<meta name="twitter:description" content="C++ 异常机制全景 — 栈展开 / 异常安全 / noexcept / std::expected：用白话讲清 throw / catch 与栈展开 stack unwinding 时发生了什么，异常安全三级保证怎么兑现，noexcept 何时标、标错为何 terminate">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -79,7 +79,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 25 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 30 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -226,7 +226,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★★</span>
     <span class="pill cyan">面试出现率 90%</span>
-    <span class="pill green">阅读时长 ~25 min</span>
+    <span class="pill green">阅读时长 ~30 min</span>
     <span class="pill amber">前置 值类别 · 拷贝控制</span>
   </div>
   <div class="meta">
@@ -250,7 +250,7 @@
     </div>
   </div>
 
-  <p>异常涉及<strong>语言语义、运行时 ABI、工程契约</strong>三层。日常几乎不写 <code>try/catch</code> 是健康的：处理集中在边界，安全却是每一行的事。</p>
+  <p>异常涉及<strong>语言语义、运行时 ABI（Application Binary Interface，编译后的二进制接口约定——两个模块能不能互相调用、抛的异常能不能被接住，都由它说了算）、工程契约</strong>三层。日常几乎不写 <code>try/catch</code> 是健康的：处理集中在边界，安全却是每一行的事。</p>
 
   <div class="analogy">火警系统：底层 <code>throw</code> 只负责报警；中间层像员工撤离——RAII 析构自动关门（解锁 / 关文件）；真正灭火的是 <code>main</code> / 线程入口 / RPC 边界上那几处 <code>catch</code>。中间层满地 try/catch，多半是没用好 RAII，或把异常当 <code>break</code> 用。</div>
 
@@ -305,7 +305,7 @@
   </div>
 
   <h3 id="s2-1">2.1 三段式语法</h3>
-  <p><code>try</code> 包可能失败的操作；<code>catch</code> 从上到下取<strong>第一个</strong>匹配（不是虚函数那种最具体）。派生类写上面，<code>catch (...)</code> 垫底。</p>
+  <p><code>try</code> 包住可能失败的操作；<code>catch</code> 从上到下取<strong>第一个</strong>匹配（不是虚函数那种挑最具体的）。所以派生类要写在上面，<code>catch (...)</code> 放在最后兜底。</p>
 
   <h3 id="s2-2">2.2 catch 匹配规则</h3>
   <table>
@@ -317,10 +317,10 @@
       <tr><td><code>catch (...)</code></td><td>任意类型</td><td>拿不到 <code>what()</code>；不重抛等于吞错</td></tr>
     </tbody>
   </table>
-  <p>匹配<strong>不做用户定义转换</strong>。顺序错了编译器会警告，别靠警告当设计。</p>
+  <p>匹配<strong>不做用户定义转换</strong>——编译器只按继承关系和类型严格比对，不会帮你调转换函数。顺序写错了编译器会警告，但别把警告当成设计的一部分。</p>
 
   <h3 id="s2-3">2.3 重新抛出与切片</h3>
-  <p><code>throw;</code> 重抛<strong>当前异常对象</strong>，动态类型还在。<code>throw e;</code> 按静态类型再构造一份 → 派生字段全部丢掉。</p>
+  <p><code>throw;</code> 重抛<strong>当前异常对象</strong>——那个对象的动态类型（运行时真正的类型）原封不动还在。<code>throw e;</code> 则按 e 的静态类型（声明时写死的类型）再拷贝构造一份，于是派生类的字段全部丢掉——这就是切片（slicing，好比把一个多层快递只寄出了最外层箱子，里面的附属信息全被削掉）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 230" style="min-width:620px;height:auto" role="img" aria-label="异常切片：throw e 或 catch 按值会把派生 RpcError 削成基类 exception，动态类型丢失">
@@ -437,7 +437,7 @@
   </div>
 
   <h3 id="s4-1">4.1 概念</h3>
-  <p>抛出后运行时沿调用栈回退，直到匹配的 <code>catch</code>。每一帧的局部对象按<strong>构造逆序析构</strong>——这就是 RAII 能在「你什么都不写」时仍释放锁和内存的原因。裸 <code>new</code> / 手动 <code>lock()</code> 没有对象可析构，展开等于泄漏。</p>
+  <p>抛出之后，运行时会沿着调用栈一路回退，直到找到类型匹配的 <code>catch</code> 为止；这个过程就叫栈展开（stack unwinding）。回退时，每一帧的局部对象按<strong>构造的逆序逐个析构</strong>——这正是 RAII（Resource Acquisition Is Initialization，把资源的取得和释放绑在对象的生与死上）能在「你什么都不写」的情况下仍然释放锁和内存的原因。反过来，裸 <code>new</code> / 手动 <code>lock()</code> 没有对象可以析构，展开对它们等于眼睁睁看着泄漏发生。</p>
 
   <h3 id="s4-2">4.2 栈展开与析构</h3>
   <div class="fig">
@@ -549,7 +549,7 @@
   </script>
 
   <h3 id="s4-3">4.3 关键点：异常对象在哪里？</h3>
-  <p>不能放普通栈——展开会把它拆掉。libstdc++ / libc++ 放在线程局部<strong>异常区</strong>（动态分配）；MSVC 拷到 catch 旁的临时区。所以异常类拷贝构造必须 <code>noexcept</code>：分配完再抛，只能 terminate。</p>
+  <p>异常对象不能放在普通栈上——因为展开过程恰恰要一路拆掉这些栈帧，放那儿等于自我毁灭。libstdc++ / libc++ 的做法是把它放进线程局部的一块<strong>异常区</strong>（动态分配出来的安全地带）；MSVC 则拷贝到 catch 旁边的临时区。这也解释了为什么异常类的拷贝构造必须 <code>noexcept</code>：如果拷贝到异常区之后又抛异常，运行时已经没有手段应对，只能 terminate。</p>
 
   <h3 id="s4-4">4.4 ABI：Itanium 与跨 .so 边界</h3>
   <table>
@@ -562,7 +562,7 @@
       <tr><td><code>__cxa_begin_catch</code> / <code>end_catch</code></td><td>进出 catch</td></tr>
     </tbody>
   </table>
-  <p>「零开销」的关键：析构点写在表里，不在每个入口埋 setjmp。</p>
+  <p>「零开销」的关键在于：析构点提前写在只读表里，而不是在每个可能出错的入口埋一层 setjmp（像不去给每扇门都装警报器，而是把全楼平面图交给消防队，出事才翻图）。这套表驱动机制由上表的组件分工实现。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 240" style="min-width:620px;height:auto" role="img" aria-label="跨共享库抛异常：typeinfo 必须同一份，编译选项和标准库必须一致，否则 catch 不住会 terminate">
@@ -587,7 +587,7 @@
   </div>
 
   <h3 id="s4-5">4.5 throw 之后若没人接</h3>
-  <p><code>__cxa_throw</code> 在 unwind 返回时（没有 landing pad）直接 <code>std::terminate()</code>。默认 <code>abort()</code>。安装 <code>set_terminate</code> 只能记日志，不能恢复——进程已经没契约了。</p>
+  <p><code>__cxa_throw</code> 在 unwind 返回时（说明一路都没有 landing pad，即没有任何 catch 接应）直接调用 <code>std::terminate()</code>，默认行为是 <code>abort()</code>。安装 <code>set_terminate</code> 处理器只能趁机记日志，不能恢复运行——此刻进程的契约已经彻底破裂，没有「继续跑」这个选项。</p>
 </section>
 
 <!-- ================================================================
@@ -631,7 +631,7 @@
   </div>
 
   <h3 id="s5-2">5.2 std::current_exception / rethrow_exception</h3>
-  <p>C++11 起可以把异常对象<strong>存成引用计数指针</strong>，跨线程或延迟处理。<code>std::async</code> / <code>future::get</code> 内部就是这个。</p>
+  <p>C++11 起可以把异常对象<strong>存成引用计数指针</strong>，也就是把「此刻正在飞的异常」打包成一个可以存放、可以搬运的东西，跨线程或延迟处理都行。<code>std::async</code> / <code>future::get</code> 内部用的就是这个机制。</p>
 
 <pre><span class="cm">// 工作线程把异常带到主线程</span>
 std::exception_ptr g_eptr;
@@ -676,7 +676,7 @@ std::exception_ptr g_eptr;
     </div>
   </div>
 
-  <p>异常安全说的不是「会不会抛」，而是<strong>抛了之后对象留在什么状态</strong>。</p>
+  <p>异常安全说的不是「这个函数会不会抛」，而是<strong>抛了之后，对象被留在什么状态</strong>——完好吗？半残吗？还是干脆损坏了？</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 250" style="min-width:620px;height:auto" role="img" aria-label="三层异常安全：nothrow 承诺不抛，strong 要么成功要么完全不变，basic 不泄漏但状态未指定">
@@ -903,10 +903,10 @@ std::exception_ptr g_eptr;
 <span class="cm">// ✅ ② noexcept → 一旦走到这里，操作必然成功</span></pre>
 
   <h3 id="s6-3">6.3 nothrow — swap / 移动构造</h3>
-  <p>容器扩容用 <code>move_if_noexcept</code>：移动构造是 <code>noexcept</code> 才敢掏空旧元素。否则退化为拷贝——慢，但旧缓冲始终完好。说谎标 <code>noexcept</code> 再抛，vector 无法回滚，直接 terminate。见图 §8。</p>
+  <p>容器扩容时会用 <code>move_if_noexcept</code> 来做抉择：只有当元素的移动构造是 <code>noexcept</code> 时，容器才敢直接掏空旧元素搬走；否则就退化为拷贝——慢一点，但旧缓冲从头到尾完好无损。反过来说，如果你说谎标了 <code>noexcept</code> 而移动其实会抛，vector 已经按「不会抛」的假设掏空了旧槽，无法回滚，只能 terminate。见图 §8。</p>
 
   <h3 id="s6-4">6.4 把 basic 升到 strong</h3>
-  <p><code>operator+=</code> 若先改 <code>*this</code> 再分配，失败就是 basic 甚至无保证。正确顺序：新缓冲全部就绪（拷贝旧数据 + 追加），最后才 <code>delete[]</code> 旧指针——所有抛点都在修改前。copy-and-swap 把这个顺序固化成惯用法。</p>
+  <p><code>operator+=</code> 如果先改 <code>*this</code> 再分配内存，失败时就是 basic 甚至无保证——旧内容已经被动过，回不去了。正确顺序是：先把新缓冲全部备好（拷贝旧数据 + 追加新内容），所有可能抛的操作都在这一步完成，最后才 <code>delete[]</code> 旧指针——所有抛点都被安排在修改之前。copy-and-swap（先备好一份完整的，再一步交换提交）就是把这个顺序固化成了惯用法。</p>
 </section>
 
 <!-- ================================================================
@@ -922,7 +922,7 @@ std::exception_ptr g_eptr;
     </div>
   </div>
 
-  <p><strong>Resource Acquisition Is Initialization</strong>：资源生命周期绑到对象生命周期。展开会调析构，所以锁和文件在异常路径上自动释放。</p>
+  <p><strong>Resource Acquisition Is Initialization</strong>，直译「资源获取即初始化」：把资源的生命周期绑到对象的生命周期上。因为栈展开会调用析构函数，所以锁和文件在异常路径上也会被自动释放。</p>
 
   <h3 id="s7-1">7.1 RAII 三件套</h3>
   <table>
@@ -963,7 +963,7 @@ std::exception_ptr g_eptr;
       <tr><td>手动 try/finally</td><td>C++ 没有 finally</td><td>漏一条路径就泄漏</td></tr>
     </tbody>
   </table>
-  <p>所有「离开作用域必须发生」的事（解锁、close、回滚）都交给对象，不要手写对称的 lock/unlock。</p>
+  <p>所有「离开作用域必须发生」的事（解锁、close、回滚）都交给对象的析构去做，不要手写一对对称的 lock/unlock——手写的话，任何一条提前 return 或异常路径漏掉一处，资源就漏了。</p>
 </section>
 
 <!-- ================================================================
@@ -988,13 +988,13 @@ std::exception_ptr g_eptr;
       <tr><td>运算符 <code>noexcept(expr)</code></td><td>编译期查询声明</td><td>查的是声明不是实现</td></tr>
     </tbody>
   </table>
-  <p>条件写法：<code>noexcept(noexcept(T(std::move(a))) &amp;&amp; noexcept(a = std::move(b)))</code> —— swap 只在 T 的移动也不抛时才标不抛。</p>
+  <p>条件写法：<code>noexcept(noexcept(T(std::move(a))) &amp;&amp; noexcept(a = std::move(b)))</code> ——内层那个 noexcept 是运算符（编译期查询「这个表达式声明为不抛吗」），外层才是说明符。这样 swap 就只在 T 的移动和赋值都不抛时，才跟着标不抛。</p>
 
   <h3 id="s8-2">8.2 哪些函数应该是 noexcept</h3>
-  <p>析构（默认就是）、移动构造/赋值、swap、平凡 getter。不要给「内部会 new / 会调用户代码」的函数随手贴。</p>
+  <p>该标的是：析构（默认就是）、移动构造/赋值、swap、平凡 getter。不要给「内部会 new / 会调用户代码」的函数随手贴上这个标签——一旦贴了，它就是一份运行时会被当真的承诺，不是注释。</p>
 
   <h3 id="s8-3">8.3 noexcept 如何毁掉强保证</h3>
-  <p>vector 扩容要保强保证：搬一半失败时旧缓冲必须还能用。若移动可能抛，它只能拷贝（旧的完好）。你把移动标成 <code>noexcept</code>，它就敢掏空旧槽——此时再抛，两边都是残骸，只能 terminate。</p>
+  <p>vector 扩容要守住强保证：万一搬到一半失败，旧缓冲必须还能用。如果元素的移动可能抛，vector 就只敢拷贝（旧的始终完好，失败时扔掉新的即可）。你把移动标成 <code>noexcept</code>，vector 就信了，敢直接掏空旧槽——此时若真的抛了，新旧两边都是残骸，没有任何退路，只能 terminate。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 250" style="min-width:620px;height:auto" role="img" aria-label="noexcept 移动让 vector 敢掏空旧元素；若移动其实会抛，强保证被毁掉并 terminate">
@@ -1237,7 +1237,7 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3 id="s9-1">9.1 构造函数抛异常</h3>
-  <p>对象<strong>没构造完</strong> → 自身析构<strong>不调用</strong>。已构造的成员和基类按逆序析构。因此构造里拿到的资源必须立刻交给成员 RAII，不能先裸 new 再在函数体里塞进指针。</p>
+  <p>对象<strong>没构造完就抛了</strong> → 它自身的析构函数<strong>不会被调用</strong>（半成品不算对象）。但已经构造完成的成员和基类会按逆序析构。因此构造函数里拿到的资源必须立刻交给成员 RAII 对象保管，不能先裸 new 一个指针、打算等函数体里再塞进智能指针——中间那一抛，就漏了。</p>
 
   <div class="fig">
     <svg viewBox="0 0 760 230" style="min-width:620px;height:auto" role="img" aria-label="构造失败：成员 A 已构造，B 抛异常，A 被析构，C 未构造，X 自身析构不跑">
@@ -1279,7 +1279,7 @@ std::exception_ptr g_eptr;
 <span class="cm">// 输出: A B ~A — c 没构造，X 析构没执行</span></pre>
 
   <h3 id="s9-2">9.2 function-try-block</h3>
-  <p>普通函数体里的 try 抓不到<strong>初始化列表</strong>里的异常。构造函数要写成 <code>X(int v) try : a_(v), b_(v) { } catch (...) { throw; }</code>。</p>
+  <p>普通函数体里的 try 抓不到<strong>初始化列表</strong>（成员初始化写在函数体之前）里的异常。构造函数要抓住它，得写成 <code>X(int v) try : a_(v), b_(v) { } catch (...) { throw; }</code>——把初始化列表也圈进 try 的势力范围。</p>
   <div class="fig">
     <svg viewBox="0 0 760 210" style="min-width:620px;height:auto" role="img" aria-label="function-try-block 包住初始化列表；catch 时已构成员已析构，不能吞异常，只能记日志后重抛">
       <rect class="box-a" x="16" y="16" width="360" height="120" rx="8"/>
@@ -1300,7 +1300,7 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3 id="s9-3">9.3 析构几乎一律不抛</h3>
-  <p>C++11 起析构默认 <code>noexcept</code>。栈展开时再抛 → 两个异常 → terminate。要抛必须显式 <code>noexcept(false)</code>，生产代码不要走这条。</p>
+  <p>C++11 起析构函数默认 <code>noexcept</code>。原因是：如果栈展开期间析构又抛出新异常，两个异常同时在场，运行时不知道该先处理哪个，只能 terminate。确实要抛的话必须显式写 <code>noexcept(false)</code>，但生产代码不要走这条。</p>
 
   <h3 id="s9-4">9.4 析构里的错误</h3>
   <table>
@@ -1379,11 +1379,11 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3 id="s10-3">10.3 反模式：用异常做控制流</h3>
-  <p>在树里 <code>throw node</code> 当 <code>break</code>：慢、难读、展开表为「正常路径」付体积。查找 miss、缓存 miss、解析失败都是<strong>预期结果</strong>，用返回值 / <code>optional</code> / <code>expected</code>。</p>
+  <p>在树里 <code>throw node</code> 当 <code>break</code> 用，是典型的反模式：慢、难读，而且展开表为这条「其实是正常路径」的路付了二进制体积。查找 miss、缓存 miss、解析失败都是<strong>预期结果</strong>，应该用返回值 / <code>optional</code> / <code>expected</code> 表达，而不是动用为意外事故设计的异常。</p>
 
   <h3 id="s10-4">10.4 第四类：契约违约根本不是「错误」</h3>
 
-  <p>上面三种风格争的都是「怎么<strong>传递</strong>错误」。但有一类情况不该传递——<strong>调用方违反了函数的前置条件</strong>。<code>vector::operator[]</code> 越界、传了空指针给一个文档写明「不接受 null」的参数，这些不是运行期的意外，是<strong>代码里有 bug</strong>。把它包装成 <code>expected</code> 返回给调用方，等于让一个已经写错的程序继续跑下去。</p>
+  <p>上面三种风格争的都是「怎么<strong>传递</strong>错误」。但有一类情况根本不该传递——<strong>调用方违反了函数的前置条件</strong>（调用前就必须满足的约定）。比如 <code>vector::operator[]</code> 越界、传空指针给一个文档写明「不接受 null」的参数：这些不是运行期的意外，而是<strong>代码里有 bug</strong>。把它包装成 <code>expected</code> 返回给调用方，等于让一个已经写错的程序若无其事地继续跑下去。</p>
 
   <table>
     <thead><tr><th>类别</th><th>例子</th><th>谁的责任</th><th>该用什么</th></tr></thead>
@@ -1435,7 +1435,7 @@ std::exception_ptr g_eptr;
     </div>
   </div>
 
-  <p>受 Rust <code>Result&lt;T,E&gt;</code> 启发：要么有值 T，要么有错误 E。成功路径多一次分支，失败路径比异常便宜几个数量级。</p>
+  <p>受 Rust <code>Result&lt;T,E&gt;</code> 启发：返回值要么装着值 T，要么装着错误 E，两者必有其一、只居其一。代价是成功路径多一次分支判断；好处是失败路径不需要展开，比异常便宜几个数量级。</p>
 
   <h3 id="s11-1">11.1 基础用法</h3>
   <table>
@@ -1492,7 +1492,7 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3>11b.1 为什么需要 error_code</h3>
-  <p>异常和 expected 是<strong>传递机制</strong>；错误本身用什么类型？POSIX errno、HRESULT、各库私有枚举互不认识。C++11 的 <code>error_code</code> + <code>error_category</code> 是统一、可扩展、零开销的编码：值 + category 指针。</p>
+  <p>异常和 expected 解决的是<strong>传递机制</strong>；错误本身该用什么类型表示？POSIX errno、HRESULT、各库私有枚举互不认识，凑到一个程序里就对不上号。C++11 的 <code>error_code</code> + <code>error_category</code> 是统一、可扩展、零开销的编码：一个整数值 + 一个指明「这个值来自哪家」的 category 指针。</p>
 
   <h3 id="s11b-2">11b.2 核心三件套</h3>
   <table>
@@ -1562,7 +1562,7 @@ std::exception_ptr g_eptr;
   </table>
 
   <h3 id="s11b-8">11b.8 两个观点</h3>
-  <p><code>error_code</code> 是错误处理的通用 IR：expected / system_error / Outcome 都是包装。库作者定义 enum + category，上层范式自动接得上。「异常 vs 错误码」是假二分：底层系统调用走码，请求边界再统一转换。</p>
+  <p><code>error_code</code> 相当于错误处理界的通用中间表示（IR，Intermediate Representation，编译器内部统一表述各种前端语言的那层）：expected / system_error / Outcome 都只是它的不同包装。库作者定义自己的 enum + category，上层任何范式都自动接得上。「异常 vs 错误码」其实是个假二分：底层系统调用走码，请求边界再统一转换成异常或回包。</p>
 </section>
 
 <!-- ================================================================
@@ -1599,7 +1599,7 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3 id="s12-2">12.2 开销落在哪</h3>
-  <p>体积、编译时间、抛出时的查表与展开、以及「每个调用都可能抛」限制优化。</p>
+  <p>真正的开销落在四处：二进制体积、编译时间、抛出时的查表与展开，以及「每个调用点都可能抛」这个事实限制了编译器优化。</p>
 
   <h3 id="s12-3">12.3 实测对照（粗略）</h3>
   <table>
@@ -1622,7 +1622,7 @@ std::exception_ptr g_eptr;
       <tr><td>体积下降 5–15%</td><td>嵌入式 / 内核模块 / WASM 常见</td></tr>
     </tbody>
   </table>
-  <p>关异常的代码和开异常的 .so 不要混链——展开表对不上，见 §4.4。</p>
+  <p>关掉异常编译的代码和开着异常编译的 .so 不要混链——两边生成的展开表对不上，异常穿过边界就接不住，见 §4.4。</p>
 </section>
 
 <!-- ================================================================
@@ -1639,19 +1639,19 @@ std::exception_ptr g_eptr;
   </div>
 
   <h3 id="s13-1">13.1 platform agent 启动</h3>
-  <p><code>main</code> 只 catch：配置错误返回 2，其余 <code>exception</code> 返回 1，<code>...</code> 垫底。业务异常在事件循环内部消化，不要漏到进程顶。</p>
+  <p><code>main</code> 只做 catch：配置错误返回 2，其余 <code>exception</code> 返回 1，<code>...</code> 垫底接住剩下的。业务异常在事件循环内部消化掉，不要让它漏到进程顶上把整个进程带走。</p>
 
   <h3 id="s13-2">13.2 schema 解析 — nested 链</h3>
-  <p>底层 IO/语法错用 <code>throw_with_nested</code> 包成带路径的外层异常。顶层递归 <code>rethrow_if_nested</code> 打出完整链：外层有路径，内层有行号。</p>
+  <p>底层的 IO / 语法错误用 <code>throw_with_nested</code> 包成带路径的外层异常（内层异常作为附件一起带走）。顶层递归调用 <code>rethrow_if_nested</code> 层层剥开，打出完整链：外层有路径，内层有行号，排查时两边信息都齐。</p>
 
   <h3 id="s13-3">13.3 RPC 热路径用 expected</h3>
-  <p>Timeout / Refused / BadRequest 是请求级预期失败，不要 throw。返回 <code>expected&lt;Reply, RpcErr&gt;</code>，调用方按有值/有错分别回包。</p>
+  <p>Timeout / Refused / BadRequest 是请求级别的预期失败，不要用 throw。返回 <code>expected&lt;Reply, RpcErr&gt;</code>，调用方按「有值 / 有错」分别组装回包——热路径上每微秒都要省。</p>
 
   <h3 id="s13-4">13.4 资源类</h3>
-  <p>C API 半打开（<code>sqlite3_open</code> 失败仍可能返回 handle）要在 throw 前手动 close，成功后再交给 <code>unique_ptr</code>。事务：BEGIN → scope guard ROLLBACK → 成功再 COMMIT + dismiss。</p>
+  <p>C API 的半打开语义（<code>sqlite3_open</code> 失败时仍可能返回一个需要清理的 handle）要求你在 throw 之前手动 close，成功之后才交给 <code>unique_ptr</code> 托管。事务的做法：BEGIN → 用 scope guard 登记 ROLLBACK → 全部成功再 COMMIT 并 <code>dismiss()</code> 掉回滚。</p>
 
   <h3 id="s13-5">13.5 跨线程</h3>
-  <p>worker 的异常经 <code>future::get</code> 重抛。多个 future 收集 <code>exception_ptr</code>，一个直接 rethrow，多个合成聚合错误。线程入口本身仍要 catch，防止漏网 terminate。代码见 §5.2。</p>
+  <p>worker 线程里的异常经 <code>future::get</code> 在取结果时重抛。收集多个 future 时把异常存成 <code>exception_ptr</code>：只有一个就直接 rethrow，有多个就合成一个聚合错误再抛。线程入口本身仍要 catch，防止漏网的异常直接 terminate 整个进程。代码见 §5.2。</p>
 </section>
 
 <!-- ================================================================

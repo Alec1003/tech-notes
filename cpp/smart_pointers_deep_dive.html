@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive</title>
-<meta name="description" content="C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive：从 unique_ptr · shared_ptr · weak_ptr 的所有权语义，到 控制块剖析 · 引用计数 · 自定义 deleter">
+<meta name="description" content="用白话讲透 C++ 智能指针：unique_ptr、shared_ptr、weak_ptr 到底怎么分工，控制块和引用计数在堆上长什么样，make_shared 为什么快，循环引用怎么破，多线程下哪里才线程安全。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/smart_pointers_deep_dive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/smart_pointers_deep_dive.html">
 <meta property="og:title" content="C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive">
-<meta property="og:description" content="C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive：从 unique_ptr · shared_ptr · weak_ptr 的所有权语义，到 控制块剖析 · 引用计数 · 自定义 deleter">
+<meta property="og:description" content="用白话讲透 C++ 智能指针：unique_ptr、shared_ptr、weak_ptr 到底怎么分工，控制块和引用计数在堆上长什么样，make_shared 为什么快，循环引用怎么破，多线程下哪里才线程安全。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive">
-<meta name="twitter:description" content="C++ 智能指针完全深度指南 — unique / shared / weak / atomic / intrusive：从 unique_ptr · shared_ptr · weak_ptr 的所有权语义，到 控制块剖析 · 引用计数 · 自定义 deleter">
+<meta name="twitter:description" content="用白话讲透 C++ 智能指针：unique_ptr、shared_ptr、weak_ptr 到底怎么分工，控制块和引用计数在堆上长什么样，make_shared 为什么快，循环引用怎么破，多线程下哪里才线程安全。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <style>
@@ -218,7 +218,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 20 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -361,11 +361,11 @@
     <header class="hero">
   <div class="badge">Smart Pointers · Ownership Semantics · 2026</div>
   <h1>C++ 智能指针完全深度指南</h1>
-  <p class="sub">会写 <code>make_shared</code> 不够。要能画出<strong>控制块</strong>、讲清<strong>计数原子 ≠ 对象线程安全</strong>、以及何时必须用 <code>weak_ptr</code> / <code>atomic&lt;shared_ptr&gt;</code>。</p>
+  <p class="sub">只会写 <code>make_shared</code> 还不够。你要能亲手画出<strong>控制块</strong>、讲清<strong>计数原子 ≠ 对象线程安全</strong>这两件事的区别，以及什么场景必须换 <code>weak_ptr</code> / <code>atomic&lt;shared_ptr&gt;</code>。</p>
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">面试出现率 高</span>
-    <span class="pill green">阅读时长 ~15 min</span>
+    <span class="pill green">阅读时长 ~20 min</span>
     <span class="pill amber">前置 RAII · 移动语义</span>
   </div>
   <div class="meta">
@@ -386,8 +386,8 @@
     </div>
   </div>
 
-  <p>智能指针把裸 <code>new</code>/<code>delete</code> 的重复释放、漏释放、UAF、异常泄漏收进类型系统。会写 <code>make_shared&lt;T&gt;()</code> 不够——还要能画出控制块、分清「计数原子」和「对象本身线程安全」、并在循环引用 / 异步回调 / 热更新里选对 <code>weak_ptr</code> 与 <code>atomic&lt;shared_ptr&gt;</code>。</p>
-  <div class="analogy">房子钥匙：<code>unique_ptr</code> 只有一把，转交必须交钥匙；<code>shared_ptr</code> 配多把钥匙（强计数），最后一把交回才拆房；<code>weak_ptr</code> 只记门牌号，进门前要 <code>lock()</code> 问「房还在吗」。</div>
+  <p>智能指针（smart pointer——一个包在裸指针外面、会自动帮你调 delete 的小对象）把裸 <code>new</code>/<code>delete</code> 容易犯的四类错——重复释放、漏释放、UAF（use-after-free，对象已删之后还有人去用它）、异常路径上的泄漏——统统收进类型系统，让编译器替你把关。只会写 <code>make_shared&lt;T&gt;()</code> 还不算掌握——你还要能亲手画出控制块（control block——堆上一小块记录「现在有几个指针共用这个对象」的账本），分清「引用计数本身是原子的」和「对象本身的访问线程安全」是两回事，并在循环引用 / 异步回调 / 热更新这三类场景里选对 <code>weak_ptr</code> 与 <code>atomic&lt;shared_ptr&gt;</code>。</p>
+  <div class="analogy">房子钥匙：<code>unique_ptr</code>（独占指针）只有一把钥匙，转交必须把钥匙交出去；<code>shared_ptr</code>（共享指针）好比配了多把钥匙（强计数每多一个持有者就 +1），最后一把钥匙交回才拆房；<code>weak_ptr</code>（弱指针）只记门牌号不拿钥匙，进门前要 <code>lock()</code> 问一句「房还在吗」。</div>
 
   <h3 id="s1-1">1.1 与其他章节的关系</h3>
   <ul>
@@ -489,7 +489,7 @@
   </div>
 
   <div class="box ok">
-    <strong>优先级铁律</strong>：能用 <code>unique_ptr</code> 绝不用 <code>shared_ptr</code>（零开销 + 语义更清晰）；能用<strong>栈对象</strong>绝不用智能指针。<code>shared_ptr</code> 只在<em>真的需要共享所有权</em>时用。
+    <strong>优先级铁律</strong>：能用 <code>unique_ptr</code> 就绝不用 <code>shared_ptr</code>（前者零额外开销、而且「谁拥有」这件事写得更清楚）；能用<strong>栈对象</strong>（生命周期跟着作用域走的普通局部变量）就绝不用智能指针。<code>shared_ptr</code> 只在<em>真的需要多个所有者共享同一对象</em>时才用。
   </div>
 </section>
 
@@ -531,7 +531,7 @@
   </div>
 
   <h3 id="s3-1">3.1 模板签名与典型大小</h3>
-  <p><code>template&lt;class T, class Deleter = std::default_delete&lt;T&gt;&gt; class unique_ptr;</code> —— deleter <strong>是类型的一部分</strong>，直接进 sizeof。</p>
+  <p><code>template&lt;class T, class Deleter = std::default_delete&lt;T&gt;&gt; class unique_ptr;</code> —— deleter（删除器——析构时负责「怎么释放这个资源」的那段代码，默认就是 <code>delete</code>）在这里 <strong>是类型的一部分</strong>，会直接算进 sizeof：也就是说 <code>unique_ptr&lt;int, FileCloser&gt;</code> 和 <code>unique_ptr&lt;int&gt;</code> 是两个不同的类型，大小也可能不同。</p>
   <table>
     <tr><th>类型</th><th>sizeof（64-bit）</th><th>原因</th></tr>
     <tr><td><code>unique_ptr&lt;int&gt;</code></td><td><strong>8</strong></td><td>默认 deleter 空类，EBO 吃掉</td></tr>
@@ -541,7 +541,7 @@
   </table>
 
   <h3 id="s3-2">3.2 EBO 让"空 deleter 不占空间"</h3>
-  <p>libstdc++ 把 <code>T*</code> 和 <code>D</code> 塞进可 EBO 的 tuple：空类 <code>D</code> 占 0 字节，所以默认 <code>unique_ptr</code> 和裸指针一样大。有状态的 deleter（函数指针、捕获了东西的 lambda）才会把 sizeof 撑开。</p>
+  <p>libstdc++ 把 <code>T*</code> 和 <code>D</code> 塞进一个可 EBO（Empty Base Optimization，空基类优化——空的类不占存储空间的一种编译器技巧）的 tuple：因为空类 <code>D</code> 实际占 0 字节，所以默认 <code>unique_ptr</code> 和裸指针一样大，只有 8 字节。反过来，有状态的 deleter（比如函数指针、捕获了变量的 lambda）才会把 sizeof 撑开。</p>
 
   <h3 id="s3-3">3.3 自定义 deleter 的 3 种正确写法</h3>
   <div class="fig">
@@ -606,7 +606,7 @@ std::unique_ptr&lt;FILE, FileCloser&gt; f{<span class="fn">fopen</span>(<span cl
   <div class="box ok">工厂返回 <code>unique_ptr</code>：默认零开销，调用方按需 <code>move</code> 升级。一开始就返回 <code>shared_ptr</code> 等于强迫所有人付计数。</div>
 
   <h3 id="s3-7">3.7 unique_ptr 与 PIMPL</h3>
-  <p>头文件只前向声明 <code>struct Impl</code> + <code>unique_ptr&lt;Impl&gt;</code>。析构和移动<strong>必须在 .cpp 里</strong>（Impl 完整之后）写成 <code>= default</code>。写在头文件会在 Impl 不完整时实例化 <code>default_delete</code>，编译失败。</p>
+  <p>PIMPL（Pointer to IMPLementation，指向实现的指针——头文件只留一个指针，真正成员藏在 .cpp 里的技巧）写法是：头文件只前向声明 <code>struct Impl</code> 加一个 <code>unique_ptr&lt;Impl&gt;</code> 成员。析构函数和移动操作<strong>必须放到 .cpp 里</strong>（那里能看到完整的 Impl）写成 <code>= default</code>。如果写在头文件，编译器会在 Impl 还不完整时就实例化 <code>default_delete</code>，而它不知道怎么删一个不完整类型，于是编译失败。</p>
 </section>
 
 <!-- =============================== §4 =============================== -->
@@ -619,7 +619,7 @@ std::unique_ptr&lt;FILE, FileCloser&gt; f{<span class="fn">fopen</span>(<span cl
     </div>
   </div>
 
-  <p>shared_ptr 的全部语义都在控制块：<strong>use_count→0 析构 T</strong>；<strong>weak_count→0 释放控制块</strong>。下面这张图比任何 API 列表都重要。</p>
+  <p>shared_ptr 的全部秘密都藏在控制块里，规则只有两条：<strong>use_count（强引用计数，记录有几个 shared_ptr 在持有对象）减到 0 时析构 T</strong>；<strong>weak_count（弱引用计数，记录有几个 weak_ptr 还在观察）减到 0 时才释放控制块本身</strong>。下面这张图比任何 API 列表都重要。</p>
 
   <h3 id="s4-1">4.1 控制块的 4 个核心字段</h3>
   <div class="fig">
@@ -749,7 +749,7 @@ std::unique_ptr&lt;FILE, FileCloser&gt; f{<span class="fn">fopen</span>(<span cl
     <tr><td><code>weak_count</code></td><td>weak 个数 +「还有 strong」这一份虚引用；0 → 释放控制块</td></tr>
     <tr><td>deleter / allocator</td><td>类型擦除；所以 <code>shared_ptr&lt;T&gt;</code> 不含 D，多态转换才成立</td></tr>
   </table>
-  <p>deleter 不能进类型：否则 <code>shared_ptr&lt;Base&gt; = make_shared&lt;Derived&gt;()</code> 和 <code>shared_ptr&lt;FILE&gt;(fp, fclose)</code> 都做不到。代价是析构多一次虚调用——unique 没有这笔开销。</p>
+  <p>为什么 deleter 不能进 shared_ptr 的类型参数？因为一旦进了，<code>shared_ptr&lt;Base&gt; = make_shared&lt;Derived&gt;()</code>（基类指针接管派生类对象）和 <code>shared_ptr&lt;FILE&gt;(fp, fclose)</code>（用 fclose 释放 FILE）这两件事就都做不到——两边的删除器类型对不上。付出的代价是析构时要多走一次虚函数调用——unique_ptr 没有这笔开销。</p>
 
   <h3 id="s4-4">4.4 控制块的 3 种实现策略</h3>
   <table>
@@ -760,7 +760,7 @@ std::unique_ptr&lt;FILE, FileCloser&gt; f{<span class="fn">fopen</span>(<span cl
   </table>
 
   <h3 id="s4-5">4.5 看真实 libstdc++ 源码（简化）</h3>
-  <p>基类 <code>_Sp_counted_base</code> 只放两个 <code>_Atomic_word</code>（32-bit，不是 long）和虚函数 <code>_M_dispose</code>（析构 T）/<code>_M_destroy</code>（释放控制块）。<code>_Sp_counted_deleter</code> 走分离式；<code>_Sp_counted_ptr_inplace</code> 把 T 嵌在控制块里——这就是 make_shared。</p>
+  <p>libstdc++ 里，基类 <code>_Sp_counted_base</code> 只放两个 <code>_Atomic_word</code>（32-bit 的原子整数，不是 long）和两个虚函数：<code>_M_dispose</code>（负责析构 T）与 <code>_M_destroy</code>（负责释放控制块自己）。<code>_Sp_counted_deleter</code> 走「对象和控制块分开分配」的分离式路线；<code>_Sp_counted_ptr_inplace</code> 则把 T 直接嵌在控制块里——这就是 make_shared 的实现方式。</p>
 
   <h3 id="s4-6">4.6 weak_count 的初值"1"的玄机</h3>
   <div class="fig">
@@ -840,10 +840,10 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
   </table>
 
   <h3 id="s5-3">5.3 make_shared 的"陷阱" —— 内存不立刻还给 OS</h3>
-  <div class="box danger">大对象 + 长寿命 <code>weak_ptr</code>（缓存窥视）不要 make_shared：对象已析构，KB/MB 级空间仍被控制块拖着。改用分离分配，T 死立刻还内存。</div>
+  <div class="box danger">大对象 + 长寿命 <code>weak_ptr</code>（比如缓存窥视）的组合不要用 make_shared：因为 T 和控制块在同一块内存里，对象虽然析构了，KB 甚至 MB 级的空间仍被没死透的控制块拖着还不了。这种场景改用分离分配，T 一死内存立刻归还。</div>
 
   <h3 id="s5-4">5.4 异常安全 —— make_shared 的另一胜场</h3>
-  <p>C++14 前 <code>f(shared_ptr(new A), g())</code> 可能先 <code>new A</code> 再 <code>g()</code> 抛异常，shared 还没接管 → 泄漏。C++17 修了求值顺序，但 make_shared 仍更好（一次分配）。</p>
+  <p>C++14 之前，<code>f(shared_ptr(new A), g())</code> 这行代码的求值顺序允许先执行 <code>new A</code>、再执行 <code>g()</code>：如果 <code>g()</code> 这时抛异常，而 shared_ptr 还没来得及接管裸指针，new 出来的 A 就泄漏了。C++17 修正了求值顺序堵住这个洞，但 make_shared 仍然更好（一次分配就够了）。</p>
 
   <h3 id="s5-5">5.5 make_shared 不能用的场景</h3>
   <table>
@@ -852,7 +852,7 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
     <tr><td>构造函数 private</td><td>友元工厂，或 <code>shared_ptr(new T)</code></td></tr>
     <tr><td>大对象 + 长 weak</td><td>分离分配（§5.3）</td></tr>
   </table>
-  <p>低延时路径用 <code>allocate_shared</code> + 每请求 monotonic pool：控制块和 T 都从池出，请求结束整池丢掉。</p>
+  <p>低延时路径可以用 <code>allocate_shared</code>（make_shared 的带分配器版本——让控制块和 T 从你指定的内存池里出）搭配每请求一个 monotonic pool（单调递增分配的内存池，只进不出，请求结束整池丢掉）：控制块和 T 都从池出，请求结束时整池一起释放，省掉逐个 free。</p>
 </section>
 
 <!-- =============================== §6 =============================== -->
@@ -888,10 +888,10 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
 <span class="cm">// ✅ prev 改 weak_ptr&lt;Node&gt; — 不增加对方 use_count</span></pre>
 
   <h3 id="s6-2">6.2 用 weak_ptr 打破循环</h3>
-  <p>树/链表：「主方向」shared，「反向/观察」weak。不要两边都强。</p>
+  <p>树或链表这类结构的口诀是：「主方向」（父→子、前→后）用 shared，「反向/观察」（子→父、后→前）用 weak。千万不要两边都用强引用，否则就绕成解不开的环。</p>
 
   <h3 id="s6-3">6.3 weak_ptr 的核心 API</h3>
-  <p>从 shared 构造；<code>lock()</code> 原子升级；<code>expired()</code> 只是快照，有竞态。真用就 lock 判返回值。</p>
+  <p>weak_ptr 只能从 shared_ptr 构造出来；<code>lock()</code>（上锁——原子地把弱引用临时升级成一个真正的 shared_ptr）是核心操作；<code>expired()</code>（过期判断）返回的只是一个瞬间的快照，单独用有竞态。真想用对象就直接 lock，然后看返回值。</p>
   <h3 id="s6-4">6.4 lock() 的内部原子操作</h3>
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="weak_ptr 只增加 weak_count。lock 用 CAS 把 use_count 从 n 升到 n+1；若读到 0 则返回空，不要先 expired 再 lock">
@@ -916,7 +916,7 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
       <text class="tg" x="480" y="172" text-anchor="middle">✅ if (auto sp = wp.lock()) 用返回值</text>
     </svg>
   </div>
-  <p><code>lock()</code> 内部是对 use_count 的 CAS 循环：读到 0 直接空；否则尝试 +1。不要自己先 <code>expired()</code> 再 lock。</p>
+  <p><code>lock()</code> 内部是对 use_count 的 CAS（Compare-And-Swap，比较并交换——「值还是我刚才读到的那个数才改」的原子指令）循环：先读计数，读到 0 说明对象已死，直接返回空指针；读到非 0 就尝试原子地 +1。所以不要自己先 <code>expired()</code> 再 lock——两步之间对象可能刚好没了。</p>
 
   <h3 id="s6-5">6.5 weak_ptr 的典型用法 — 观察者模式</h3>
   <h3 id="s6-6">6.6 weak_ptr 与缓存模式</h3>
@@ -961,19 +961,19 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
       <text class="ts" x="480" y="192" text-anchor="middle">parent_sp 先走也没关系：Child 视图还握着控制块，整个 Parent 活着</text>
     </svg>
   </div>
-  <p><code>shared_ptr&lt;T&gt;(other, raw)</code>：与 <code>other</code> 共享控制块，<code>get()</code> 返回 <code>raw</code>。把「引用计数」和「当前指针」拆开。</p>
+  <p>Aliasing Constructor（别名构造函数——造一个「指针指向 A、引用计数却挂在 B 身上」的 shared_ptr）的签名是 <code>shared_ptr&lt;T&gt;(other, raw)</code>：新指针与 <code>other</code> 共享同一个控制块，但 <code>get()</code> 返回的是 <code>raw</code>。效果上就是把「引用计数管着谁」和「当前指针指着谁」这两件事拆开了。</p>
 
   <h3 id="s7-2">7.2 经典用例：指向 vector 内某个元素，但持有 vector 所有权</h3>
-  <p><code>shared_ptr&lt;int&gt; elem{vec, &amp;vec-&gt;at(2)}</code>：elem 活着，整个 vector 就不释放。别返回裸 <code>&amp;vec[i]</code>。</p>
+  <p>写法是 <code>shared_ptr&lt;int&gt; elem{vec, &amp;vec-&gt;at(2)}</code>：只要 elem 还活着，整个 vector 就不会被释放。千万别返回裸 <code>&amp;vec[i]</code>——vector 一释放它就成了悬空指针。</p>
 
   <h3 id="s7-3">7.3 经典用例：返回内部子对象，但延长父对象生命周期</h3>
-  <p>工厂返回 <code>shared_ptr&lt;Child&gt;{self, &amp;self-&gt;child_}</code>。调用方只拿得到 Child，Parent 由控制块保活。</p>
+  <p>工厂可以返回 <code>shared_ptr&lt;Child&gt;{self, &amp;self-&gt;child_}</code>。这样调用方手里只有 Child 视图，但 Parent 的寿命由共享的控制块保着，不会先一步死掉。</p>
 
   <h3 id="s7-4">7.4 C++17 与 aliasing 的 move 版本</h3>
-  <p>rvalue 重载把控制块「偷」过来，少一次原子 +1/-1。能 move 就 move。</p>
+  <p>C++17 增加了 rvalue（右值）重载：它把对方的控制块直接「偷」过来，省掉一次原子的 +1/-1。所以能 move 就 move。</p>
 
   <h3 id="s7-5">7.5 真实使用：CRTP 风格的子视图、Protobuf 子消息</h3>
-  <p>Protobuf：<code>shared_ptr&lt;Header&gt; h{msg, msg-&gt;mutable_header()}</code>，异步队列只传 Header 视图，整包 Message 跟着活。没有 aliasing 就得拷整包。</p>
+  <p>拿 Protobuf 举例：<code>shared_ptr&lt;Header&gt; h{msg, msg-&gt;mutable_header()}</code>，异步队列里只传这个 Header 视图，但整包 Message 会跟着它一起活。如果没有 aliasing constructor，想安全传递就只能把整包拷一份。</p>
 </section>
 
 <!-- =============================== §8 =============================== -->
@@ -987,10 +987,10 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
   </div>
 
   <h3 id="s8-1">8.1 解决什么问题</h3>
-  <p>异步回调捕获裸 <code>this</code> 不延长寿命。需要「把自己活到回调跑完」——从对象内部拿出自己的 <code>shared_ptr</code> 再捕获。</p>
+  <p>异步回调里如果捕获的是裸 <code>this</code>，它并不能延长对象寿命——回调还在队列里等着跑，对象可能已经析构了。解决办法是「让对象活到回调跑完为止」：从对象内部拿到指向自己的 <code>shared_ptr</code>，捕获它而不捕获 this。</p>
 
   <h3 id="s8-2">8.2 用法</h3>
-  <p>类公开继承 <code>enable_shared_from_this&lt;T&gt;</code>，且对象必须由 <code>shared_ptr</code> 创建。回调里 <code>auto self = shared_from_this()</code> 再捕获 self。</p>
+  <p>用法分两步：让类公开继承 <code>enable_shared_from_this&lt;T&gt;</code>，并且对象必须由 <code>shared_ptr</code> 创建（比如 make_shared）。之后在回调里写 <code>auto self = shared_from_this()</code>，把 self 捕获进 lambda。</p>
   <h3 id="s8-3">8.3 内部机制 —— 内嵌一个 weak_this</h3>
   <div class="fig">
     <svg viewBox="0 0 960 220" style="min-width:720px;height:auto" role="img" aria-label="enable_shared_from_this 在对象内嵌 weak_this。shared_ptr 构造结束才回填；构造函数里调用 shared_from_this 会抛 bad_weak_ptr">
@@ -1027,10 +1027,10 @@ shared_ptr&lt;T&gt; sp(p);   <span class="cm">// alloc 2：控制块</span></pre
 <span class="kw">auto</span> p = std::<span class="fn">make_shared</span>&lt;Foo&gt;();   <span class="cm">// 构造返回后才注入 weak_this</span>
 p-&gt;<span class="fn">start</span>();                         <span class="cm">// ✅ post-ctor</span></pre>
 
-  <p>C++17 <code>weak_from_this()</code> 直接拿 weak，未管理时返回 expired，不抛。Asio session：每次 <code>async_*</code> 捕获 <code>self = shared_from_this()</code>，回调跑完前连接对象不死。</p>
+  <p>C++17 的 <code>weak_from_this()</code> 直接返回 weak，对象还没被 shared_ptr 管住时返回 expired 状态，而不是抛异常。Asio session 的典型写法：每次 <code>async_*</code> 都捕获 <code>self = shared_from_this()</code>，保证回调跑完之前连接对象不死。</p>
 
   <h3 id="s8-6">8.6 真实使用范式 —— Asio / Beast 的 strand-based session</h3>
-  <p>链式 <code>do_read</code> 里用 init-capture <code>[self = shared_from_this()]</code>。外部 reset 最后一个 shared 也不影响已入队的回调。</p>
+  <p>在链式的 <code>do_read</code> 里用 init-capture（初始化捕获——C++14 起在 lambda 方括号里声明并初始化一个新变量的写法）：<code>[self = shared_from_this()]</code>。这样即使外部把最后一个 shared reset 掉，已经入队的回调也不受影响，对象会陪它们跑完。</p>
 </section>
 
 <!-- =============================== §9 =============================== -->
@@ -1066,13 +1066,13 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
   </div>
 
   <h3 id="s9-2">9.2 C++11/17 的临时方案 — 自由函数 atomic_load / atomic_store</h3>
-  <p><code>atomic_load(&amp;g)</code> / <code>atomic_store</code>：C++20 弃用、C++26 移除。库多用全局锁池，别在热路径上用。</p>
+  <p>自由函数（不依附于类的全局函数）方案 <code>atomic_load(&amp;g)</code> / <code>atomic_store</code>：C++20 已弃用、C++26 将移除。标准库实现多用全局锁池，性能不济，别在热路径上用。</p>
 
   <h3 id="s9-3">9.3 C++20 正式入标：std::atomic&lt;std::shared_ptr&lt;T&gt;&gt;</h3>
-  <p><code>load</code> 拿当前快照，<code>store</code> 原子替换。读端握着旧 shared，写端换新配置，两边都不 UAF。</p>
+  <p>用 <code>load</code> 原子地拿当前快照，用 <code>store</code> 原子地整体替换。读端手里握着旧的 shared，写端换上新配置，两边各用各的副本，谁也不会踩到已释放的内存。</p>
 
   <h3 id="s9-4">9.4 实现内部 — 不是真的"无锁"</h3>
-  <p><code>is_always_lock_free</code> 不是 true。libstdc++ 早期 mutex 池；新实现 split lock / HP；Folly 才接近 lock-free 读。</p>
+  <p><code>is_always_lock_free</code>（是否总是无锁的编译期常量）通常不是 true。libstdc++ 早期版本用 mutex 池；新实现改用 split lock（拆分锁——把两个指针分两把锁保护）或 HP（hazard pointer，危险指针——读者先登记「我正在用这个对象」再访问的无锁方案）；只有 Folly 的实现才接近 lock-free 的读。</p>
 
   <h3 id="s9-5">9.5 性能基准</h3>
   <table>
@@ -1081,7 +1081,7 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
     <tr><td><code>atomic&lt;shared_ptr&gt;.load</code></td><td>~30 ns</td><td>~80–150 ns</td></tr>
     <tr><td>folly::atomic_shared_ptr</td><td>~10 ns</td><td>~20–30 ns</td></tr>
   </table>
-  <p>不热 → 标准 atomic；读极重 → Folly 或 <a href="./memory_model.html#s14">hazard pointer / RCU</a>。</p>
+  <p>访问不热 → 用标准 atomic 就够；读操作极重 → 换 Folly 或 <a href="./memory_model.html#s14">hazard pointer / RCU</a>。</p>
 </section>
 
 <!-- =============================== §10 =============================== -->
@@ -1122,13 +1122,13 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
   </table>
 
   <h3 id="s10-2">10.2 反例与正例</h3>
-  <p>两个线程对同一 <code>sp</code> 做 <code>=</code> / <code>reset</code> 是 UB。先 <code>auto copy = sp</code>（单线程）再把 copy 按值进线程；或者用 §9 的 atomic。</p>
+  <p>两个线程同时对同一个 <code>sp</code> 变量做 <code>=</code> / <code>reset</code> 是 UB（未定义行为）。正确做法是：先在单线程环境 <code>auto copy = sp</code> 拷出副本，再把 copy 按值传进线程；要在线程间换指向就用 §9 的 atomic。</p>
 
   <h3 id="s10-3">10.3 引用计数的内存序</h3>
-  <p>+1 用 <code>relaxed</code>（已持有合法引用，只把计数变大）。-1 用 <code>release</code>；最后一个再 <code>acquire</code> fence 后才析构，保证其他线程对 T 的写 happens-before 析构。详见 <a href="./memory_model.html">内存模型</a> 与 §14.4。</p>
+  <p>引用计数 +1 时用 <code>relaxed</code>（最弱的内存序——因为此时已经合法持有引用，只是把数字变大，不牵涉别的数据）。-1 时用 <code>release</code>；只有减到 0 的那一次，再补一道 <code>acquire</code> fence 之后才析构对象，这样其他线程此前对 T 的写就 happens-before（先行发生于）析构，不会丢。详见 <a href="./memory_model.html">内存模型</a> 与 §14.4。</p>
 
   <h3 id="s10-4">10.4 跨 .so 边界的陷阱</h3>
-  <p>两边必须同一份控制块定义：都动态链同一 libstdc++ 才行。静态链、混 libc++、混 MSVC CRT 都会把计数打到两份副本上。公共 API 三选一：统一 toolchain、改 C ABI、或 intrusive_ptr（§11）。</p>
+  <p>跨动态库边界的规则：两边必须用同一份控制块定义，也就是都动态链接同一 libstdc++ 才行。一边静态链、混用 libc++、或混 MSVC CRT，都会让引用计数落到两份独立副本上，各自各数各的。公共 API 的出路三选一：统一 toolchain、改用 C ABI、或换 intrusive_ptr（§11）。</p>
 </section>
 
 <!-- =============================== §11 =============================== -->
@@ -1157,7 +1157,7 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
       <text class="ty" x="710" y="136" text-anchor="middle">必须改类型；无内建 weak</text>
     </svg>
   </div>
-  <p>对象提供 <code>intrusive_ptr_add_ref</code> / <code>release</code>（COM 的 AddRef/Release 就是这个）。Boost 包装成 RAII。</p>
+  <p>intrusive_ptr（侵入式指针——引用计数不放在旁边的小块里，而是直接埋进对象自己身体里）要求对象提供 <code>intrusive_ptr_add_ref</code> / <code>release</code> 两个钩子函数（Windows COM 的 AddRef/Release 就是这套东西）。Boost 把它包装成 RAII 风格的智能指针。</p>
 
   <h3 id="s11-2">11.2 intrusive vs std::shared_ptr 对比</h3>
   <table>
@@ -1170,7 +1170,7 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
   </table>
 
   <h3 id="s11-3">11.3 什么时候选 intrusive_ptr</h3>
-  <p>性能敏感、C 层来回传、跨 .so 不想绑 STL、或包装 COM。对象池把 <code>release</code> 改成还池而不是 delete。</p>
+  <p>性能敏感、要在 C 层来回传、跨 .so 不想绑死 STL、或需要包装 COM——这些场景选 intrusive_ptr。对象池玩法是把 <code>release</code> 改成「还回池子」而不是 delete。</p>
 
   <h3 id="s11-4">11.4 其他智能指针替代方案</h3>
   <table>
@@ -1181,7 +1181,7 @@ p-&gt;<span class="fn">start</span>();                         <span class="cm">
   </table>
 
   <h3 id="s11-5">11.5 反模式：用 raw pointer + 自己管引用计数</h3>
-  <p>不要手写 retain/release（接 COM 除外）。用 intrusive_ptr 包一层，让析构帮你减计数。</p>
+  <p>不要手写 retain/release 配对（接 COM 的场景除外）。正确做法是用 intrusive_ptr 包一层，让析构函数自动帮你减计数，省掉人工配对的失误。</p>
 </section>
 
 <!-- =============================== §12 =============================== -->

@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 老兵转 AI Infra · 4 周冲刺路径（2026）— Tech Notes</title>
-<meta name="description" content="C++ 老兵转 AI Infra：6 个 C++↔CUDA 概念映射 · 4 周冲刺时间线 · 5 个 STAR 故事范式 · 8 个 FAQ · 1 个真实 OSS 贡献路线">
+<meta name="description" content="写给 5 年以上 C++ 工程师的 AI Infra 转型指南：用 6 个概念映射把 CUDA 讲成熟悉的 C++ 概念，4 周冲刺学 GPU、读 vLLM 源码、提开源 PR、改简历面试，附 STAR 故事与 FAQ。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/transition_to_ai_infra.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/transition_to_ai_infra.html">
 <meta property="og:title" content="C++ 老兵转 AI Infra · 4 周冲刺路径（2026）">
-<meta property="og:description" content="C++ 老兵转 AI Infra：6 个 C++↔CUDA 概念映射 · 4 周冲刺时间线 · 5 个 STAR 故事范式 · 8 个 FAQ · 1 个真实 OSS 贡献路线">
+<meta property="og:description" content="写给 5 年以上 C++ 工程师的 AI Infra 转型指南：用 6 个概念映射把 CUDA 讲成熟悉的 C++ 概念，4 周冲刺学 GPU、读 vLLM 源码、提开源 PR、改简历面试，附 STAR 故事与 FAQ。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 老兵转 AI Infra · 4 周冲刺路径（2026）">
-<meta name="twitter:description" content="C++ 老兵转 AI Infra：6 个 C++↔CUDA 概念映射 · 4 周冲刺时间线 · 5 个 STAR 故事范式 · 8 个 FAQ · 1 个真实 OSS 贡献路线">
+<meta name="twitter:description" content="写给 5 年以上 C++ 工程师的 AI Infra 转型指南：用 6 个概念映射把 CUDA 讲成熟悉的 C++ 概念，4 周冲刺学 GPU、读 vLLM 源码、提开源 PR、改简历面试，附 STAR 故事与 FAQ。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -149,7 +149,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="modern_cpp_stl_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 10 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 15 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -177,18 +177,18 @@
       <h1>C++ 老兵转 AI Infra<br>4 周拿下 Senior offer</h1>
       <p class="sub">
         9 章 · 6 个 C++↔CUDA 概念映射 · 4 周冲刺时间线 · 5 个 STAR 故事范式 · 8 个 FAQ · 1 个真实 OSS 贡献路线。<br>
-        <strong>对位读者</strong>：5+ yoy C++ 工程师 / 系统编程背景 / 想转 AI Infra senior，<u>但不想花 1 年再学 ML</u>。<br>
+        <strong>对位读者</strong>：5+ yoy C++ 工程师 / 系统编程背景 / 想转 AI Infra senior（AI Infra 指大模型背后的基础设施工程：推理引擎、GPU 集群、性能优化），<u>但不想花 1 年再学 ML</u>。<br>
         <strong>跟 R05 关系</strong>：R05 是 30/60/90 系统化路径（适合所有 AI 路径）。本文是<strong>4 周突击</strong>（专门给已有强 C++ 基础的人，跳过 0-1 阶段）。
       </p>
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★☆☆</span>
         <span class="pill cyan">适合 C++ 老兵转型</span>
-        <span class="pill green">阅读时长 ~10 min</span>
+        <span class="pill green">阅读时长 ~15 min</span>
         <span class="pill amber">前置 5+ yoy C++</span>
       </div>
       <div class="meta">
         <span>9 章节</span>
-        <span>~10 min 阅读</span>
+        <span>~15 min 阅读</span>
         <span>4 周执行</span>
         <span>给 C++ 老兵专属</span>
       </div>
@@ -201,7 +201,7 @@
         <div class="sub">从招聘官视角说清楚 — 为什么 C++ 背景是 AI Infra 最贵的画像</div>
       </div></div>
 
-      <p class="lead">大部分 C++ 工程师以为"AI 跟我没关系，我又不懂 ML"。<strong>这是错的</strong>。AI Infra 这个 2024-2026 的最大缺口岗位，<u>不要 ML PhD，要的就是 C++ + 系统编程 + 性能优化背景</u>。本章帮你看清你的位置。</p>
+      <p class="lead">大部分 C++ 工程师以为"AI 跟我没关系，我又不懂 ML"。<strong>这是错的</strong>。AI Infra 这个 2024-2026 的最大缺口岗位，<u>不要 ML PhD，要的就是 C++ + 系统编程 + 性能优化背景</u> —— 因为大模型跑得快不快、省不省钱，拼的是系统功底而不是调模型。本章帮你看清你的位置。</p>
 
       <h3>0.1 三个反直觉事实</h3>
 
@@ -212,11 +212,11 @@
         </div>
         <div class="card violet">
           <h4>事实 2 · ML PhD 反而抢不过你</h4>
-          <p>PhD 强在 modeling，<strong>弱在工程</strong>。AI Infra 80% 是工程：CUDA / 分布式 / profiling / 编译。<u>你的 lock-free queue / memory pool / cache 优化经验，PhD 学 3 年都学不会</u>。</p>
+          <p>PhD 强在 modeling（设计模型结构、调参数出论文），<strong>弱在工程</strong>。AI Infra 80% 是工程：CUDA / 分布式 / profiling / 编译。<u>你的 lock-free queue / memory pool / cache 优化经验，PhD 学 3 年都学不会</u>。</p>
         </div>
         <div class="card green">
           <h4>事实 3 · ML 只需懂"够用"</h4>
-          <p>AI Infra 不需要你会推导 backprop / 不需要会 fine-tune。<u>需要懂的：Transformer 算什么 / KV-Cache 是什么 / attention 是 memory-bound</u>。这些 1 周能学完。</p>
+          <p>AI Infra 不需要你会推导 backprop / 不需要会 fine-tune。<u>需要懂的：Transformer 算什么 / KV-Cache 是什么（推理时缓存已算过的中间结果，省得每个字都从头重算一遍的机制）/ attention 是 memory-bound（瓶颈在搬数据而不是算数）</u>。这些 1 周能学完。</p>
         </div>
       </div>
 
@@ -248,7 +248,7 @@
         <div class="sub">你已经懂的 → 你需要补的（学 CUDA 不是从零，是改名字）</div>
       </div></div>
 
-      <p class="lead">CUDA 的"难"很大部分是<u>命名陌生</u>。其实绝大多数概念你都见过 — 只是叫法不同。把这 6 个映射记住，CUDA 上手时间砍 70%。</p>
+      <p class="lead">CUDA（NVIDIA 的 GPU 编程语言，写法是 C++ 加几个扩展关键字）的"难"很大部分是<u>命名陌生</u>。其实绝大多数概念你都见过 — 只是叫法不同。把这 6 个映射记住，CUDA 上手时间砍 70%。</p>
 
       <div class="map-tbl">
         <div class="row head">
@@ -293,7 +293,7 @@
       </div>
 
       <div class="intuition">
-        看到 CUDA kernel <code>__global__</code> / <code>__shared__</code> / <code>threadIdx.x</code> 别慌 — <u>那只是把"线程 / cache / 队列"重新命名</u>。本质都是<strong>"在 1000 个并发执行单元上协调内存访问 + 计算"</strong>，跟你写多线程 C++ 一回事。
+        看到 CUDA kernel（在 GPU 上跑的函数）<code>__global__</code> / <code>__shared__</code> / <code>threadIdx.x</code> 别慌 — <u>那只是把"线程 / cache / 队列"重新命名</u>。本质都是<strong>"在 1000 个并发执行单元上协调内存访问 + 计算"</strong>，跟你写多线程 C++ 一回事。
       </div>
 
       <h3>1.1 一份"反派词典" · 别被这些词唬住</h3>
@@ -340,7 +340,7 @@
         <div class="tl-row w3">
           <div class="tl-week">Week 3<br>第一个 OSS PR</div>
           <div class="tl-content">
-            <strong>挑 1 个 good-first-issue 提 PR</strong>（vLLM / SGLang / llama.cpp）+ 持续 1-2 个迭代。
+            <strong>挑 1 个 good-first-issue（开源项目专门留给新手的简单任务标签）提 PR</strong>（vLLM / SGLang / llama.cpp）+ 持续 1-2 个迭代。
             <span class="out">输出</span> 1 个 merged PR 链接（哪怕是文档修复 / 性能微调 / 测试增强）<br>
             <em style="color:var(--text-dim);font-style:normal">~15 hr · PR 不在大小 · 在 "你 contribute 过"</em>
           </div>
@@ -356,7 +356,7 @@
       </div>
 
       <div class="intuition">
-        4 周的精髓不是"学完所有 AI Infra"（不可能），而是<strong>建立 3 个可验证证据</strong>：① 1 个 OSS PR ② 2 篇技术博客 ③ 1 张 vLLM 架构图。<u>简历 + 面试时这些就是你 sell 自己的"硬证据"</u>。
+        4 周的精髓不是"学完所有 AI Infra"（不可能），而是<strong>建立 3 个可验证证据</strong>：① 1 个 OSS PR（给开源项目提交并被合并的代码改动）② 2 篇技术博客 ③ 1 张 vLLM 架构图。<u>简历 + 面试时这些就是你 sell 自己的"硬证据"</u>。
       </div>
     </section>
 
@@ -398,7 +398,7 @@
 
         <h3>3.3 Day 5-6 · 读 1 个真实 vLLM CUDA kernel（4 hr）</h3>
 
-        <p>推荐：vLLM 的 <code>paged_attention_v1_kernel</code>（<a href="https://github.com/vllm-project/vllm/blob/main/csrc/attention/attention_kernels.cu" target="_blank" rel="noopener">attention_kernels.cu</a>）。这是 vLLM 性能核心，~500 行 CUDA。</p>
+        <p>推荐：vLLM 的 <code>paged_attention_v1_kernel</code>（<a href="https://github.com/vllm-project/vllm/blob/main/csrc/attention/attention_kernels.cu" target="_blank" rel="noopener">attention_kernels.cu</a>）。vLLM 是当前最主流的开源大模型推理引擎，而这个文件是它的性能核心，~500 行 CUDA。</p>
 
         <p>读法：</p>
         <ol style="font-size:13.5px;line-height:1.85">
@@ -474,7 +474,7 @@
 
         <h3>4.3 Day 6 · trace 2 个调用路径（3 hr）</h3>
 
-        <p>"trace 调用路径" = 用纸笔画"一个 HTTP 请求进来，经过哪些函数到 GPU"。</p>
+        <p>"trace 调用路径" = 用纸笔画"一个 HTTP 请求进来，经过哪些函数到 GPU"。这就像查快递：包裹（请求）从下单到签收，中间过了哪几个中转站（函数），每个站做了什么。</p>
 
         <p>2 个必 trace 的路径：</p>
         <ol style="font-size:13.5px;line-height:1.85">
@@ -632,7 +632,7 @@
 
         <h3>6.3 同步投递 · 第二周开始就投（2 hr / week）</h3>
 
-        <p>不要等 4 周都做完再投。<strong>第二周末就开始投</strong> — 把"4 周冲刺"作为 ongoing 项目写在简历，每周更新进展。投 20-30 家：</p>
+        <p>不要等 4 周都做完再投。<strong>第二周末就开始投</strong> — 把"4 周冲刺"作为 ongoing 项目写在简历，每周更新进展。这就好比卖房子不等装修完美就挂牌：先挂出去收集市场反馈，边谈边收尾。投 20-30 家：</p>
         <ul style="font-size:13.5px;line-height:1.85">
           <li>大厂 AI Infra 团队（字节 / 阿里 / 腾讯 / 华为 / 美团）</li>
           <li>AI 公司基础设施岗（智谱 / 月之暗面 / 阶跃 / DeepSeek / MiniMax）</li>
@@ -660,7 +660,7 @@
         <div class="sub">把你已有的经验改写成 AI Infra 招聘官想听的故事</div>
       </div></div>
 
-      <p class="lead">行为面 / 技术面追问深度时，<strong>你需要 5 个 60-90 秒能讲完的故事</strong>，把已有 C++ 经验 sell 到 AI Infra 语境。下面 5 个范式覆盖招聘官最常问的 5 类问题。</p>
+      <p class="lead">行为面 / 技术面追问深度时，<strong>你需要 5 个 60-90 秒能讲完的故事</strong>，把已有 C++ 经验 sell 到 AI Infra 语境。STAR 是讲故事的固定模板：Situation（背景）→ Task（任务）→ Action（你怎么做）→ Result（结果如何），面试官听惯了这个顺序。下面 5 个范式覆盖招聘官最常问的 5 类问题。</p>
 
       <div class="star">
         <div class="s-head">范式 1 · "讲一个你做的最难的并发问题"</div>
@@ -717,7 +717,7 @@
       <details class="faq">
         <summary>Q1 · 我不会 Python（或只是会一点），影响大吗？</summary>
         <div class="ans">
-          <strong>影响小</strong>。AI Infra 70% 是 C++/CUDA，Python 主要是 binding 层。<u>vLLM 80% 性能关键代码是 C++/CUDA，Python 是胶水</u>。<br>
+          <strong>影响小</strong>。AI Infra 70% 是 C++/CUDA，Python 主要是 binding 层（把底层 C++ 能力包一层给上层调用的「胶水」代码）。<u>vLLM 80% 性能关键代码是 C++/CUDA，Python 是胶水</u>。<br>
           补 Python 的最快路径：1 周学 type hint / async / decorator / context manager 这 4 个概念就够读 vLLM。<u>不需要会写 web 后端 / 不需要会用 numpy / 不需要 PyTorch 模型</u>。
         </div>
       </details>

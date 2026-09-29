@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++20/23 Ranges 与 views 深入 · view 的 O(1) 约束 / dangling 与 borrowed_range / 惰性的真实代价 / 自定义 adaptor</title>
-<meta name="description" content="C++20/23 Ranges 深入：view 概念为什么把移动与析构的复杂度写进语义要求，owning_view 为什么迟到；borrowed_range 与 std::ranges::dangling 如何把悬垂迭代器变成编译错误；filter 的 begin() 是 O(n)、transform 在 filter 之后被重复求值的真实代价；range adaptor closure 与 operator| 的两条规则、用 view_interface 自己写一个 adaptor；迭代器类别的退化对 ranges::sort 意味着什么；编译时间、报错、调试与抽象惩罚这些工程账单，以及 C++23 的 ranges::to / zip / enumerate / chunk / slide / join_with">
+<meta name="description" content="C++20/23 Ranges 与 views 讲人话：view 为什么不复制数据、borrowed_range 与 dangling 如何把悬垂引用变成编译错误、惰性求值的重复计算与性能陷阱、管道 operator| 怎么拼、自定义 adaptor 怎么写，以及 ranges::to / zip / chunk 等 C++23 新货。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/ranges_views_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/ranges_views_guide.html">
 <meta property="og:title" content="C++20/23 Ranges 与 views 深入 · view 的 O(1) 约束 / dangling 与 borrowed_range / 惰性的真实代价 / 自定义 adaptor">
-<meta property="og:description" content="C++20/23 Ranges 深入：view 概念为什么把移动与析构的复杂度写进语义要求，owning_view 为什么迟到；borrowed_range 与 std::ranges::dangling 如何把悬垂迭代器变成编译错误；filter 的 begin() 是 O(n)、transform 在 filter 之后被重复求值的真实代价；range adaptor closure 与 operator| 的两条规则、用 view_interface 自己写一个 adaptor；迭代器类别的退化对 ranges::sort 意味着什么；编译时间、报错、调试与抽象惩罚这些工程账单，以及 C++23 的 ranges::to / zip / enumerate / chunk / slide / join_with">
+<meta property="og:description" content="C++20/23 Ranges 与 views 讲人话：view 为什么不复制数据、borrowed_range 与 dangling 如何把悬垂引用变成编译错误、惰性求值的重复计算与性能陷阱、管道 operator| 怎么拼、自定义 adaptor 怎么写，以及 ranges::to / zip / chunk 等 C++23 新货。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++20/23 Ranges 与 views 深入 · view 的 O(1) 约束 / dangling 与 borrowed_range / 惰性的真实代价 / 自定义 adaptor">
-<meta name="twitter:description" content="C++20/23 Ranges 深入：view 概念为什么把移动与析构的复杂度写进语义要求，owning_view 为什么迟到；borrowed_range 与 std::ranges::dangling 如何把悬垂迭代器变成编译错误；filter 的 begin() 是 O(n)、transform 在 filter 之后被重复求值的真实代价；range adaptor closure 与 operator| 的两条规则、用 view_interface 自己写一个 adaptor；迭代器类别的退化对 ranges::sort 意味着什么；编译时间、报错、调试与抽象惩罚这些工程账单，以及 C++23 的 ranges::to / zip / enumerate / chunk / slide / join_with">
+<meta name="twitter:description" content="C++20/23 Ranges 与 views 讲人话：view 为什么不复制数据、borrowed_range 与 dangling 如何把悬垂引用变成编译错误、惰性求值的重复计算与性能陷阱、管道 operator| 怎么拼、自定义 adaptor 怎么写，以及 ranges::to / zip / chunk 等 C++23 新货。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -156,7 +156,7 @@
   <header class="hero">
     <div class="badge">Ranges · views · C++20 / C++23 · 2026</div>
     <h1>Ranges 与 views 深入</h1>
-    <p class="sub">Ranges 的教学材料几乎都停在「<code>v | filter | transform</code> 好漂亮」这一层。但真正决定你能不能在生产代码里用它的，是<strong>下面三件事</strong>：view 概念把<strong>复杂度</strong>写进了语义要求（于是 <code>owning_view</code> 要等两年才补上）；引用语义让一半的悬垂问题被 <code>dangling</code> 挡成编译错误、另一半照旧是 UB；惰性求值把一次遍历的代价重新分配了——有时更快，有时把同一个函数算了两遍。</p>
+    <p class="sub">Ranges 的教学材料几乎都停在「<code>v | filter | transform</code> 好漂亮」这一层。但真正决定你能不能在生产代码里用它的，是<strong>下面三件事</strong>：view 概念（view——视图，一种不复制数据、只换个方式看原数据的轻量对象）把<strong>复杂度</strong>写进了语义要求（于是 <code>owning_view</code> 要等两年才补上）；引用语义让一半的悬垂问题被 <code>dangling</code> 挡成编译错误、另一半照旧是 UB（未定义行为）；惰性求值（要一个才算一个，不提前算完整批）把一次遍历的代价重新分配了——有时更快，有时把同一个函数算了两遍。</p>
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">踩坑密度 高</span>
@@ -179,13 +179,13 @@
     <div class="t"><h2>概念层次：range 之上的那层约束</h2><p class="sub">「什么东西能当 view」这个问题的答案，编译器其实检查不了</p></div>
   </div>
 
-  <p>Ranges 库表面上是一堆 <code>views::xxx</code>，骨架却是四五个互相叠加的 concept。搞不清这几个 concept 的关系，后面所有的坑都会显得像是随机的：为什么这个能进管道那个不能、为什么 <code>ranges::find</code> 有时返回不了迭代器、为什么 <code>const auto&amp;</code> 接一个 filter 就编译不过。</p>
+  <p>Ranges 库表面上是一堆 <code>views::xxx</code>，骨架却是四五个互相叠加的 concept（概念——编译期检查「类型有没有某组能力」的约束条件）。搞不清这几个 concept 的关系，后面所有的坑都会显得像是随机的：为什么这个能进管道那个不能、为什么 <code>ranges::find</code> 有时返回不了迭代器、为什么 <code>const auto&amp;</code> 接一个 filter 就编译不过。</p>
 
   <div class="analogy">把容器想成<strong>一本相册</strong>，view 就是<strong>一副眼镜</strong>。眼镜不复制任何照片，只改变你翻这本相册的方式（跳过没对焦的、给每张加个滤镜）。所以眼镜必须<strong>轻</strong>——随手能递给别人、能装进口袋、能戴两副叠着看。一件「戴上要花十分钟、摘下还得再花十分钟」的东西，无论效果多好都不是眼镜。<code>view</code> 概念里那条复杂度要求，就是在给「轻」下一个可执行的定义。</div>
 
   <h3 id="s1-1">1.1 range 只要求有 begin 和 end</h3>
 
-  <div class="def"><strong>range</strong>：<code>std::ranges::range&lt;T&gt;</code> 只要求 <code>ranges::begin(t)</code> 和 <code>ranges::end(t)</code> 合法，且前者返回迭代器、后者返回一个能与之比较的 <strong>sentinel</strong>。注意 end 返回的不必是同类型迭代器——这一条松动是 Ranges 相对旧 STL 最大的结构性改动，它让「以 <code>'\0'</code> 结尾」「以谓词结尾」这类无界序列第一次成为一等公民。</div>
+  <div class="def"><strong>range</strong>：<code>std::ranges::range&lt;T&gt;</code> 只要求 <code>ranges::begin(t)</code> 和 <code>ranges::end(t)</code> 合法，且前者返回迭代器、后者返回一个能与之比较的 <strong>sentinel</strong>（哨兵——「到这儿就停」的结束标记，它不必是迭代器，只要能和迭代器比出「走没走到头」）。注意 end 返回的不必是同类型迭代器——这一条松动是 Ranges 相对旧 STL 最大的结构性改动，它让「以 <code>'\0'</code> 结尾」「以谓词结尾」这类无界序列第一次成为一等公民。</div>
 
   <p>在 <code>range</code> 之上，标准又叠了几层。它们不是继承关系，而是各自加一条独立的要求：</p>
 
@@ -240,9 +240,9 @@
 
   <h3 id="s1-2">1.2 view 的那条复杂度约束</h3>
 
-  <div class="def"><strong>view</strong>：<code>view&lt;T&gt;</code> 的语法部分只有三项——<code>range&lt;T&gt;</code>、<code>movable&lt;T&gt;</code>、<code>enable_view&lt;T&gt;</code>。真正的门槛在<strong>语义要求</strong>：移动构造必须是 O(1)；如果可拷贝，拷贝构造也必须是 O(1)；从一个含 M 个元素的 view 复制/移动出 N 个对象，这 N 个对象的析构总代价是 O(N+M)。</div>
+  <div class="def"><strong>view</strong>：<code>view&lt;T&gt;</code> 的语法部分只有三项——<code>range&lt;T&gt;</code>、<code>movable&lt;T&gt;</code>、<code>enable_view&lt;T&gt;</code>。真正的门槛在<strong>语义要求</strong>（写进标准文字、但编译器无法自动验证的承诺）：移动构造必须是 O(1)；如果可拷贝，拷贝构造也必须是 O(1)；从一个含 M 个元素的 view 复制/移动出 N 个对象，这 N 个对象的析构总代价是 O(N+M)。</div>
 
-  <p>为什么要把复杂度写进概念？因为管道的每一步都在<strong>按值传递并存储</strong>整条链：<code>v | filter(p) | transform(f)</code> 的结果是 <code>transform_view&lt;filter_view&lt;ref_view&lt;vector&lt;int&gt;&gt;, P&gt;, F&gt;</code>，外层持有内层的一份<em>副本</em>。如果某一层的拷贝是 O(n)，那么「拼一条管道」这个动作本身就变成了 O(n) —— 而它在源码里长得像零成本的语法糖。这条约束的存在，正是为了让「管道拼装是免费的」这句话在标准里有依据，而不只是一个惯例。</p>
+  <p>为什么要把复杂度写进概念？因为管道的每一步都在<strong>按值传递并存储</strong>整条链：<code>v | filter(p) | transform(f)</code> 的结果是 <code>transform_view&lt;filter_view&lt;ref_view&lt;vector&lt;int&gt;&gt;, P&gt;, F&gt;</code>，外层持有内层的一份<em>副本</em>。如果某一层的拷贝是 O(n)，那么「拼一条管道」这个动作本身就变成了 O(n) —— 而它在源码里长得像零成本的语法糖。这条约束的存在，正是为了让「管道拼装是免费的」这句话在标准里有依据，而不只是一个惯例。好比一列火车每节车厢都要完整复制前一节才能挂上——只要有一节是实心的铁疙瘩，整列火车就再也跑不快了。</p>
 
   <div class="box tip"><strong>但编译器验证不了它。</strong><code>view&lt;T&gt;</code> 里的 <code>enable_view&lt;T&gt;</code> 是一个变量模板，默认值是「T 是否派生自 <code>view_base</code> 或 <code>view_interface</code>」。也就是说，<strong>「我是一个 view」是作者宣称的，不是编译器测出来的</strong>。你完全可以让一个每次拷贝都要 <code>memcpy</code> 一兆内存的类型满足 <code>view</code>，编译器一句话都不会说，只是所有依赖「管道拼装免费」的代码都会静默变慢。这是整个 Ranges 设计里最需要靠自觉的一处。</div>
 
@@ -250,11 +250,11 @@
 
   <h3 id="s1-3">1.3 owning_view 为什么迟到</h3>
 
-  <p>现在回头看那条复杂度要求，会发现它顺手禁掉了一整类东西：<strong>一个 view 不能拥有它的元素</strong>。因为析构 n 个元素的代价一定随 n 增长，而最初的措辞要求析构与元素个数无关。</p>
+  <p>现在回头看那条复杂度要求，会发现它顺手禁掉了一整类东西：<strong>一个 view 不能拥有它的元素</strong>。因为析构 n 个元素的代价一定随 n 增长，而最初的措辞要求析构代价与元素个数无关。</p>
 
-  <p>后果是 C++20 刚定稿时，<code>get_vector() | views::filter(pred)</code> 这行代码<strong>根本编译不过</strong>——右值容器既不是 view（拷贝 O(n)），又不是 <code>borrowed_range</code>，于是不满足 <code>viewable_range</code>。这是一个刻意的编译错误：宁可拒绝，也不要生成一个指向已死临时对象的 view。</p>
+  <p>后果是 C++20 刚定稿时，<code>get_vector() | views::filter(pred)</code> 这行代码<strong>根本编译不过</strong>——右值容器（函数刚返回的临时对象）既不是 view（拷贝 O(n)），又不是 <code>borrowed_range</code>，于是不满足 <code>viewable_range</code>（能接进管道的入场条件）。这是一个刻意的编译错误：宁可拒绝，也不要生成一个指向已死临时对象的 view。</p>
 
-  <p>P2415（<em>What is a view?</em>）改的正是这一句：把析构那条要求松成「从一个含 M 个元素的 view 复制/移动出 N 个对象，这 N 个对象的析构总代价是 O(N+M)」。这句话读起来绕，意思其实很直白——<strong>允许有一个 view 真正拥有那 M 个元素，只要它的<em>副本</em>不各自再拥有一份</strong>。<code>owning_view</code> 于是成立：它 move-only（删掉了拷贝），所以永远只有一份所有权。</p>
+  <p>P2415（<em>What is a view?</em>）改的正是这一句：把析构那条要求松成「从一个含 M 个元素的 view 复制/移动出 N 个对象，这 N 个对象的析构总代价是 O(N+M)」。这句话读起来绕，意思其实很直白——<strong>允许有一个 view 真正拥有那 M 个元素，只要它的<em>副本</em>不各自再拥有一份</strong>。<code>owning_view</code>（把容器整体搬进自己体内的视图）于是成立：它 move-only（删掉了拷贝，只能移动），所以永远只有一份所有权。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 300" role="img" aria-label="views::all 面对三种输入时产出的三种包装：左值容器包成 ref_view 只存一个指针，右值可移动容器包成 owning_view 把容器整体移入自己内部因此只能移动不能拷贝，已经是 view 的原样透传。下方标注 P2415 之前右值容器这一路是编译错误" style="min-width:880px;height:auto">
@@ -307,7 +307,7 @@
     <div class="t"><h2>引用语义与 dangling</h2><p class="sub">一半的悬垂被挡成了编译错误，另一半照旧是 UB —— 分界线在哪很值得记住</p></div>
   </div>
 
-  <p>「views 有悬垂风险」这句话流传很广，但流传的版本大多是错的。最常见的一个说法是「<code>views::filter(get_vector(), pred)</code> 很危险」——它在 C++20 的<strong>最初版本</strong>里确实有问题（编译不过），而 P2415 之后这一行反而是<strong>安全的</strong>：临时容器被移进了 <code>owning_view</code>，元素的所有权跟着视图走。</p>
+  <p>「views 有悬垂风险」这句话流传很广，但流传的版本大多是错的。悬垂（dangling——引用指向的对象已经死了，引用却还在被用）。最常见的一个说法是「<code>views::filter(get_vector(), pred)</code> 很危险」——它在 C++20 的<strong>最初版本</strong>里确实有问题（编译不过），而 P2415 之后这一行反而是<strong>安全的</strong>：临时容器被移进了 <code>owning_view</code>，元素的所有权跟着视图走。</p>
 
   <p>所以真正需要记住的不是某一行代码，而是那条分界线：<strong>视图究竟是「引用了别人的元素」还是「自己拥有元素」</strong>。前者才有悬垂风险，而它的三种典型形状如下。</p>
 
@@ -383,7 +383,7 @@ static_assert(std::same_as&lt;decltype(it), rg::dangling&gt;);
 
   <h3 id="s2-2">2.2 borrowed_range 到底在断言什么</h3>
 
-  <div class="def"><strong>borrowed_range</strong>：<code>range&lt;T&gt; &amp;&amp; (T 是左值引用 || enable_borrowed_range&lt;remove_cvref_t&lt;T&gt;&gt;)</code>。语义上它断言一件事——<strong>从这个 range 取出的迭代器，其有效性不依赖 range 对象本身是否还活着</strong>。左值自动满足（对象在调用方手里活着）；右值必须由类型作者显式特化 <code>enable_borrowed_range</code> 来开启。</div>
+  <div class="def"><strong>borrowed_range</strong>：<code>range&lt;T&gt; &amp;&amp; (T 是左值引用 || enable_borrowed_range&lt;remove_cvref_t&lt;T&gt;&gt;)</code>。语义上它断言一件事——<strong>从这个 range 取出的迭代器，其有效性不依赖 range 对象本身是否还活着</strong>（好比图书馆的索引卡：就算借书登记簿烧了，卡片上写的书架号仍指得到那本书）。左值自动满足（对象在调用方手里活着）；右值必须由类型作者显式特化 <code>enable_borrowed_range</code> 来开启。</div>
 
   <p>判断某个类型该不该开这个开关，只需要问一句：<strong>它的迭代器里有没有指回视图对象自己的指针？</strong></p>
 
@@ -400,11 +400,11 @@ static_assert(std::same_as&lt;decltype(it), rg::dangling&gt;);
     </tbody>
   </table>
 
-  <p>这张表解释了一个让人意外的现象：<code>filter_view</code> 和 <code>transform_view</code> 明明可能只是引用了别人的元素，却不是 <code>borrowed_range</code>。原因不在元素上，在<strong>谓词/函数对象</strong>上——它们存在视图里，而迭代器必须能访问到它们，所以迭代器持有一个 <code>parent_</code> 指针。视图一死，指针就悬垂，跟元素在哪毫无关系。</p>
+  <p>这张表解释了一个让人意外的现象：<code>filter_view</code> 和 <code>transform_view</code> 明明可能只是引用了别人的元素，却不是 <code>borrowed_range</code>。原因不在元素上，在<strong>谓词/函数对象</strong>上（谓词 predicate——返回 true/false 的筛选函数）——它们存在视图里，而迭代器必须能访问到它们，所以迭代器持有一个 <code>parent_</code> 指针。视图一死，指针就悬垂，跟元素在哪毫无关系。</p>
 
   <h3 id="s2-3">2.3 dangling：把 UB 变成编译错误</h3>
 
-  <p><code>std::ranges::dangling</code> 是一个<strong>空结构体</strong>，除了「能被任何参数构造出来」之外什么都不做。它的全部价值在于成为一个返回类型：</p>
+  <p><code>std::ranges::dangling</code> 是一个<strong>空结构体</strong>（什么成员都没有的类型），除了「能被任何参数构造出来」之外什么都不做。它的全部价值在于成为一个返回类型：</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" role="img" aria-label="borrowed_iterator_t 的分支：ranges 算法的返回类型在编译期做一次判断，如果传入的 range 是 borrowed_range 就返回真正的迭代器，否则返回空类型 dangling，任何对它解引用的写法都会立即编译失败" style="min-width:820px;height:auto">
@@ -437,7 +437,7 @@ static_assert(std::same_as&lt;decltype(it), rg::dangling&gt;);
 
   <p>值得注意的是这个设计的<strong>边界</strong>，它同时说明了为什么 §2.1 的第 ② 种情况救不了：<code>dangling</code> 只能在<strong>单个表达式内</strong>看到「实参是右值」这个事实。一旦跨过函数边界，被调用方拿到的只是一个 <code>const&amp;</code>，它无法知道上游绑的是变量还是临时对象。同一类问题在 C++26 的生命周期标注提案里仍在讨论——<strong>目前这条防线只能挡住「当场就错」的那一半</strong>。</p>
 
-  <p>另外，<code>ranges::find</code> 之类返回单个迭代器的算法用 <code>borrowed_iterator_t</code>，而 <code>ranges::equal_range</code>、<code>ranges::search</code> 这些返回区间的用 <code>borrowed_subrange_t</code>，退化目标同样是 <code>dangling</code>。而 <code>ranges::for_each</code> 这类返回 <code>{iterator, function}</code> 的，退化的只是其中的迭代器成员。</p>
+  <p>另外补充一个细节：<code>ranges::find</code> 之类返回单个迭代器的算法用 <code>borrowed_iterator_t</code>，而 <code>ranges::equal_range</code>、<code>ranges::search</code> 这些返回区间的用 <code>borrowed_subrange_t</code>，退化目标同样是 <code>dangling</code>。而 <code>ranges::for_each</code> 这类返回 <code>{iterator, function}</code> 的，退化的只是其中的迭代器成员。</p>
 </section>
 
 <!-- ================================================================ §3 -->
@@ -451,7 +451,7 @@ static_assert(std::same_as&lt;decltype(it), rg::dangling&gt;);
 
   <h3 id="s3-1">3.1 filter 的 begin() 是 O(n)</h3>
 
-  <p><code>range</code> 概念要求 <code>begin()</code> 是<strong>摊还常数</strong>时间。<code>filter_view</code> 天然做不到：第一个满足谓词的元素可能在最后，也可能压根不存在，找到它就是一次 <code>find_if</code>。标准的解法是<strong>缓存</strong>——第一次 <code>begin()</code> 扫一遍并把结果存进视图，后续调用直接返回。</p>
+  <p><code>range</code> 概念要求 <code>begin()</code> 是<strong>摊还常数</strong>时间（amortized O(1)——单次可能慢，但多次平均下来是常数）。<code>filter_view</code> 天然做不到：第一个满足谓词的元素可能在最后，也可能压根不存在，找到它就是一次 <code>find_if</code>。标准的解法是<strong>缓存</strong>——第一次 <code>begin()</code> 扫一遍并把结果存进视图，后续调用直接返回。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 300" role="img" aria-label="filter_view 的 begin 缓存机制：第一次调用要从头扫描到第一个满足谓词的元素，代价与前缀长度成正比，结果被存进视图内部的缓存，第二次调用变成常数时间。但缓存是可变状态，导致 filter_view 没有 const 版本的 begin，因此不能用 const 引用迭代，而且拷贝视图时缓存不会跟着走" style="min-width:880px;height:auto">
@@ -496,7 +496,7 @@ static_assert(std::same_as&lt;decltype(it), rg::dangling&gt;);
 
   <h3 id="s3-2">3.2 每次解引用都重算一遍</h3>
 
-  <p>视图<strong>不缓存元素值</strong>。<code>transform_view</code> 的 <code>operator*</code> 就是 <code>invoke(f, *base_it)</code>，每次解引用都真的调一次 <code>f</code>。这在单趟遍历里是想要的行为（这才叫惰性），但只要谁在你背后多解引用了一次，代价就翻倍。</p>
+  <p>视图<strong>不缓存元素值</strong>。<code>transform_view</code> 的 <code>operator*</code>（解引用——取出迭代器当前位置的元素）就是 <code>invoke(f, *base_it)</code>，每次解引用都真的调一次 <code>f</code>。这在单趟遍历里是想要的行为（这才叫惰性），但只要谁在你背后多解引用了一次，代价就翻倍。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 300" role="img" aria-label="两种拼装顺序的函数调用次数对照：先 transform 再 filter 时，filter 为了找下一个满足元素必须先解引用 transform 从而调用一次变换函数，用户随后再解引用一次又调一次，通过的元素被算两遍；先 filter 再 transform 时谓词读的是原始元素，变换函数只在用户解引用时调一次" style="min-width:880px;height:auto">
@@ -564,7 +564,7 @@ for (int y : v | std::views::filter([](int x){ return x % 2 == 0; })
     (void)y;
 // calls == 4</code></pre>
 
-  <p>这就是为什么<strong>视图链里的函数对象必须是纯函数</strong>。带副作用的 <code>transform</code>（打日志、递增计数器、往队列里塞东西）在管道里的行为无法预测：调用次数取决于下游有几个 <code>filter</code>、你遍历了几趟、有没有算法在背后多解引用一次。<code>ranges::max_element</code> 就会对同一位置解引用多次；写成 <code>ranges::max_element(v | views::transform(expensive))</code>，那个 <code>expensive</code> 会被调用远超 n 次。</p>
+  <p>这就是为什么<strong>视图链里的函数对象必须是纯函数</strong>（pure function——同样的输入永远给同样的输出，除了返回值不留任何痕迹）。带副作用的 <code>transform</code>（打日志、递增计数器、往队列里塞东西）在管道里的行为无法预测：调用次数取决于下游有几个 <code>filter</code>、你遍历了几趟、有没有算法在背后多解引用一次。<code>ranges::max_element</code> 就会对同一位置解引用多次；写成 <code>ranges::max_element(v | views::transform(expensive))</code>，那个 <code>expensive</code> 会被调用远超 n 次。</p>
 
   <h3 id="s3-3">3.3 什么时候惰性反而更慢</h3>
 
@@ -582,7 +582,7 @@ for (int y : v | std::views::filter([](int x){ return x % 2 == 0; })
 
   <p>把最后一行和前面五行放在一起看，结论就清楚了：<strong>惰性的收益是「省掉中间容器的分配与拷贝」，代价是「元素的求值次数不再由你直接掌握」</strong>。数据量大、只走一趟、函数便宜 → 收益压倒代价；反过来任何一项不成立，就要具体算一算。</p>
 
-  <div class="box tip">协程 generator 是另一种惰性序列，它和 views 可以互通（<code>generator | views::take(10)</code>），代价结构却完全不同——generator 的每次 <code>++</code> 是一次协程恢复，有实打实的间接跳转，但它天然只能单趟、也天然不会重复求值。对照见 <a href="./coroutines_deep_dive.html#s16-3">协程深入 §16.3</a>。</div>
+  <div class="box tip">协程 generator（生成器——用 co_yield 逐个产值的惰性序列）是另一种惰性序列，它和 views 可以互通（<code>generator | views::take(10)</code>），代价结构却完全不同——generator 的每次 <code>++</code> 是一次协程恢复，有实打实的间接跳转，但它天然只能单趟、也天然不会重复求值。对照见 <a href="./coroutines_deep_dive.html#s16-3">协程深入 §16.3</a>。</div>
 </section>
 
 <!-- ================================================================ §4 -->
@@ -596,7 +596,7 @@ for (int y : v | std::views::filter([](int x){ return x % 2 == 0; })
 
   <p><code>views::filter</code> 这个名字下其实藏着两种可调用对象，区别只在于「参数够不够」：</p>
 
-  <div class="def"><strong>range adaptor object</strong>：参数齐全时直接产出视图（<code>views::filter(v, pred)</code> → <code>filter_view</code>）。<br><strong>range adaptor closure object</strong>：只给了除 range 之外的参数时，返回一个「等着 range」的可调用对象（<code>views::filter(pred)</code>）。<strong><code>operator|</code> 只认识后者。</strong></div>
+  <div class="def"><strong>range adaptor object</strong>（适配器对象——给它喂参数就产出视图的工厂）：<br>参数齐全时直接产出视图（<code>views::filter(v, pred)</code> → <code>filter_view</code>）。<br><strong>range adaptor closure object</strong>（闭包对象——参数没给全、还差一个 range 的「半成品」，等着管道把 range 送来）：<br>只给了除 range 之外的参数时，返回一个「等着 range」的可调用对象（<code>views::filter(pred)</code>）。<strong><code>operator|</code> 只认识后者。</strong></div>
 
   <p><code>views::all</code>、<code>views::reverse</code>、<code>views::join</code> 这类不需要额外参数的，本身就是 closure；<code>views::filter</code>、<code>views::take</code>、<code>views::transform</code> 则是「调用一次生成 closure」的工厂。理解这个二分之后，<code>v | views::take(3)</code> 就不再神秘：<code>views::take(3)</code> 先产出一个 closure，然后 <code>|</code> 把 <code>v</code> 喂给它。</p>
 
@@ -636,7 +636,7 @@ for (int y : v | std::views::filter([](int x){ return x % 2 == 0; })
 
   <h3 id="s4-3">4.3 自己写一个 adaptor</h3>
 
-  <p>C++20 有一个尴尬的空缺：标准描述了 <code>|</code> 对<strong>标准</strong> adaptor 的行为，却没提供任何让用户类型接入 <code>|</code> 的机制。于是各家库（range-v3、libstdc++ 的内部实现）各写一套，用户想自定义就只能抄实现细节。C++23 的 <code>std::ranges::range_adaptor_closure&lt;D&gt;</code> 补上了这一块：CRTP 继承它，就自动获得 §4.2 的两条规则。</p>
+  <p>C++20 有一个尴尬的空缺：标准描述了 <code>|</code> 对<strong>标准</strong> adaptor 的行为，却没提供任何让用户类型接入 <code>|</code> 的机制。于是各家库（range-v3、libstdc++ 的内部实现）各写一套，用户想自定义就只能抄实现细节。C++23 的 <code>std::ranges::range_adaptor_closure&lt;D&gt;</code> 补上了这一块：CRTP（Curiously Recurring Template Pattern——基类模板以派生类自身为参数，编译期把「调用谁」定死，不用虚函数）继承它，就自动获得 §4.2 的两条规则。</p>
 
   <p>下面是一个完整骨架，功能是「跳过相邻的重复元素」。三个部件缺一不可：<strong>视图本体</strong>（继承 <code>view_interface</code>）、<strong>CTAD 推导指引</strong>（把容器包成 <code>ref_view</code> 或 <code>owning_view</code>）、<strong>closure 对象</strong>（接入 <code>|</code>）。</p>
 
@@ -699,8 +699,7 @@ auto r = v | std::views::filter(odd) | dedup | std::views::take(3);</code></pre>
     </tbody>
   </table>
 
-  <p>值得强调的是 <code>view_interface</code> 的性质：它<strong>不提供任何虚函数</strong>，全部靠 CRTP 把 <code>static_cast&lt;D&amp;&gt;(*this)</code> 转回派生类去调 <code>begin()</code>/<code>end()</code>。所以「继承一个基类拿到十几个成员函数」在这里是零运行期成本的。CRTP 的一般形态与它相对虚函数的取舍见 <a href="./templates_guide.html#s9-3">模板与元编程 §9.3</a>。</p>
-</section>
+  <p>值得强调的是 <code>view_interface</code> 的性质：它<strong>不提供任何虚函数</strong>，全部靠 CRTP 把 <code>static_cast&lt;D&amp;&gt;(*this)</code> 转回派生类去调 <code>begin()</code>/<code>end()</code>。所以「继承一个基类拿到十几个成员函数」在这里是零运行期成本的。CRTP 的一般形态与它相对虚函数的取舍见 <a href="./templates_guide.html#s9-3">模板与元编程 §9.3</a>。</p></section>
 
 <!-- ================================================================ §5 -->
 <section class="chapter" id="s5">
@@ -711,7 +710,7 @@ auto r = v | std::views::filter(odd) | dedup | std::views::take(3);</code></pre>
 
   <h3 id="s5-1">5.1 filter 为什么到不了 random_access</h3>
 
-  <p><code>random_access_iterator</code> 的语义要求里有一条：<code>it + n</code> 和 <code>it2 - it1</code> 必须是<strong>常数时间</strong>。对 <code>filter_view</code> 来说，「第 n 个满足谓词的元素在哪」除了从头数没有别的办法，<code>it + n</code> 注定是 O(n)。<strong>所以这不是实现偷懒，是「诚实地不宣称做不到的事」</strong>——如果 <code>filter_view</code> 谎称 random_access，所有基于「随机访问 ⇒ 可以做二分」的算法都会静默退化成 O(n) 甚至 O(n log n) 的扫描。</p>
+  <p><code>random_access_iterator</code>（随机访问迭代器——一步跳到任意位置都是常数时间）的语义要求里有一条：<code>it + n</code> 和 <code>it2 - it1</code> 必须是<strong>常数时间</strong>。对 <code>filter_view</code> 来说，「第 n 个满足谓词的元素在哪」除了从头数没有别的办法，<code>it + n</code> 注定是 O(n)。<strong>所以这不是实现偷懒，是「诚实地不宣称做不到的事」</strong>——如果 <code>filter_view</code> 谎称 random_access，所有基于「随机访问 ⇒ 可以做二分」的算法都会静默退化成 O(n) 甚至 O(n log n) 的扫描。</p>
 
   <p>同样的逻辑决定了每个 adaptor 的天花板：</p>
 
@@ -770,7 +769,6 @@ auto r = v | std::views::filter(odd) | dedup | std::views::take(3);</code></pre>
   </table>
 
   <p>第三行是个真实会咬人的差异：一个返回值（而非引用）的 <code>transform_view</code>，在 <code>ranges::</code> 算法眼里是随机访问的，在 <code>std::</code> 算法眼里只是输入迭代器。所以 <code>std::sort(sq.begin(), sq.end())</code> 和 <code>ranges::sort(sq)</code> 会因为<strong>完全不同的原因</strong>失败——前者是「类别不够」，后者是「元素不可写」。这也是「不要混用 <code>std::</code> 和 <code>ranges::</code> 算法」的一个具体理由。</p>
-
   <h3 id="s5-3">5.3 这对算法意味着什么</h3>
 
   <pre><code>namespace rg = std::ranges;
@@ -795,7 +793,7 @@ auto sq = v | std::views::transform([](int x){ return x * x; });
 
   <p>甲式往往被忽略，但它常常是最好的答案：<strong>要排序就排拥有元素的那个容器</strong>，视图只负责「怎么看」。乙式的成本要算清楚——它把「省掉中间容器」这个惰性最大的收益直接还回去了，所以只在确实需要一个独立结果时才用。丙式最考验对算法库的熟悉度：<code>partition</code>、<code>rotate</code>、<code>unique</code> 这些只要求双向甚至前向的算法，往往能替掉一次排序。</p>
 
-  <p>最后一段的失败是另一回事。<code>ranges::sort</code> 要求 <code>sortable</code>，其中包含「元素可交换」；而 <code>transform_view</code> 的 <code>operator*</code> 返回的是一个临时值，交换两个临时值毫无意义，所以约束不成立。<strong>这条规则可以推广：所有<em>计算出</em>元素的视图都是只读的</strong>，包括 <code>transform</code>、<code>iota</code>、<code>repeat</code>、<code>zip_transform</code>。反过来 <code>filter</code>、<code>take</code>、<code>reverse</code>、<code>elements</code> 转发的是底层的真引用，通过它们写回原容器是合法的。</p>
+  <p>最后一段的失败是另一回事。<code>ranges::sort</code> 要求 <code>sortable</code>（可排序——元素能交换、能比较），其中包含「元素可交换」；而 <code>transform_view</code> 的 <code>operator*</code> 返回的是一个临时值，交换两个临时值毫无意义，所以约束不成立。<strong>这条规则可以推广：所有<em>计算出</em>元素的视图都是只读的</strong>，包括 <code>transform</code>、<code>iota</code>、<code>repeat</code>、<code>zip_transform</code>。反过来 <code>filter</code>、<code>take</code>、<code>reverse</code>、<code>elements</code> 转发的是底层的真引用，通过它们写回原容器是合法的。</p>
 </section>
 
 <!-- ================================================================ §6 -->
@@ -807,7 +805,7 @@ auto sq = v | std::views::transform([](int x){ return x * x; });
 
   <h3 id="s6-1">6.1 编译时间与报错长度</h3>
 
-  <p><code>&lt;ranges&gt;</code> 是标准库里最重的头文件之一：它拖进 <code>&lt;concepts&gt;</code>、<code>&lt;iterator&gt;</code>、<code>&lt;compare&gt;</code>，自己又定义了几十个类模板和成打的 concept。单纯 <code>#include &lt;ranges&gt;</code> 在一个空 TU 里就有可观的固定开销，而每写一段管道就要实例化一整串嵌套类型和它们的迭代器。</p>
+  <p><code>&lt;ranges&gt;</code> 是标准库里最重的头文件之一：它拖进 <code>&lt;concepts&gt;</code>、<code>&lt;iterator&gt;</code>、<code>&lt;compare&gt;</code>，自己又定义了几十个类模板和成打的 concept。单纯 <code>#include &lt;ranges&gt;</code> 在一个空 TU（翻译单元——单个 .cpp 编译出的对象文件）里就有可观的固定开销，而每写一段管道就要实例化一整串嵌套类型和它们的迭代器。</p>
 
   <p>更麻烦的是<strong>报错</strong>。Concepts 确实改善了错误信息的<em>开头</em>——第一行会明确告诉你「约束 <code>random_access_range&lt;...&gt;</code> 不满足」，这比旧 STL 那种从模板深处爆出来的十几屏替换失败好得多。但紧接着打印的类型名是灾难级的：一条四段管道的完整类型能有几百个字符，而报错里往往要重复它五六次。</p>
 
@@ -822,7 +820,7 @@ auto sq = v | std::views::transform([](int x){ return x * x; });
     </tbody>
   </table>
 
-  <p>「接口层不暴露视图类型」这一条值得单独强调。视图类型名进了函数签名，就意味着它进了 mangled 符号名、进了每个包含该头文件的 TU、也进了链接器要处理的符号表。<strong>把管道当实现细节、在边界上落地成 <code>span</code> 或容器，是控制这笔账最有效的一招</strong>——顺带也解决了 §2.1 的悬垂问题。</p>
+  <p>「接口层不暴露视图类型」这一条值得单独强调。视图类型名进了函数签名，就意味着它进了 mangled 符号名（符号修饰名——C++ 把类型信息编码进链接符号的那串名字）、进了每个包含该头文件的 TU、也进了链接器要处理的符号表。<strong>把管道当实现细节、在边界上落地成 <code>span</code> 或容器，是控制这笔账最有效的一招</strong>——顺带也解决了 §2.1 的悬垂问题。</p>
 
   <h3 id="s6-2">6.2 调试器里的黑盒</h3>
 
@@ -910,8 +908,7 @@ auto sq = v | std::views::transform([](int x){ return x * x; });
     </tbody>
   </table>
 
-  <p>反过来，ranges 真正赢得漂亮的场景也很集中：<strong>多段变换串在一起、只遍历一趟、每段都便宜、且中间结果不需要落地</strong>。这时手写循环会退化成一个塞了三四个 <code>if</code> 与临时变量的大块头，而管道恰好把「做什么」和「怎么遍历」分开了。判据不是喜好，是「省下的中间容器」和「多付的类型复杂度」哪个更重。</p>
-</section>
+  <p>反过来，ranges 真正赢得漂亮的场景也很集中：<strong>多段变换串在一起、只遍历一趟、每段都便宜、且中间结果不需要落地</strong>。这时手写循环会退化成一个塞了三四个 <code>if</code> 与临时变量的大块头，而管道恰好把「做什么」和「怎么遍历」分开了。判据不是喜好，是「省下的中间容器」和「多付的类型复杂度」哪个更重。</p></section>
 
 <!-- ================================================================ §7 -->
 <section class="chapter" id="s7">
@@ -922,9 +919,9 @@ auto sq = v | std::views::transform([](int x){ return x * x; });
 
   <h3 id="s7-1">7.1 ranges::to：链条的终点</h3>
 
-  <p>C++20 的 Ranges 有一个非常显眼的缺口：<strong>没有标准办法把视图变回容器</strong>。老写法 <code>std::vector&lt;int&gt; out(r.begin(), r.end())</code> 对视图常常不成立，因为许多视图不是 <code>common_range</code>（<code>begin</code> 与 <code>end</code> 类型不同），而容器的迭代器对构造函数要求两者同类型。于是所有人都在自己项目里手写一个 <code>to_vector</code>。</p>
+  <p>C++20 的 Ranges 有一个非常显眼的缺口：<strong>没有标准办法把视图变回容器</strong>。老写法 <code>std::vector&lt;int&gt; out(r.begin(), r.end())</code> 对视图常常不成立，因为许多视图不是 <code>common_range</code>（<code>begin</code> 与 <code>end</code> 类型相同的那种 range），而容器的迭代器对构造函数要求两者同类型。于是所有人都在自己项目里手写一个 <code>to_vector</code>。</p>
 
-  <p><code>std::ranges::to</code> 把这件事标准化了，而且做了三件手写版本通常会漏掉的事：<strong>能问长度就先 <code>reserve</code></strong>；<strong>支持递归转换</strong>（<code>range&lt;range&lt;char&gt;&gt;</code> → <code>vector&lt;string&gt;</code>）；<strong>能通过尾随参数转发给容器的构造函数</strong>（分配器、比较器）。它既能当函数调 <code>rg::to&lt;std::vector&gt;(r)</code>，也是一个 closure，可以写在管道末尾 <code>r | rg::to&lt;std::vector&gt;()</code>。</p>
+  <p><code>std::ranges::to</code> 把这件事标准化了，而且做了三件手写版本通常会漏掉的事：<strong>能问长度就先 <code>reserve</code></strong>（预先分配好容量，避免边插边扩容）；<strong>支持递归转换</strong>（<code>range&lt;range&lt;char&gt;&gt;</code> → <code>vector&lt;string&gt;</code>）；<strong>能通过尾随参数转发给容器的构造函数</strong>（分配器、比较器）。它既能当函数调 <code>rg::to&lt;std::vector&gt;(r)</code>，也是一个 closure，可以写在管道末尾 <code>r | rg::to&lt;std::vector&gt;()</code>。</p>
 
   <h3 id="s7-2">7.2 zip / enumerate / chunk / slide</h3>
 
@@ -1001,7 +998,7 @@ auto line = names | rv::join_with(',') | rg::to&lt;std::string&gt;();   // "ada,
 
   <h3 id="s7-3">7.3 join_with 与其余</h3>
 
-  <p><code>views::join_with(sep)</code> 补的是 <code>join</code> 的一个很常见的变体：把嵌套序列摊平的<strong>同时</strong>插入分隔符。它最实际的用途就是 string join——一个每种语言都有、C++ 却一直要么手写要么依赖第三方的操作。而且它是惰性的，直接接 <code>rg::to&lt;std::string&gt;()</code> 时只有一次分配。</p>
+  <p><code>views::join_with(sep)</code> 补的是 <code>join</code> 的一个很常见的变体：把嵌套序列摊平的<strong>同时</strong>插入分隔符。它最实际的用途就是 string join（字符串拼接——把一串片段用分隔符连成一个字符串），一个每种语言都有、C++ 却一直要么手写要么依赖第三方的操作。而且它是惰性的，直接接 <code>rg::to&lt;std::string&gt;()</code> 时只有一次分配。</p>
 
   <table>
     <thead><tr><th>C++23 新增</th><th>补的是什么缺口</th><th>注意</th></tr></thead>
@@ -1021,7 +1018,7 @@ auto line = names | rv::join_with(',') | rg::to&lt;std::string&gt;();   // "ada,
     </tbody>
   </table>
 
-  <div class="box tip">这些设施在三大实现里的到位时间差得比较远（<code>ranges::to</code>、<code>cartesian_product</code> 是较晚才齐的一批）。要在有编译器版本下限的项目里用，<strong>先查一遍支持表再动手</strong>，别按标准年份想当然——「代码写完才发现 CI 上那台旧编译器不认」是这一节最常见的返工来源。</div>
+  <div class="box tip">这些设施在三大实现（GCC / Clang / MSVC）里的到位时间差得比较远（<code>ranges::to</code>、<code>cartesian_product</code> 是较晚才齐的一批）。要在有编译器版本下限的项目里用，<strong>先查一遍支持表再动手</strong>，别按标准年份想当然——「代码写完才发现 CI 上那台旧编译器不认」是这一节最常见的返工来源。</div>
 </section>
 
 <!-- ================================================================ §8 -->
@@ -1031,7 +1028,7 @@ auto line = names | rv::join_with(',') | rg::to&lt;std::string&gt;();   // "ada,
     <div class="t"><h2>面试题集（12 道）</h2><p class="sub">按难度分三档，先自测再对照</p></div>
   </div>
 
-  <p class="qa-hint">点击每道题展开参考答案（先自测，再对照）。</p>
+  <p class="qa-hint">点击每道题展开参考答案（先遮住答案自己答一遍，再对照，效果最好）。</p>
 
   <h3 id="s8-1">8.1 基础（必答）</h3>
   <ol class="qa-list">

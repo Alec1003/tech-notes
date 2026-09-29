@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Memory / Register / Assembly：深入程序底层 · x / info registers / disassemble / RIP RSP RBP</title>
-<meta name="description" content="Memory / Register / Assembly：深入程序底层：当变量层面看不出问题（栈损坏、优化后变量消失、崩在库函数里没有源码），就必须下探到 内存、寄存器、汇编 这一层">
+<meta name="description" content="GDB 怎么看内存、寄存器和汇编？本篇白话讲清 x 命令读内存、x/16gx $rsp 看栈、info registers 查寄存器、disassemble 反汇编，以及 RIP、RSP、RBP 各自盯什么。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/cpp/gdb_memory_register_assembly.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/cpp/gdb_memory_register_assembly.html">
 <meta property="og:title" content="Memory / Register / Assembly：深入程序底层 · x / info registers / disassemble / RIP RSP RBP">
-<meta property="og:description" content="Memory / Register / Assembly：深入程序底层：当变量层面看不出问题（栈损坏、优化后变量消失、崩在库函数里没有源码），就必须下探到 内存、寄存器、汇编 这一层">
+<meta property="og:description" content="GDB 怎么看内存、寄存器和汇编？本篇白话讲清 x 命令读内存、x/16gx $rsp 看栈、info registers 查寄存器、disassemble 反汇编，以及 RIP、RSP、RBP 各自盯什么。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Memory / Register / Assembly：深入程序底层 · x / info registers / disassemble / RIP RSP RBP">
-<meta name="twitter:description" content="Memory / Register / Assembly：深入程序底层：当变量层面看不出问题（栈损坏、优化后变量消失、崩在库函数里没有源码），就必须下探到 内存、寄存器、汇编 这一层">
+<meta name="twitter:description" content="GDB 怎么看内存、寄存器和汇编？本篇白话讲清 x 命令读内存、x/16gx $rsp 看栈、info registers 查寄存器、disassemble 反汇编，以及 RIP、RSP、RBP 各自盯什么。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -189,7 +189,7 @@
 
     <div class="info-box warning">
       <div class="title">适用条件先说清楚</div>
-      <p>本篇几乎所有寄存器名（<span class="reg">RIP/RSP/RBP/RDI…</span>）与汇编示例都基于 <strong>x86-64 + Linux System V ABI</strong>。换到 ARM64（<span class="reg">x0–x30 / sp / pc / lr</span>）或 Windows x64，寄存器名与调用约定不同，但「代码 ↔ 汇编 ↔ 寄存器 ↔ 内存」的分析思路完全通用。寄存器分配还受编译器与优化级别影响。底层约定详见 <a href="calling_convention_abi.html">Calling Convention / ABI</a>。</p>
+      <p>本篇几乎所有寄存器名（<span class="reg">RIP/RSP/RBP/RDI…</span>）与汇编示例都基于 <strong>x86-64 + Linux System V ABI</strong>（ABI：调用约定，即「参数放哪个寄存器、返回值放哪」这类双方提前约定好的规矩）。换到 ARM64（<span class="reg">x0–x30 / sp / pc / lr</span>）或 Windows x64，寄存器名与调用约定不同，但「代码 ↔ 汇编 ↔ 寄存器 ↔ 内存」的分析思路完全通用。寄存器分配还受编译器与优化级别影响。底层约定详见 <a href="calling_convention_abi.html">Calling Convention / ABI</a>。</p>
     </div>
 
     <!-- S1 -->
@@ -201,7 +201,7 @@
           <p class="sub">源码级调试失效时，机器级真相还在</p>
         </div>
       </div>
-      <p>大部分时间你在「变量层面」调试就够了。但有几种情况，变量层面会失灵：</p>
+      <p>大部分时间你在「变量层面」调试就够了。但有几种情况，变量层面会失灵，原因是「名字」这层皮已经靠不住了：</p>
       <ul>
         <li><strong>栈被破坏</strong>：越界写、栈溢出把返回地址覆盖了，<code>bt</code> 显示乱码 —— 只能去看内存里的栈到底被写成了什么；</li>
         <li><strong>优化后变量消失</strong>（<code>&lt;optimized out&gt;</code>）：源码里看不到，但值其实就在某个寄存器里；</li>
@@ -210,7 +210,7 @@
       </ul>
       <div class="info-box key">
         <div class="title">一句话</div>
-        <p>源码是「程序应该怎么跑」，<strong>内存和寄存器是「程序此刻真的怎么跑」</strong>。当两者对不上，真相永远在后者。这一层是 C++、嵌入式、系统软件工程师的必修 —— 也是把前面栈帧/ABI 知识落地的地方。</p>
+        <p>源码是「程序应该怎么跑」，<strong>内存和寄存器是「程序此刻真的怎么跑」</strong>。当两者对不上，真相永远在后者。这一层是 C++、嵌入式、系统软件工程师的必修 —— 也是把前面栈帧/ABI 知识落地的地方。好比看诊：源码是体检报告上的「应该健康」，内存和寄存器才是此刻的心电图。</p>
       </div>
       <p>沿用最小例子（<code>g++ -g -O0 addmem.cpp -o addmem</code>）：</p>
       <pre><code><span class="type">int</span> add(<span class="type">int</span> a, <span class="type">int</span> b) { <span class="keyword">return</span> a + b; }
@@ -226,7 +226,7 @@
           <p class="sub">examine —— 把任意地址的字节按你要的格式解释出来</p>
         </div>
       </div>
-      <p><code>x</code>（examine）是「读内存」的通用命令。它的语法核心是 <strong><code>x/NFU 地址</code></strong>：</p>
+      <p><code>x</code>（examine，检查）是「读内存」的通用命令。它的语法核心是 <strong><code>x/NFU 地址</code></strong> —— 三个字母分别回答「看几个、按什么格式看、每个单位多大」：</p>
       <div class="xanat">
         <div><div class="k">N — 数量</div>要显示几个单位，如 <code>10</code>、<code>16</code></div>
         <div><div class="k">F — 格式</div><code>x</code> 十六进制 / <code>d</code> 十进制 / <code>i</code> 指令 / <code>s</code> 字符串 / <code>c</code> 字符 / <code>u</code> 无符号 / <code>f</code> 浮点 / <code>a</code> 地址</div>
@@ -239,7 +239,7 @@
 <span class="prompt">(gdb)</span> x/16gx $rsp     <span class="comment"># 从栈顶起，16 个 8 字节，十六进制（看栈常用）</span></code></pre>
       <div class="info-box">
         <div class="title"><code>x</code> 与 <code>print</code> 的分工</div>
-        <p><code>p</code> 面向<strong>「有类型的变量/表达式」</strong>（它知道 <code>user</code> 是个 <code>User</code>）；<code>x</code> 面向<strong>「一段裸地址的原始字节」</strong>（它不管那里是什么，按你给的格式硬解释）。排查栈损坏、看原始内存布局、反汇编时用 <code>x</code>；看具体变量值用 <code>p</code>。GDB 会记住上次的 N/F/U，直接敲 <code>x</code> 可继续往后看下一段。</p>
+        <p><code>p</code> 面向<strong>「有类型的变量/表达式」</strong>（它知道 <code>user</code> 是个 <code>User</code>）；<code>x</code> 面向<strong>「一段裸地址的原始字节」</strong>（它不管那里是什么，按你给的格式硬解释）。打个比方：<code>p</code> 是问「这个箱子里按说明书装的是什么」，<code>x</code> 是把箱子拆开、按你给的尺子一格一格量原始字节。排查栈损坏、看原始内存布局、反汇编时用 <code>x</code>；看具体变量值用 <code>p</code>。GDB 会记住上次的 N/F/U，直接敲 <code>x</code> 可继续往后看下一段。</p>
       </div>
     </section>
 
@@ -263,14 +263,14 @@
           <tr><td><code>$rsp</code></td><td>起始地址：<strong>栈顶</strong>（栈指针寄存器）</td></tr>
         </tbody>
       </table>
-      <p>合起来就是：<strong>从栈顶开始，以 8 字节为单位，用十六进制打印 16 个格</strong> —— 也就是「把当前栈顶往下的 128 字节，按 64 位对齐排出来看」。这是查看栈布局、找返回地址、诊断栈溢出的标准动作。</p>
+      <p>合起来就是：<strong>从栈顶开始，以 8 字节为单位，用十六进制打印 16 个格</strong> —— 也就是「把当前栈顶往下的 128 字节，按 64 位对齐排出来看」。这是查看栈布局、找返回地址、诊断栈溢出的标准动作。好比把一列抽屉从上往下挨个拉开，看看每个抽屉里实际装了什么。</p>
       <pre><code><span class="prompt">(gdb)</span> x/16gx $rsp
 0x7fffffffe0a0: 0x0000000000000014  0x00007ffff7...   <span class="comment"># 局部/保存值</span>
 0x7fffffffe0b0: 0x00007fffffffe0d0  0x0000555555555169 <span class="comment"># 旧RBP、返回地址</span>
 ...</code></pre>
       <div class="info-box key">
         <div class="title">看到栈内容之后怎么分析</div>
-        <p>栈里最值得关注的是<strong>返回地址</strong>（第 06 篇实战会用到）。正常情况下它应指向调用者代码段的合理地址；如果这里变成 <code>0x4141414141414141</code>（ASCII 的 <code>AAAA…</code>）或其他被写乱的值，几乎可以断定<strong>栈缓冲区溢出覆盖了返回地址</strong> —— 这类问题 <code>bt</code> 会直接崩溃或乱码，只有看内存才看得清。<code>g</code>（8 字节）是 64 位下看栈的正确单位；用 <code>w</code>（4 字节）会把地址切成两半，读起来会错乱。</p>
+        <p>栈里最值得关注的是<strong>返回地址</strong>（函数干完活后「回哪儿去」的地址，第 06 篇实战会用到）。正常情况下它应指向调用者代码段的合理地址；如果这里变成 <code>0x4141414141414141</code>（ASCII 的 <code>AAAA…</code>）或其他被写乱的值，几乎可以断定<strong>栈缓冲区溢出覆盖了返回地址</strong> —— 这类问题 <code>bt</code> 会直接崩溃或乱码，只有看内存才看得清。<code>g</code>（8 字节）是 64 位下看栈的正确单位；用 <code>w</code>（4 字节）会把地址切成两半，读起来会错乱。</p>
       </div>
     </section>
 
@@ -307,7 +307,7 @@ rip  0x555555555159  0x555555555159 &lt;add+16&gt;
       </table>
       <div class="info-box">
         <div class="title"><code>p $rax</code> 与 <code>info registers</code></div>
-        <p><code>info registers</code> 一次看全貌；<code>p $reg</code> 精确取某个、还能参与表达式（<code>p $rsp - $rbp</code> 算当前帧大小、<code>x/i $rip</code> 反汇编当前指令）。<strong>寄存器名前的 <code>$</code></strong> 是 GDB 约定，别漏写。</p>
+        <p><code>info registers</code> 一次看全貌；<code>p $reg</code> 精确取某个、还能参与表达式（<code>p $rsp - $rbp</code> 算当前帧大小、<code>x/i $rip</code> 反汇编当前指令）。<strong>寄存器名前的 <code>$</code></strong> 是 GDB 约定——它告诉 GDB「这是寄存器，不是程序里的变量名」，别漏写。</p>
       </div>
     </section>
 
@@ -321,10 +321,10 @@ rip  0x555555555159  0x555555555159 &lt;add+16&gt;
         </div>
       </div>
       <div class="phase-card">
-        <p><strong><span class="reg">RIP</span>（Instruction Pointer）—— 「现在执行到哪」</strong><br>指向<strong>下一条即将执行的指令</strong>。程序崩溃时，<code>RIP</code> 就是「出事那一刻 CPU 想执行的地址」。若 <code>RIP</code> 指向一个非法/不可执行地址（如 <code>0x0</code>），通常意味着<strong>跳转目标被破坏</strong> —— 比如通过野函数指针调用、或返回地址被覆盖后 <code>ret</code> 跳飞。</p>
+        <p><strong><span class="reg">RIP</span>（Instruction Pointer）—— 「现在执行到哪」</strong><br>指向<strong>下一条即将执行的指令</strong>。程序崩溃时，<code>RIP</code> 就是「出事那一刻 CPU 想执行的地址」。若 <code>RIP</code> 指向一个非法/不可执行地址（如 <code>0x0</code>），通常意味着<strong>跳转目标被破坏</strong> —— 比如通过野函数指针调用、或返回地址被覆盖后 <code>ret</code> 跳飞。好比导航突然指向一片湖：车没坏，是目的地坐标被人改了。</p>
       </div>
       <div class="phase-card">
-        <p><strong><span class="reg">RSP</span>（Stack Pointer）—— 「栈顶在哪」</strong><br>始终指向<strong>当前栈顶</strong>。<code>push</code> 让它减小、<code>pop</code> 让它增大（x86-64 栈向低地址增长）。<code>call</code> 会把返回地址压入、<code>RSP</code> 自动 −8。想看当前栈就 <code>x/…gx $rsp</code>。</p>
+        <p><strong><span class="reg">RSP</span>（Stack Pointer）—— 「栈顶在哪」</strong><br>始终指向<strong>当前栈顶</strong>。<code>push</code> 让它减小、<code>pop</code> 让它增大（x86-64 栈向低地址增长，也就是「越压越多、地址越小」）。<code>call</code> 会把返回地址压入、<code>RSP</code> 自动 −8。想看当前栈就 <code>x/…gx $rsp</code>。</p>
       </div>
       <div class="phase-card">
         <p><strong><span class="reg">RBP</span>（Base Pointer / Frame Pointer）—— 「当前帧的锚点」</strong><br>指向<strong>当前栈帧的基准位置</strong>，函数序言里 <code>push rbp; mov rbp, rsp</code> 建立，局部变量和参数常以 <code>RBP</code> 为基准用固定偏移访问（如 <code>[rbp-4]</code>）。它还串起「上一帧的 RBP」，让 <code>bt</code> 能逐帧回溯。<strong>注意：<code>-O2</code> 或 <code>-fomit-frame-pointer</code> 下 RBP 可能被省去当普通寄存器用</strong>，此时 GDB 靠 DWARF CFI 信息回溯栈，而非靠 RBP 链 —— 详见 <a href="stack_frame_deep_dive.html">栈帧深入</a>。</p>
@@ -363,7 +363,7 @@ Dump of assembler code for function add(int, int):
 <span class="prompt">(gdb)</span> layout regs           <span class="comment"># TUI：同时看寄存器窗口</span></code></pre>
       <div class="info-box">
         <div class="title">看汇编的正确姿势</div>
-        <p>不需要读懂每一条指令。抓三件事：<strong>①函数序言/结语</strong>（<code>push rbp</code> / <code>ret</code> 标出边界）；<strong>②内存读写</strong>（<code>mov</code> 与 <code>[rbp-x]</code> 对应局部变量）；<strong>③控制流</strong>（<code>call</code> / <code>jmp</code> / <code>je</code> 决定走向）。配合 <code>stepi</code>/<code>nexti</code> 逐指令走、<code>layout asm</code> 高亮跟随，能看清「这一行 C++ 到底编译成了哪几条指令」。</p>
+        <p>不需要读懂每一条指令。抓三件事：<strong>①函数序言/结语</strong>（<code>push rbp</code> / <code>ret</code> 标出边界——序言是函数开头「搭台」的指令，结语是「拆台回家」的指令）；<strong>②内存读写</strong>（<code>mov</code> 与 <code>[rbp-x]</code> 对应局部变量）；<strong>③控制流</strong>（<code>call</code> / <code>jmp</code> / <code>je</code> 决定走向）。配合 <code>stepi</code>/<code>nexti</code> 逐指令走、<code>layout asm</code> 高亮跟随，能看清「这一行 C++ 到底编译成了哪几条指令」。</p>
       </div>
     </section>
 
@@ -376,7 +376,7 @@ Dump of assembler code for function add(int, int):
           <p class="sub">用 GDB 把整套函数调用底层机制走一遍</p>
         </div>
       </div>
-      <p>把前面几篇的原理，用 GDB 在 <code>add(10,20)</code> 上验证成一条闭环：</p>
+      <p>把前面几篇的原理，用 GDB 在 <code>add(10,20)</code> 上验证成一条闭环。整条链路用一句话说：参数先被塞进寄存器，<code>call</code> 负责跳转并留下返回地址，函数体算完把结果放进 <code>RAX</code>，最后 <code>ret</code> 靠返回地址回到家：</p>
       <div class="flow-diagram">
         <div class="flow-box"><strong>参数</strong>：main 把 10→<span class="reg">EDI</span>、20→<span class="reg">ESI</span>（<code>info registers</code> 可见）</div>
         <div class="flow-arrow-down"></div>
