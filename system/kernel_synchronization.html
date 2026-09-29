@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>内核同步原语与 RCU · 原子操作 / 内存屏障 / spinlock / seqlock / per-CPU / RCU / lockdep</title>
-<meta name="description" content="内核态同步完全指南：内核并发的四个来源、原子操作与 READ_ONCE/WRITE_ONCE、内存屏障为什么总是成对出现、spinlock 家族的变体决策矩阵与 qspinlock 演进、mutex/rwsem 的乐观自旋与饥饿、seqlock 与 per-CPU 变量、RCU 的发布-订阅-宽限期三件套与真实陷阱、lockdep / KCSAN / hung task 排障，含 12 道面试题。">
+<meta name="description" content="用白话讲透内核同步：并发从哪来、原子操作与 READ_ONCE、内存屏障为何成对、spinlock 变体怎么选、mutex/rwsem、seqlock、per-CPU、RCU 原理与宽限期、lockdep/KCSAN 排障，含 12 道面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/kernel_synchronization.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/kernel_synchronization.html">
 <meta property="og:title" content="内核同步原语与 RCU · 原子操作 / 内存屏障 / spinlock / seqlock / per-CPU / RCU / lockdep">
-<meta property="og:description" content="内核态同步完全指南：内核并发的四个来源、原子操作与 READ_ONCE/WRITE_ONCE、内存屏障为什么总是成对出现、spinlock 家族的变体决策矩阵与 qspinlock 演进、mutex/rwsem 的乐观自旋与饥饿、seqlock 与 per-CPU 变量、RCU 的发布-订阅-宽限期三件套与真实陷阱、lockdep / KCSAN / hung task 排障，含 12 道面试题。">
+<meta property="og:description" content="用白话讲透内核同步：并发从哪来、原子操作与 READ_ONCE、内存屏障为何成对、spinlock 变体怎么选、mutex/rwsem、seqlock、per-CPU、RCU 原理与宽限期、lockdep/KCSAN 排障，含 12 道面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="内核同步原语与 RCU · 原子操作 / 内存屏障 / spinlock / seqlock / per-CPU / RCU / lockdep">
-<meta name="twitter:description" content="内核态同步完全指南：内核并发的四个来源、原子操作与 READ_ONCE/WRITE_ONCE、内存屏障为什么总是成对出现、spinlock 家族的变体决策矩阵与 qspinlock 演进、mutex/rwsem 的乐观自旋与饥饿、seqlock 与 per-CPU 变量、RCU 的发布-订阅-宽限期三件套与真实陷阱、lockdep / KCSAN / hung task 排障，含 12 道面试题。">
+<meta name="twitter:description" content="用白话讲透内核同步：并发从哪来、原子操作与 READ_ONCE、内存屏障为何成对、spinlock 变体怎么选、mutex/rwsem、seqlock、per-CPU、RCU 原理与宽限期、lockdep/KCSAN 排障，含 12 道面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -111,7 +111,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 50 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 55 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -152,7 +152,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★★</span>
       <span class="pill cyan">面试高频</span>
-      <span class="pill green">阅读时长 ~50 min</span>
+      <span class="pill green">阅读时长 ~55 min</span>
       <span class="pill amber">前置 进程调度 · 设备驱动 · C++ 内存模型</span>
     </div>
     <div class="meta">
@@ -172,19 +172,19 @@
     <div class="t"><h2>内核并发从哪来</h2><p class="sub">四个并发源，决定了锁的种类</p></div>
   </div>
 
-  <p>用户态并发只需要 mutex + atomic，前提是<strong>永远可以睡眠</strong>。内核这个前提不成立：同一函数可能跑在进程上下文（可睡）、硬中断（绝不能睡）、或已经持着自旋锁（原子上下文，一睡整机 hang）。锁的种类多，不是喜欢造轮子——<strong>四个并发源必须用不同手段挡住。</strong></p>
+  <p>用户态并发只需要 mutex（互斥锁——同一时刻只放一个线程进临界区的睡眠锁）+ atomic，前提是<strong>永远可以睡眠</strong>。内核这个前提不成立：同一函数可能跑在进程上下文（可睡）、硬中断（绝不能睡）、或已经持着自旋锁（原子上下文，一睡整机 hang）。锁的种类多，不是喜欢造轮子——<strong>四个并发源必须用不同手段挡住。</strong></p>
 
   <div class="analogy">用户态像办公室协作：等打印机可以去喝咖啡。内核像急诊值班：救护车随时把你从病历夹边叫走。拿着病历夹去睡觉，下一个找夹子的人只能<strong>干等到天亮</strong>——还堵着电梯（自旋烧 CPU）。</div>
 
   <h3>1.1 四个并发源</h3>
 
-  <div class="def"><strong>上下文</strong>：这段代码跑在什么身份。<strong>进程上下文</strong>有 <code>current</code>，可睡；<strong>中断上下文</strong>借当前任务栈，不能睡（睡了就把无关任务永久挂起）；<strong>原子上下文</strong>是 <code>preempt_count != 0</code> 的任何时刻（持自旋锁、关中断/抢占、在中断里），同样不能睡。</div>
+  <div class="def"><strong>上下文</strong>：这段代码跑在什么身份。<strong>进程上下文</strong>（普通进程/内核线程的执行环境，有 <code>current</code> 指针指着自己）有 <code>current</code>，可睡；<strong>中断上下文</strong>（硬件打断后临时借道执行的代码）借当前任务栈，不能睡（睡了就把无关任务永久挂起）；<strong>原子上下文</strong>是 <code>preempt_count != 0</code> 的任何时刻（持自旋锁、关中断/抢占、在中断里），同样不能睡。</div>
 
-  <div class="def"><strong><code>preempt_count</code></strong>：把抢占/软中断禁用层数、硬中断/NMI 嵌套压在同一个 32 位数里。<code>in_atomic()</code> / <code>might_sleep()</code> 都读它。<strong>能不能睡，本质是问这个数是不是 0。</strong></div>
+  <div class="def"><strong><code>preempt_count</code></strong>：把抢占/软中断禁用层数、硬中断/NMI 嵌套压在同一个 32 位数里（相当于一串「当前不能被打断」标记的叠加计数）。<code>in_atomic()</code> / <code>might_sleep()</code> 都读它。<strong>能不能睡，本质是问这个数是不是 0。</strong></div>
 
   <h3>1.2 谁能打断谁</h3>
 
-  <p>选锁只有一句：先问「这份数据会被谁访问」，能打断就必须挡住它。关中断挡不住另一个 CPU——那是新手最常犯的错。</p>
+  <p>选锁只有一句：先问「这份数据会被谁访问」，能打断就必须挡住它。关中断挡不住另一个 CPU——SMP（对称多处理器，一台机器多个独立 CPU 核）上别的核根本不受本核中断开关影响，那是新手最常犯的错。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 330" role="img" aria-label="内核四个并发源，以及谁能打断谁：SMP 真并行、内核抢占、硬中断与软中断、主动睡眠让出。本 CPU 上硬中断可打断软中断与进程，软中断只能打断进程；别的 CPU 无视关中断">
@@ -228,7 +228,7 @@
 
   <h3>1.3 中断与进程共享队列</h3>
 
-  <p>驱动最常见的结构：ISR 把包挂进链表，<code>read()</code> 取走。进程侧只用 <code>spin_lock</code> 时，<strong>同 CPU 上的硬中断再抢同一把锁就是死锁</strong>——持锁者被挂起、永远回不去解锁。</p>
+  <p>驱动最常见的结构：ISR（中断服务程序——硬件打断 CPU 时执行的处理函数）把包挂进链表，<code>read()</code> 取走。进程侧只用 <code>spin_lock</code> 时，<strong>同 CPU 上的硬中断再抢同一把锁就是死锁</strong>——持锁者被挂起、永远回不去解锁。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 268" role="img" aria-label="进程与硬中断共享队列：普通 spin_lock 在同 CPU 上死锁；进程侧 spin_lock_irqsave 关中断后再拿锁">
@@ -266,7 +266,7 @@
     <figcaption>「16 核开发机压测一周没事，客户 2 核虚拟机十分钟 hang」——ISR 只有落在持锁那个核上才死。</figcaption>
   </div>
 
-  <div class="note"><strong>PREEMPT_RT 会改变这里的部分规则。</strong>在实时内核上，<code>spinlock_t</code> 被换成了可睡眠的 rt_mutex，持有它<strong>不再禁止抢占</strong>；真正的「关抢占自旋锁」变成了 <code>raw_spinlock_t</code>。中断处理程序默认也被线程化。所以 RT 上「持 <code>spinlock_t</code> 时能不能 <code>kmalloc(GFP_KERNEL)</code>」的答案和主线内核相反。写通用驱动时按主线内核的严格规则写（不睡眠、临界区短），在 RT 上一定是安全的；反过来不成立。详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</div>
+  <div class="note"><strong>PREEMPT_RT 会改变这里的部分规则。</strong>在实时内核（PREEMPT_RT，把 Linux 改造成可硬实时的一套补丁）上，<code>spinlock_t</code> 被换成了可睡眠的 rt_mutex，持有它<strong>不再禁止抢占</strong>；真正的「关抢占自旋锁」变成了 <code>raw_spinlock_t</code>。中断处理程序默认也被线程化（变成可调度的普通线程）。所以 RT 上「持 <code>spinlock_t</code> 时能不能 <code>kmalloc(GFP_KERNEL)</code>」的答案和主线内核相反。写通用驱动时按主线内核的严格规则写（不睡眠、临界区短），在 RT 上一定是安全的；反过来不成立。详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</div>
 </section>
 
 <!-- ================================================================ §2 -->
@@ -276,11 +276,11 @@
     <div class="t"><h2>原子操作与 READ_ONCE / WRITE_ONCE</h2><p class="sub">最便宜的同步，和编译器的一场博弈</p></div>
   </div>
 
-  <p>共享的只是计数器或标志位时，一条 CPU 指令就能原子改完，加锁是浪费。内核给两套：<strong><code>atomic_t</code></strong>，以及比锁更基础、评审里最常被抓的 <strong><code>READ_ONCE()</code> / <code>WRITE_ONCE()</code></strong>。</p>
+  <p>共享的只是计数器或标志位时，一条 CPU 指令就能原子改完（所谓原子，就是「做就一次做完，中间不会被别的核插进来看到半截」），加锁是浪费。内核给两套：<strong><code>atomic_t</code></strong>，以及比锁更基础、评审里最常被抓的 <strong><code>READ_ONCE()</code> / <code>WRITE_ONCE()</code></strong>。</p>
 
   <h3>2.1 atomic_t 与常用 API</h3>
 
-  <div class="def"><strong><code>atomic_t</code></strong>：包了一层结构体的 <code>int</code>，故意让你没法 <code>++</code>、必须走 <code>atomic_*()</code>。32 位有符号；64 位用 <code>atomic64_t</code>。引用计数不要手搓——用 <code>refcount_t</code>，溢出和「从 0 复活」会 <code>WARN</code> 并饱和，<code>atomic_t</code> 上这两种是静默 UAF。</div>
+  <div class="def"><strong><code>atomic_t</code></strong>：包了一层结构体的 <code>int</code>，故意让你没法 <code>++</code>、必须走 <code>atomic_*()</code>（强制每次操作都走原子接口，不给手滑留机会）。32 位有符号；64 位用 <code>atomic64_t</code>。引用计数不要手搓——用 <code>refcount_t</code>，溢出和「从 0 复活」会 <code>WARN</code> 并饱和，<code>atomic_t</code> 上这两种是静默 UAF。</div>
 
   <table>
     <thead><tr><th>类别</th><th>例子</th><th>原子性</th><th>内存序（LKMM 视角）</th></tr></thead>
@@ -297,7 +297,7 @@
 
   <h3>2.2 READ_ONCE / WRITE_ONCE：不是「再读一次」</h3>
 
-  <p><code>READ_ONCE</code> 禁止的是<strong>撕裂</strong>和<strong>编译器优化</strong>，不是「提醒你再读一遍」。普通变量轮询在 C 抽象机里，循环体内没人改 <code>ready</code>，编译器有权把多次读提成一次——数据竞争是 UB，它有权假设不存在。</p>
+  <p><code>READ_ONCE</code> 禁止的是<strong>撕裂</strong>（一次访问被拆成两半，读到「前半新后半旧」拼出来的值）和<strong>编译器优化</strong>，不是「提醒你再读一遍」。普通变量轮询在 C 抽象机里，循环体内没人改 <code>ready</code>，编译器有权把多次读提成一次——数据竞争是 UB（未定义行为，标准不管会发生什么），它有权假设不存在。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 220" role="img" aria-label="编译器把 while (!ready) 循环优化成一次读：若第一次读到 0 就变成永久空转；READ_ONCE 禁止这次提升">
@@ -372,7 +372,7 @@
     <div class="t"><h2>内存屏障</h2><p class="sub">屏障永远成对出现</p></div>
   </div>
 
-  <p>乱序有两层：<strong>编译器</strong>（挡它的是 <code>barrier()</code>，不产生指令）和 <strong>CPU</strong>（store buffer、推测执行；挡它的是 <code>mfence</code>/<code>dmb</code>）。x86-64 是 TSO，只允许「写→读」重排，所以 <code>smp_rmb()</code>/<code>smp_wmb()</code> 在 x86 上是纯编译器屏障、零指令——缺屏障的 bug 到 ARM64 / POWER 才炸。</p>
+  <p>乱序有两层：<strong>编译器</strong>（挡它的是 <code>barrier()</code>，不产生指令）和 <strong>CPU</strong>（store buffer（写缓冲——CPU 先把写攒在手里的暂存区，还没刷到内存）、推测执行（猜着先把后面的活干了，猜错再回滚）；挡它的是 <code>mfence</code>/<code>dmb</code>）。x86-64 是 TSO（全存储排序——x86 自己承诺的较强内存模型，读写几乎不乱序），只允许「写→读」重排，所以 <code>smp_rmb()</code>/<code>smp_wmb()</code> 在 x86 上是纯编译器屏障、零指令——缺屏障的 bug 到 ARM64 / POWER 才炸。</p>
 
   <div class="analogy">屏障像快递「先封箱再贴单」。仓库为了效率会打乱工序；下游按面单取货，单子贴了箱子还空着就会拿到<strong>空箱</strong>。写侧 release = 封好才能贴单；读侧 acquire = 看到单才能开箱。只管仓库不管取货方，推测执行照样偷看。</div>
 
@@ -390,13 +390,13 @@
     </tbody>
   </table>
 
-  <div class="warn"><code>smp_*</code> 在 <code>CONFIG_SMP=n</code> 上退化成 <code>barrier()</code>。DMA 引擎不是 CPU，单核板上 <code>smp_wmb()</code> 变空操作、描述符还在 store buffer 里网卡就开始读。设备侧用 <code>mb()</code> / <code>dma_wmb()</code>。</div>
+  <div class="warn"><code>smp_*</code> 在 <code>CONFIG_SMP=n</code>（编译时声明「这台机器只有一个 CPU」）上退化成 <code>barrier()</code>。DMA 引擎（设备自己搬数据的硬件单元）不是 CPU，单核板上 <code>smp_wmb()</code> 变空操作、描述符还在 store buffer 里网卡就开始读。设备侧用 <code>mb()</code> / <code>dma_wmb()</code>。</div>
 
   <h3>3.2 铁律：屏障总是成对出现</h3>
 
-  <div class="intuition">一个屏障单独存在<strong>几乎总是 bug</strong>。写侧 release 必须对上读侧 acquire。看到孤零零的 <code>smp_mb()</code>，第一反应是「它的对儿在哪」。</div>
+  <div class="intuition">一个屏障单独存在<strong>几乎总是 bug</strong>。写侧 release（释放屏障——保证它之前的写先对外可见）必须对上读侧 acquire（获取屏障——保证它之后的读不提前）。看到孤零零的 <code>smp_mb()</code>，第一反应是「它的对儿在哪」。</div>
 
-  <p>最经典的成对是<strong>发布—订阅</strong>：先填对象再发指针。RCU、延迟初始化、模块加载都是它。图已经画清两侧缺一的后果，下面只留配对写法：</p>
+  <p>最经典的成对是<strong>发布—订阅</strong>：先填对象再发指针（发布方把东西装进箱子再亮出地址，订阅方看到地址才开箱）。RCU、延迟初始化、模块加载都是它。图已经画清两侧缺一的后果，下面只留配对写法：</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 336" role="img" aria-label="发布-订阅模式：写侧 release 与读侧 acquire 成对配合，以及缺少屏障时读者看到未初始化对象的错误路径">
@@ -488,7 +488,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <div class="t"><h2>spinlock 家族</h2><p class="sub">忙等的锁，和「绝不能睡」这条红线</p></div>
   </div>
 
-  <div class="def"><strong>自旋锁</strong>：拿不到就不睡、不让出 CPU，循环直到拿到。意义是省掉睡眠-唤醒两次切换（几微秒），代价是等待时 CPU 空转。只适合<strong>极短临界区</strong>，也是<strong>中断上下文里唯一能用的锁</strong>。</div>
+  <div class="def"><strong>自旋锁</strong>（spinlock，拿不到就原地打转的锁）：拿不到就不睡、不让出 CPU，循环直到拿到。意义是省掉睡眠-唤醒两次切换（几微秒），代价是等待时 CPU 空转。只适合<strong>极短临界区</strong>，也是<strong>中断上下文里唯一能用的锁</strong>。</div>
 
   <div class="analogy">mutex 像银行取号：可以去买咖啡。自旋锁像等自动门——对方两秒就出来，去买咖啡更慢。里面的人睡午觉，门口整层楼堵死。</div>
 
@@ -503,7 +503,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     </ul>
   </div>
 
-  <p><code>CONFIG_DEBUG_ATOMIC_SLEEP</code> 下，<code>might_sleep()</code> 在 <code>preempt_count != 0</code> 时立刻打 <code>BUG: sleeping function called from invalid context</code>；没开则更晚看到 <code>scheduling while atomic</code>，末尾十六进制就是 <code>preempt_count</code>。</p>
+  <p><code>CONFIG_DEBUG_ATOMIC_SLEEP</code> 下，<code>might_sleep()</code> 在 <code>preempt_count != 0</code> 时立刻打 <code>BUG: sleeping function called from invalid context</code>；没开则更晚看到 <code>scheduling while atomic</code>（在原子上下文里调了调度器），末尾十六进制就是 <code>preempt_count</code>。</p>
 
   <div class="checklist">
     <h4>临界区里这些函数会睡，一律不能出现在 spin_lock 内</h4>
@@ -569,7 +569,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>4.3 实现演进：MCS 排队，别贴实现</h3>
 
-  <p>自旋锁史是一部公平性 vs cacheline 争用的斗争史。</p>
+  <p>自旋锁史是一部公平性 vs cacheline 争用的斗争史（cacheline：CPU 缓存的最小单位，谁改了它，其他核手里那份副本就要作废重取）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 150" role="img" aria-label="qspinlock 三代演进：test-and-set 不公平且全员写同一缓存行；ticket 公平但仍全员读同一行；qspinlock 用 MCS 排队，每人自旋在本地节点">
@@ -647,11 +647,11 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <figcaption>qspinlock 的核心思想：把「全员争抢一条缓存行」变成「一条链表，每个等待者只自旋在自己那条本地缓存行上」——争用流量从 O(N) 降到 O(1)</figcaption>
   </div>
 
-  <div class="def"><strong>qspinlock</strong>：x86 从 4.2 起的默认 <code>spinlock_t</code>。基于 MCS——每人把 per-CPU 本地节点挂到队尾，只自旋在自己那条缓存行上；释放只写下一个节点。<strong>无争用与 test-and-set 一样快，高争用是 O(1) 且 FIFO。</strong></div>
+  <div class="def"><strong>qspinlock</strong>（排队自旋锁）：x86 从 4.2 起的默认 <code>spinlock_t</code>。基于 MCS（一种排队锁算法：等待者各自占一个本地节点排队）——每人把 per-CPU 本地节点挂到队尾，只自旋在自己那条缓存行上；释放只写下一个节点。<strong>无争用与 test-and-set 一样快，高争用是 O(1) 且 FIFO。</strong></div>
 
   <h3>4.4 临界区要短</h3>
 
-  <p>无争用 lock+unlock ~10–20 ns；争用一次传递 50–200 ns（跨 socket 再乘 2–5）；上下文切换 1–5 μs。自旋只要低于切换就划算。<strong>争用是超线性放大的</strong>：临界区拉长 10 倍，撞锁概率也涨约 10 倍，核数越多吞吐掉得越狠。把一次 <code>kfree</code> 移出锁外，不是抠 100 ns，是掐掉会随核数爆炸的争用点。</p>
+  <p>无争用 lock+unlock ~10–20 ns；争用一次传递 50–200 ns（跨 socket（跨 CPU 插槽，两颗物理 CPU 之间的通信）再乘 2–5）；上下文切换 1–5 μs。自旋只要低于切换就划算。<strong>争用是超线性放大的</strong>：临界区拉长 10 倍，撞锁概率也涨约 10 倍，核数越多吞吐掉得越狠。把一次 <code>kfree</code> 移出锁外，不是抠 100 ns，是掐掉会随核数爆炸的争用点。</p>
 
   <div class="checklist">
     <h4>缩短临界区</h4>
@@ -672,13 +672,13 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <div class="t"><h2>可睡眠锁：mutex / rwsem / semaphore</h2><p class="sub">临界区长的时候，让出 CPU 才是对的</p></div>
   </div>
 
-  <p>临界区可能长于一次上下文切换（微秒）时，睡下去把 CPU 让出才划算。硬条件：<strong>只能在进程上下文用</strong>。</p>
+  <p>临界区可能长于一次上下文切换（微秒）时，睡下去把 CPU 让出才划算。硬条件：<strong>只能在进程上下文用</strong>（就是系统调用、内核线程这种「有 task_struct、可以被调度」的正常代码环境，而不是中断那种借别人栈的场合）。</p>
 
   <h3>5.1 mutex：能用就用它</h3>
 
-  <div class="def"><strong>乐观自旋</strong>：<code>mutex_lock</code> 拿不到时不立刻睡。owner 正在另一个 CPU 上跑，就先自旋一会儿（自旋者自己排 MCS 队列）；owner 被切走或自旋太久才睡。<strong>短临界区接近自旋锁，长临界区保留睡眠语义。</strong></div>
+  <div class="def"><strong>乐观自旋</strong>：拿不到锁时不立刻睡，先赌一把——<code>mutex_lock</code> 拿不到时不立刻睡。owner（锁的当前持有者）正在另一个 CPU 上跑，就先自旋一会儿（自旋者自己排 MCS 队列）；owner 被切走或自旋太久才睡。<strong>短临界区接近自旋锁，长临界区保留睡眠语义。</strong></div>
 
-  <p>系统调用路径优先 <code>mutex_lock_interruptible</code>（可被 Ctrl-C 打断）。不可递归、必须持有者本人解锁、中断里用 = BUG。</p>
+  <p>系统调用路径优先 <code>mutex_lock_interruptible</code>（可被 Ctrl-C 打断的拿锁版本，免得进程卡在锁上连杀都杀不掉）。不可递归、必须持有者本人解锁、中断里用 = BUG。</p>
 
   <table>
     <thead><tr><th>判据</th><th>选 spinlock</th><th>选 mutex</th></tr></thead>
@@ -695,7 +695,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>5.2 rwsem / semaphore / completion</h3>
 
-  <p><code>down_read</code> 多读者并发，<code>down_write</code> 独占。典型用户：<code>mmap_lock</code>、文件系统 <code>i_rwsem</code>。「读多、写少、临界区可能很长」。5.x 加了 handoff（写者等太久就预定锁，新读者不能插队），饥饿压到可接受。<strong>仍不适合写侧也有一定频率的热点。</strong></p>
+  <p><code>down_read</code>（rwsem 读写信号量的读侧接口——多个读者可以同时持有）多读者并发，<code>down_write</code> 独占。典型用户：<code>mmap_lock</code>、文件系统 <code>i_rwsem</code>。「读多、写少、临界区可能很长」。5.x 加了 handoff（交接——写者等太久就直接预定锁位，新读者不许再插队），饥饿压到可接受。<strong>仍不适合写侧也有一定频率的热点。</strong></p>
 
   <div class="danger">读写锁在「读多」时可能比互斥更慢：读侧也要原子改读者计数，32 核就是 32 次争同一条 cacheline。临界区工作量必须显著大于一次 cacheline 迁移，读写锁才有意义。</div>
 
@@ -713,17 +713,17 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <div class="t"><h2>seqlock 与 per-CPU 变量</h2><p class="sub">两种把读侧成本压到接近零的思路</p></div>
   </div>
 
-  <p>§4 的结论：读写锁在读侧极热时是负优化（读侧也要写 cacheline）。两条绕开的路：<strong>seqlock</strong> 读侧一个字都不写，靠版本号重试；<strong>per-CPU</strong> 让每个 CPU 有自己的一份，从根上消灭共享。</p>
+  <p>§4 的结论：读写锁在读侧极热时是负优化（读侧也要写 cacheline）。两条绕开的路：<strong>seqlock</strong>（顺序锁——靠「版本号对不上就重读」代替给读者上锁）读侧一个字都不写，靠版本号重试；<strong>per-CPU</strong>（每核一份变量副本，各玩各的）让每个 CPU 有自己的一份，从根上消灭共享。</p>
 
   <h3>6.1 seqlock：读侧无锁重试</h3>
 
-  <div class="def"><strong>seqlock</strong>：序号 + 自旋锁。写者拿锁并把序号加一（变奇数），改完再加一（变偶数）。读者完全不写：读序号 → 读数据 → 再读序号；两次不同或第一次是奇数就整段重读。</div>
+  <div class="def"><strong>seqlock</strong>：序号 + 自旋锁。写者拿锁并把序号加一（变奇数），改完再加一（变偶数）。读者完全不写：读序号 → 读数据 → 再读序号；两次不同或第一次是奇数就整段重读。好比看公告栏：先看编号，抄内容，再看编号——编号没变说明抄的时候没人动过牌子。</div>
 
   <div class="note">seqlock 最典型的一个生产用例就在你每次调 <code>clock_gettime</code> 时跑：vDSO 的共享数据页（内核写、所有进程读）正是用 seqlock 保护的——读多写少、且<strong>读者绝对不能阻塞写者</strong>（否则内核更新时间就会被用户态卡住）。展开见 <a href="time_and_clocks.html#s4">时间与时钟 · vDSO</a>。</div>
 
   <div class="analogy">seqlock 像抄翻页车次牌：先看「更新中」灯，抄完再看灯有没有闪过。没闪就是一致的一屏；闪过就整屏重抄。抄的人从不碰牌子，一百人同时抄也不互相干扰。</div>
 
-  <p>写侧：<code>write_seqlock</code> / <code>write_sequnlock</code>（中断里用 <code>_irqsave</code>）。读侧：<code>do { seq = read_seqbegin(); 拷到局部; } while (read_seqretry());</code>——循环内可能读到撕裂态，只能拷贝，绝不能决策或解引用。</p>
+  <p>写侧：<code>write_seqlock</code> / <code>write_sequnlock</code>（中断里用 <code>_irqsave</code>）。读侧：<code>do { seq = read_seqbegin(); 拷到局部; } while (read_seqretry());</code>——循环内可能读到撕裂态，只能拷贝，绝不能决策或解引用（拿指针去访问它指向的内存——撕裂出来的指针是野值，一访问就崩）。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 250" role="img" aria-label="seqlock 的读侧重试时间线：读者两次读到相同的偶数序号则成功，中间被写者插入导致序号变化则重试">
@@ -771,7 +771,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>6.2 per-CPU：无锁是因为根本不共享</h3>
 
-  <div class="def"><strong>per-CPU 变量</strong>：每个 CPU 一份副本，各自只碰自己的。不需要锁、原子、屏障——唯一要防的是访问期间被抢占/迁移到别的 CPU。<strong>不是把锁做快，是把共享消灭掉。</strong></div>
+  <div class="def"><strong>per-CPU 变量</strong>：每个 CPU 一份副本，各自只碰自己的。不需要锁、原子、屏障——唯一要防的是访问期间被抢占/迁移到别的 CPU（人还在读 3 号柜的东西，脚下却已经漂到 4 号柜台）。<strong>不是把锁做快，是把共享消灭掉。</strong></div>
 
   <div class="fig">
     <svg viewBox="0 0 780 200" role="img" aria-label="per-CPU 变量每个 CPU 一份副本互不共享因此无锁；汇总必须遍历所有 possible CPU，拿到的是近似值">
@@ -822,7 +822,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <div class="warn">三个代价：① 内存放大（256 核 = 256 份）；② 汇总不便宜（监控每秒采一次 = 每秒 256 次跨 NUMA miss）；③ 拿不到一致快照。「精确总数等于 0 才能释放」别用它。</div>
 
-  <div class="note">「不是把锁做快，是把共享消灭掉」在用户态是同一本账。高并发服务里最典型的三个跨核弹跳点——<code>shared_ptr</code> 的引用计数、被多个 worker 共享的连接表、挤在同一条 cache line 上的统计计数器——以及 shared-nothing 分片之后它们怎么整个消失，见 <a href="../architect/high_concurrency_gateway.html#s6">IoT 接入网关架构设计 §6</a>。<strong>判据</strong>：代码跑在内核态（驱动、模块、内核路径）用本篇的原语；跑在用户态的服务端程序，那边讲的是同一个硬件效应在 C++ 侧的形态与代价。</div>
+  <div class="note">「不是把锁做快，是把共享消灭掉」在用户态是同一本账。高并发服务里最典型的三个跨核弹跳点——<code>shared_ptr</code> 的引用计数、被多个 worker 共享的连接表、挤在同一条 cache line（缓存行，CPU 缓存的最小拷贝单位，多个变量挤进同一行会假性互卡）上的统计计数器——以及 shared-nothing（分片架构，每个 worker 独占自己那份数据）分片之后它们怎么整个消失，见 <a href="../architect/high_concurrency_gateway.html#s6">IoT 接入网关架构设计 §6</a>。<strong>判据</strong>：代码跑在内核态（驱动、模块、内核路径）用本篇的原语；跑在用户态的服务端程序，那边讲的是同一个硬件效应在 C++ 侧的形态与代价。</div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -832,19 +832,19 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <div class="t"><h2>RCU 原理</h2><p class="sub">读侧零开销，代价全给写侧</p></div>
   </div>
 
-  <p>RCU 解决「读极热、写极少、读侧还常在不能睡的上下文」：路由表、模块列表、fd 表、SELinux 策略。rwsem 不能进中断，rwlock 读侧要写 cacheline，seqlock 不能保护含指针的结构。</p>
+  <p>RCU 解决「读极热、写极少、读侧还常在不能睡的上下文」：路由表、模块列表、fd 表、SELinux 策略。rwsem 不能进中断，rwlock（读写自旋锁——允许多个读者同时持锁的自旋锁）读侧要写 cacheline，seqlock 不能保护含指针的结构。</p>
 
-  <div class="intuition">RCU 的核心交易是：<strong>让读者永远不阻塞、不重试、甚至一条同步指令都不执行；把全部代价转移给写者——写者必须做拷贝，还必须等待一段「宽限期」才能释放旧数据。</strong>读写比例是 1000:1 时，这笔交易划算得离谱。</div>
+  <div class="intuition">RCU 的核心交易是：<strong>让读者永远不阻塞、不重试、甚至一条同步指令都不执行；把全部代价转移给写者——写者必须做拷贝，还必须等待一段「宽限期」才能释放旧数据。</strong>读写比例是 1000:1 时，这笔交易划算得离谱。（RCU 全称 Read-Copy-Update：读-拷贝-更新，一种为「读极多写极少」场景设计的同步机制。）</div>
 
   <div class="analogy">RCU 像换公告板：旁边做好新通知，箭头一挪（原子指针替换）。正在看旧通知的人不受影响；新来的人看到新的。旧通知不能立刻撕掉——等到「换箭头前就开始看的人都走了」，这段等待就是宽限期。</div>
 
   <h3>7.1 读侧为什么能做到零开销</h3>
 
-  <p><code>rcu_read_lock()</code> <strong>不是一把锁</strong>：不互斥、不失败、不阻塞。它只标记「我正在读」，好让写者判断宽限期结束了没有。非抢占内核里展开成 <code>preempt_disable()</code>，某些配置下几乎零指令。抢占式内核可读侧被抢占，要记账嵌套计数，但对使用者行为一致：<strong>不阻塞、不失败、不能主动睡眠</strong>。读侧：<code>rcu_read_lock(); c = rcu_dereference(p); use(c-&gt;field); rcu_read_unlock();</code>——只能把<strong>值</strong>带出临界区。</p>
+  <p><code>rcu_read_lock()</code> <strong>不是一把锁</strong>：不互斥、不失败、不阻塞。它只标记「我正在读」，好让写者判断宽限期结束了没有。非抢占内核里展开成 <code>preempt_disable()</code>（关抢占——别的任务暂时抢不走这个 CPU），某些配置下几乎零指令。抢占式内核可读侧被抢占，要记账嵌套计数，但对使用者行为一致：<strong>不阻塞、不失败、不能主动睡眠</strong>。读侧：<code>rcu_read_lock(); c = rcu_dereference(p); use(c-&gt;field); rcu_read_unlock();</code>——只能把<strong>值</strong>带出临界区。</p>
 
-  <div class="def"><strong>宽限期</strong>：从指针替换到「所有在替换前已进入读侧的读者都退出」。之后再也没有任何路径能拿到旧指针。它<strong>不等新读者</strong>，也不需要知道有哪些读者——这才是读侧零开销的原因。</div>
+  <div class="def"><strong>宽限期</strong>（grace period，优雅期——给旧数据留的「送客时间」）：从指针替换到「所有在替换前已进入读侧的读者都退出」。之后再也没有任何路径能拿到旧指针。它<strong>不等新读者</strong>，也不需要知道有哪些读者——这才是读侧零开销的原因。</div>
 
-  <div class="def"><strong>静止状态</strong>：一个 CPU 此刻肯定不在任何 RCU 读侧临界区。非抢占内核里，上下文切换 / idle / 返回用户态即证明。宽限期 = 等每个 CPU 都经过一次。内核死循环不让出 → RCU stall（§8）。</div>
+  <div class="def"><strong>静止状态</strong>（quiescent state——一个 CPU「此刻肯定不在任何 RCU 读侧临界区」的可判定时刻）：一个 CPU 此刻肯定不在任何 RCU 读侧临界区。非抢占内核里，上下文切换 / idle / 返回用户态即证明。宽限期 = 等每个 CPU 都经过一次。内核死循环不让出 → RCU stall（§8）。</div>
 
   <h3>7.2 三件套：发布、订阅、宽限期</h3>
 
@@ -900,7 +900,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>7.3 写侧模式与完整代码</h3>
 
-  <p>「Read-Copy-Update」这个名字就是写侧的流程：<strong>拷贝一份 → 改副本 → 原子替换指针 → 等宽限期 → 释放旧的</strong>。注意 RCU <strong>不解决写者之间的互斥</strong>——多个写者并发时仍然需要一把普通的锁（spinlock 或 mutex）把它们串起来。</p>
+  <p>「Read-Copy-Update」（读-拷贝-更新，名字本身就是流程说明书）这个名字就是写侧的流程：<strong>拷贝一份 → 改副本 → 原子替换指针 → 等宽限期 → 释放旧的</strong>。注意 RCU <strong>不解决写者之间的互斥</strong>——多个写者并发时仍然需要一把普通的锁（spinlock 或 mutex）把它们串起来。</p>
 
 <pre><span class="cm">/* ══ 模式一：整体替换一个配置对象 ═══════════════════ */</span>
 <span class="kw">static</span> <span class="kw">struct</span> cfg __rcu *g_cfg;
@@ -989,7 +989,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <div class="intuition"><strong>能用 kfree_rcu 就用它；逻辑复杂用 call_rcu；必须确认旧对象彻底没人用才 synchronize。</strong>第三种远比想象的少。</div>
 
-  <div class="note">RCU 保护查找，引用计数保护使用：临界区里 <code>refcount_inc_not_zero()</code> 再出临界区。必须用 <code>_not_zero</code>，计数已是 0 不能复活。</div>
+  <div class="note">RCU 保护查找，引用计数保护使用：临界区里 <code>refcount_inc_not_zero()</code>（先把引用计数从非零值加一，证明对象还活着）再出临界区。必须用 <code>_not_zero</code>，计数已是 0 不能复活。</div>
 </section>
 
 <!-- ================================================================ §8 -->
@@ -1023,7 +1023,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>8.2 陷阱一：读侧睡眠是核弹</h3>
 
-  <p>普通 RCU 读侧<strong>不能主动睡眠</strong>：<code>mutex_lock</code>、<code>GFP_KERNEL</code>、<code>copy_to_user</code>、<code>synchronize_rcu</code> 一律禁止。</p>
+  <p>普通 RCU 读侧<strong>不能主动睡眠</strong>：<code>mutex_lock</code>、<code>GFP_KERNEL</code>（允许分配时睡眠换内存的分配标志）、<code>copy_to_user</code>、<code>synchronize_rcu</code> 一律禁止。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 200" role="img" aria-label="RCU 读侧睡眠为什么炸：读侧临界区标记着宽限期还不能结束，睡眠让这个 CPU 长期不报告静止状态，所有写者卡死，最终 stall">
@@ -1047,11 +1047,11 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <figcaption>抢占式内核允许被抢占，仍不允许主动阻塞。SRCU 的域隔离：你的慢读者只拖累你自己的 synchronize_srcu。</figcaption>
   </div>
 
-  <div class="box tip"><strong>SRCU 不只是「能睡」。</strong>普通 RCU 全局：任一 CPU 长时间不让出，拖长所有人的宽限期。每个 <code>srcu_struct</code> 是独立域——读侧临界区可能很长，也是选它的理由。代价：读侧不再零开销。</div>
+  <div class="box tip"><strong>SRCU 不只是「能睡」。</strong>（SRCU：可睡眠版 RCU，sleepable RCU。）普通 RCU 全局：任一 CPU 长时间不让出，拖长所有人的宽限期。每个 <code>srcu_struct</code> 是独立域——读侧临界区可能很长，也是选它的理由。代价：读侧不再零开销。</div>
 
   <h3>8.3 陷阱二：call_rcu 洪水导致 OOM</h3>
 
-  <p><code>call_rcu()</code> 立刻返回，释放进队列。回调产生快于宽限期推进时，队列无限涨——<strong>内存被一堆「已经没人用、还没被释放」的对象吃光</strong>。OOM killer 杀谁都救不回来：内存不在任何进程账上。</p>
+  <p><code>call_rcu()</code> 立刻返回，释放进队列。回调产生快于宽限期推进时，队列无限涨——<strong>内存被一堆「已经没人用、还没被释放」的对象吃光</strong>。OOM killer（内存耗尽时内核挑进程杀掉的机制）杀谁都救不回来：内存不在任何进程账上。</p>
 
   <div class="vs">
     <div class="bad">
@@ -1066,7 +1066,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>8.4 陷阱三：读懂 RCU stall 报错</h3>
 
-  <p>宽限期超过阈值（默认 21 秒，<code>rcupdate.rcu_cpu_stall_timeout</code>）会打 stall。生产里很常见，<strong>它报的往往不是 RCU 的 bug，而是「有人在内核里赖着不走」</strong>。</p>
+  <p>宽限期超过阈值（默认 21 秒，<code>rcupdate.rcu_cpu_stall_timeout</code>）会打 stall（停滞告警——宽限期迟迟结束不了时内核的抱怨日志）。生产里很常见，<strong>它报的往往不是 RCU 的 bug，而是「有人在内核里赖着不走」</strong>。</p>
 
   <table>
     <thead><tr><th>字段</th><th>怎么读</th></tr></thead>
@@ -1116,11 +1116,11 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     <div class="t"><h2>死锁排查与竞态检测</h2><p class="sub">别靠压测和运气</p></div>
   </div>
 
-  <p>同步 bug 概率极低、后果极重、现场难留。工程实践不是「写完压测」，而是<strong>打开运行时验证，让 bug 第一次跑到就暴露</strong>。</p>
+  <p>同步 bug 概率极低、后果极重、现场难留。工程实践不是「写完压测」，而是<strong>打开运行时验证，让 bug 第一次跑到就暴露</strong>（在内核里预先编入各种检查器，运行时一触即报，而不是等崩溃后再取证）。</p>
 
   <h3>9.1 lockdep：不需要真死锁就能发现死锁</h3>
 
-  <div class="def"><strong>lockdep（<code>CONFIG_PROVE_LOCKING</code>）</strong>：不检测「现在死锁了」，而是检测「这套加锁模式在某种时序下可能死锁」。每个锁归一个锁类，运行时记录「持有 A 时获取 B」的有向图；新边成环立刻报警。同时记录上下文（硬中断 / 开中断），抓 §1.3 那种不一致。</div>
+  <div class="def"><strong>lockdep（<code>CONFIG_PROVE_LOCKING</code>）</strong>（锁依赖检查器——内核自带的死锁预警系统）：不检测「现在死锁了」，而是检测「这套加锁模式在某种时序下可能死锁」。每个锁归一个锁类，运行时记录「持有 A 时获取 B」的有向图；新边成环立刻报警。同时记录上下文（硬中断 / 开中断），抓 §1.3 那种不一致。</div>
 
   <div class="intuition">真死锁要两个 CPU 恰好交错；lockdep 只要两条路径各自跑过一次。概率性 bug 变成覆盖率问题。</div>
 
@@ -1180,11 +1180,11 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     </tbody>
   </table>
 
-  <div class="warn"><strong>lockdep 三个盲区：</strong>① 只看跑到过的路径；② 只认识内核锁原语（土制锁 / completion / 跨用户态它看不见）；③ 不查数据竞争（那是 KCSAN）。开销大，<strong>生产不开</strong>。报过一次就把自己关掉，<code>Tainted: W</code> 时往上翻找第一条。</div>
+  <div class="warn"><strong>lockdep 三个盲区：</strong>① 只看跑到过的路径；② 只认识内核锁原语（土制锁 / completion / 跨用户态它看不见）；③ 不查数据竞争（两个执行流不加同步地同时读写同一变量，那是 KCSAN 的活）。开销大，<strong>生产不开</strong>。报过一次就把自己关掉，<code>Tainted: W</code> 时往上翻找第一条。</div>
 
   <h3>9.3 KCSAN：找出「没有锁保护」的访问</h3>
 
-  <p>lockdep 查锁对不对，KCSAN 查<strong>这个变量到底有没有被保护</strong>：编译器插桩 + 采样 watchpoint，无同步的并发访问就报。修法不一定是加锁——统计计数器用 <code>READ_ONCE</code>/<code>WRITE_ONCE</code> 即可，那是给人和工具看的<strong>意图声明</strong>；KCSAN 把它们和 <code>atomic_*</code> 当作已标注，不再报警。</p>
+  <p>lockdep 查锁对不对，KCSAN（Kernel Concurrency Sanitizer，内核并发检测器——专门抓「没加锁的并发访问」）查<strong>这个变量到底有没有被保护</strong>：编译器插桩 + 采样 watchpoint（在被访问处设的观察哨），无同步的并发访问就报。修法不一定是加锁——统计计数器用 <code>READ_ONCE</code>/<code>WRITE_ONCE</code> 即可，那是给人和工具看的<strong>意图声明</strong>；KCSAN 把它们和 <code>atomic_*</code> 当作已标注，不再报警。</p>
 
   <div class="tool-card green">
     <h4>KCSAN / KASAN / lockdep 分工</h4>
@@ -1198,7 +1198,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
 
   <h3>9.4 兜底检测器：hung task 与 lockup</h3>
 
-  <p>前面几样都需要提前编译进内核。生产内核上默认开着的是三个「兜底」检测器，它们不告诉你原因，但会在系统已经出问题时<strong>保住现场</strong>。</p>
+  <p>前面几样都需要提前编译进内核。生产内核上默认开着的是三个「兜底」检测器，它们不告诉你原因，但会在系统已经出问题时<strong>保住现场</strong>（把卡住时刻的调用栈和状态打印出来）。</p>
 
   <table>
     <thead><tr><th>检测器</th><th>它在检测什么</th><th>阈值 / 参数</th><th>报出来意味着</th></tr></thead>
@@ -1224,7 +1224,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     </tbody>
   </table>
 
-  <p>hung task：栈指向卡在哪把 mutex/rwsem。先把所有 D 状态任务的栈拼起来（<code>echo w &gt; /proc/sysrq-trigger</code>）——单个栈只告诉你「谁在等」，<strong>环要多个栈对上</strong>。soft lockup 的 RIP 就是当时在跑的代码：落在 <code>queued_spin_lock_slowpath</code> = 有人持锁不放。</p>
+  <p>hung task：栈指向卡在哪把 mutex/rwsem。先把所有 D 状态（不可中断睡眠状态，此时进程连信号都唤不醒）任务的栈拼起来（<code>echo w &gt; /proc/sysrq-trigger</code>）——单个栈只告诉你「谁在等」，<strong>环要多个栈对上</strong>。soft lockup 的 RIP（指令指针寄存器，指向当时正在执行的代码位置）就是当时在跑的代码：落在 <code>queued_spin_lock_slowpath</code> = 有人持锁不放。</p>
 
   <h3>9.5 开发内核该开哪些 CONFIG</h3>
 
@@ -1246,7 +1246,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
     </tbody>
   </table>
 
-  <p>发行版内核通常只开了兜底那几项。确认：<code>grep PROVE_LOCKING /boot/config-$(uname -r)</code>。锁热点看 <code>/proc/lock_stat</code> 的 <code>con-bounces</code> / <code>waittime-max</code>，或不改内核用 <code>perf lock</code> / eBPF（见文末链接）。</p>
+  <p>发行版内核通常只开了兜底那几项。确认：<code>grep PROVE_LOCKING /boot/config-$(uname -r)</code>。锁热点看 <code>/proc/lock_stat</code> 的 <code>con-bounces</code>（锁在 CPU 之间弹跳的次数，越高越争）/ <code>waittime-max</code>，或不改内核用 <code>perf lock</code> / eBPF（见文末链接）。</p>
 
   <div class="checklist">
     <h4>提交前</h4>
@@ -1255,7 +1255,7 @@ smp_store_release(&amp;dev-&gt;cfg, newc);   <span class="cm">/* ★ 发布：�
       <li>硬中断 → <code>irqsave</code>；软中断 → <code>_bh</code>；可能长且仅进程 → <code>mutex</code>。锁内无睡眠、无 printk 洪水。</li>
       <li>多锁写死全局顺序；错误路径统一 <code>goto unlock</code>。</li>
       <li>无锁访问有 <code>READ_ONCE</code>/<code>WRITE_ONCE</code>/<code>atomic_*</code>，屏障成对。</li>
-      <li>RCU：指针不逃出 unlock；<code>list_del_rcu</code>；批量只等一次宽限期；用过 <code>call_rcu</code> 则 exit 里 <code>rcu_barrier</code>。</li>
+      <li>RCU：指针不逃出 unlock；<code>list_del_rcu</code>；批量只等一次宽限期；用过 <code>call_rcu</code> 则 exit 里 <code>rcu_barrier</code>（等已排队回调全部跑完的栅栏函数）。</li>
       <li>lockdep + <code>DEBUG_ATOMIC_SLEEP</code> + <code>DEBUG_LIST</code> 跑完整测试（含错误注入）；单独一轮 KASAN；可能的话 ARM64 再跑——x86 TSO 会掩盖缺屏障。</li>
     </ul>
   </div>

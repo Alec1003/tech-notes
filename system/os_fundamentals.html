@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>C++ 操作系统基础 — 可视化指南</title>
-<meta name="description" content="C++ 操作系统基础 — 可视化指南：聚焦进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，建立 C++ 工程实践所需的系统层认知">
+<meta name="description" content="C++ 操作系统基础 — 可视化指南：用白话讲清进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，帮被术语劝退的工程师建立系统层认知">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/os_fundamentals.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/os_fundamentals.html">
 <meta property="og:title" content="C++ 操作系统基础 — 可视化指南">
-<meta property="og:description" content="C++ 操作系统基础 — 可视化指南：聚焦进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，建立 C++ 工程实践所需的系统层认知">
+<meta property="og:description" content="C++ 操作系统基础 — 可视化指南：用白话讲清进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，帮被术语劝退的工程师建立系统层认知">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 操作系统基础 — 可视化指南">
-<meta name="twitter:description" content="C++ 操作系统基础 — 可视化指南：聚焦进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，建立 C++ 工程实践所需的系统层认知">
+<meta name="twitter:description" content="C++ 操作系统基础 — 可视化指南：用白话讲清进程线程、上下文切换、虚拟内存、mmap 与容器底层隔离机制，帮被术语劝退的工程师建立系统层认知">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -222,7 +222,7 @@
   </div>
 
 <div class="card">
-<p><strong>进程</strong>是资源分配单位，<strong>线程</strong>是调度单位；一进程可含多线程。隔离看进程，并发看线程。崩溃边界在进程上。</p>
+<p><strong>进程</strong>（Process，操作系统眼里「正在运行的程序」，拥有独立的一整块内存和资源）是资源分配单位，<strong>线程</strong>（Thread，进程内部的一条执行流，CPU 真正调度跑代码的对象）是调度单位；一个进程可以包含多条线程。想隔离就靠进程，想并发就靠线程。崩溃边界落在进程上：一个线程把进程弄崩，同进程的其他线程全部陪葬。</p>
 </div>
 
 <!-- ---- 进程内存布局 SVG ---- -->
@@ -422,18 +422,18 @@
 </div>
 
 <div class="card">
-<p><strong>Copy-on-Write：</strong>fork 后共享只读物理页，某方<strong>真写入</strong>才复制该页。fork 本身很快，代价摊到后续每一次首写。</p>
+<p><strong>Copy-on-Write</strong>（写时复制，简称 COW）：fork 之后父子进程先共享同一批只读物理页，哪一方<strong>真写入</strong>某个页，内核才复制那个页给它。好比合租时两人先共用一份家具，谁想改造自己的那份，才自费复印一份。因此 fork 本身很快，代价被摊到后续每一次首写上。</p>
 </div>
 
 <h3 id="s1-5">1.5 单核是不是只有一个进程？</h3>
 <div class="card">
-<p><strong>不是。</strong>核、进程、线程不是一对一：</p>
+<p><strong>不是。</strong>核、进程、线程三者不是一对一关系，它们是三个不同层面的东西：</p>
 <ul>
-  <li><b>核</b> = 硬件执行单元（能同时取指/执行的物理或逻辑 CPU）。</li>
-  <li><b>进程</b> = 资源容器（地址空间、fd、信号量……）。</li>
-  <li><b>线程</b> = 调度实体（内核眼里真正被排上某个核的那条执行流）。</li>
+  <li><b>核</b> = 硬件执行单元（能同时取指/执行的物理或逻辑 CPU）——好比工厂里的机器台数，是干活的物理上限。</li>
+  <li><b>进程</b> = 资源容器（地址空间、fd、信号量……）——好比工厂里一个个独立的车间，各有一套设备和原料。</li>
+  <li><b>线程</b> = 调度实体（内核眼里真正被排上某个核的那条执行流）——好比车间里的工人，是被排班到机器上的最小单位。</li>
 </ul>
-<p>单核<strong>同一时刻</strong>通常只有一条指令流，靠时间片<strong>并发</strong>；<strong>多核</strong>才真并行。进程数可以远大于核数；某一瞬间 <code>Running</code> 大约等于逻辑核数。</p>
+<p>单核<strong>同一时刻</strong>通常只有一条指令流在跑，靠时间片（timeslice，操作系统分给每个任务的运行配额，用完就得让位）<strong>并发</strong>——轮换着跑，看起来像同时；<strong>多核</strong>才是真并行（同一瞬间多条指令流各自在跑）。进程数可以远大于核数；某一瞬间处于 <code>Running</code> 状态的进程数大约等于逻辑核数。</p>
 <div class="diagram-wrap">
 <svg viewBox="0 0 720 170" role="img" aria-label="单核时间片并发 vs 多核并行" style="width:100%;max-width:720px;height:auto">
   <rect x="8" y="8" width="340" height="154" rx="10" fill="var(--bg-card)" stroke="var(--border)"/>
@@ -489,7 +489,7 @@
   </div>
 
 <div class="card">
-<p><strong>上下文切换</strong>把 CPU 从一个任务交给另一个：多任务的前提，也是高并发里最常见的隐性税。</p>
+<p><strong>上下文切换</strong>（Context Switch，CPU 从跑一个任务换到跑另一个任务时，把前一个任务的「现场」——寄存器、程序计数器这些——存起来、再把下一个任务的现场装回来的过程）：它是多任务得以实现的前提，也是高并发系统里最常见的隐性税——每次切换 CPU 都不干正经活。</p>
 </div>
 
 <h3 id="s2-1">2.1 上下文切换的完整流程</h3>
@@ -621,7 +621,7 @@
 </div>
 
 <div class="highlight-box">
-<strong>性能：</strong>切换多了，CPU 时间花在保存/恢复和 cache 冷却上。少造线程、用线程池、少 sleep。观测：<code>vmstat</code> / <code>perf stat</code> / <code>/proc/[pid]/status</code>。
+<strong>性能：</strong>切换次数多了，CPU 时间就花在保存/恢复现场和 cache 冷却（切换后缓存里全是上一个任务的数据，新任务要重新从内存搬）上。对策：少造线程、用线程池、少 sleep。观测工具：<code>vmstat</code> / <code>perf stat</code> / <code>/proc/[pid]/status</code>。
 </div>
 
 <div class="note"><strong>「用线程池」的下一个问题是开多大</strong>，这个数不能拍脑袋。CPU 密集大致等于核数；I/O 密集要用 Little's Law 从到达率和单次耗时反推需要多少并发，见 <a href="../architect/capacity_backpressure_design.html#s2">容量估算与背压 · Little's Law</a>。同一条流水线里「等网络」「烧 CPU」「等存储」三类工作的合理并发度相差一两个数量级，必须各自一个池、各自定容，见 <a href="../architect/image_pipeline_architecture.html#s2">图片处理流水线 · 三层并发度</a>。开多了就是这里说的切换与 cache 冷却，开少了 CPU 空等——两个方向都是错。</div>
@@ -644,7 +644,7 @@
   </div>
 
 <div class="card">
-<p>每个进程都以为自己有一整片连续私有空间；真正干活的是 MMU + 页表。隔离、超卖 RAM、共享 libc、NX 保护，都靠这张表。</p>
+<p>每个进程都以为自己独享一整片连续的私有内存空间；实际干活的是 MMU（Memory Management Unit，CPU 里专门做地址翻译的硬件）+ 页表（Page Table，一张「虚拟地址 → 物理地址」的对照表，每个进程一张）。进程隔离、超卖 RAM、多个进程共享同一份 libc、NX 保护（No-eXecute，让数据页不可执行，堵住缓冲区溢出攻击），全都靠这张表撑起来。如果访问的页还不在物理内存里，MMU 就触发 Page Fault（缺页异常），内核再按需把页调进来——所以虚拟内存可以「先记账、后进货」。</p>
 </div>
 
 <h3 id="s3-1">3.1 虚拟地址 → 物理地址转换</h3>
@@ -854,7 +854,7 @@
   </div>
 
 <div class="card">
-<p><code>mmap()</code> 把文件或匿名页直接铺进虚拟地址空间，按指针读写，绕开 <code>read()/write()</code> 那次用户缓冲拷贝。</p>
+<p><code>mmap()</code>（内存映射，把文件或一块内存「铺」进你的虚拟地址空间，之后像访问普通数组一样用指针读写）把文件或匿名页（不对应任何文件、内容全为零的纯内存页）直接铺进虚拟地址空间，按指针读写，绕开 <code>read()/write()</code> 必须经过的那次用户缓冲拷贝。</p>
 </div>
 
 <h3 id="s4-1">4.1 mmap vs 传统 I/O</h3>
@@ -1023,7 +1023,7 @@
 </div>
 
 <h3 id="s4-5">4.5 mmap 实战</h3>
-<p>文件映射：建好即可 <code>close(fd)</code>，按指针读，用完 <code>munmap</code>。匿名两种见下表。</p>
+<p>文件映射：建好映射后即可 <code>close(fd)</code>，之后按指针读文件内容，用完 <code>munmap</code> 解除。匿名映射的两种用法见下表。</p>
 <pre><code><span class="kw">#include</span> <span class="str">&lt;sys/mman.h&gt;</span>
 <span class="kw">#include</span> <span class="str">&lt;fcntl.h&gt;</span>
 <span class="kw">#include</span> <span class="str">&lt;sys/stat.h&gt;</span>
@@ -1070,7 +1070,7 @@ munmap(p, sb.st_size);</code></pre>
   </div>
 
 <div class="card">
-<p>C++11 起标准库封装了线程、互斥和分配；底下仍是 <code>clone</code> / <code>futex</code> / <code>brk</code>/<code>mmap</code>。图里的 API 对照这张表即可，不必再抄一份 thread 样板。</p>
+<p>C++11 起标准库封装了线程、互斥和内存分配；它们底下仍然是 <code>clone</code> / <code>futex</code> / <code>brk</code>/<code>mmap</code> 这几个系统调用——标准库只是给 OS 原语穿了件 C++ 外衣。图里的 API 对照这张表即可，不必再抄一份 thread 样板。</p>
 </div>
 
 <h3 id="s5-1">5.1 线程与同步 API 全景</h3>
@@ -1293,7 +1293,7 @@ munmap(p, sb.st_size);</code></pre>
 
 <h3 id="s7-1">7.1 用户态 vs 内核态切换代价</h3>
 <div class="card">
-<p>syscall 比函数调用贵两个数量级，但比进程切换便宜。账面 50–100 ns，真正的税往往是 KPTI 换 CR3 和 cache 被内核路径挤冷。同机网络往返大约 50 μs，所以“再加一次 syscall”通常比“再打一趟网”便宜。</p>
+<p>syscall（系统调用，用户程序请内核代劳特权操作的入口，如 read、mmap）比普通函数调用贵两个数量级，但比进程切换便宜。账面开销 50–100 ns，真正的税往往是 KPTI（内核页表隔离，Meltdown 漏洞的缓解措施，进出内核要额外换一次页表）换 CR3 和 cache 被内核路径挤冷。同机网络往返大约 50 μs，所以「再加一次 syscall」通常比「再打一趟网」便宜。</p>
 <div class="fig">
 <svg viewBox="0 0 720 160" role="img" aria-label="函数调用约 1 纳秒，用户态到内核态约 50 到 100 纳秒，线程切换微秒级，进程切换还要换页表" style="min-width:560px;height:auto">
   <rect class="box-g" x="16" y="36" width="150" height="88" rx="8"/>
@@ -1336,12 +1336,12 @@ munmap(p, sb.st_size);</code></pre>
 <tr><td><strong>Barrier/Latch</strong></td><td>批量等待点</td><td>阻塞到所有就绪</td><td>中</td><td><code>std::barrier</code>/<code>latch</code> (C++20)</td></tr>
 <tr><td><strong>Futex</strong></td><td>无竞争时零系统调用</td><td>有竞争才进内核</td><td>极低</td><td>Linux 内部实现，mutex 基础</td></tr>
 </table>
-<p><strong>选：</strong>单变量 → atomic；&lt;1μs 且 CPU 闲 → spinlock；其余 mutex；读多写少 → shared_mutex。无竞争时 futex 不进内核，这是 mutex 快的原因。</p>
+<p><strong>选型口诀：</strong>保护单个变量 → atomic；临界区短于 1μs 且 CPU 反正闲着 → spinlock；其余情况 mutex；读多写少 → shared_mutex。无竞争时 futex（fast userspace mutex，Linux 互斥锁的底层机制：没人和你抢时全程在用户态完成，根本不进内核）不进内核，这就是 mutex 快的原因。</p>
 </div>
 
 <h3 id="s7-3">7.3 C++11 内存模型 &amp; Memory Order <span class="tag tag-pink" style="color:var(--accent3);background:rgba(244,114,182,.12);font-size:.7rem;padding:2px 8px;border-radius:4px">高级难点</span></h3>
 <div class="card">
-<p>CPU 会乱序、重排。C++11 内存模型管的是<strong>可见性与顺序</strong>，不是“原子就不会坏”。单例发布：acquire 读指针，确认空后再在 mutex 里 <code>new</code>，release 写回。</p>
+<p>CPU 会乱序执行、编译器也会重排指令。C++11 内存模型（Memory Model，语言层面对多线程可见性与顺序的正式约定）管的是<strong>可见性与顺序</strong>，不是「原子就不会坏」。单例发布（singleton 的安全初始化）写法：用 acquire 语义读指针，确认是空后再在 mutex 里 <code>new</code>，最后用 release 语义写回。</p>
 <table>
 <tr><th>Memory Order</th><th>语义</th><th>性能</th><th>典型用法</th></tr>
 <tr><td><code>memory_order_relaxed</code></td><td>无任何同步/顺序约束，仅原子性</td><td>最快</td><td>统计计数器</td></tr>
@@ -1356,7 +1356,7 @@ munmap(p, sb.st_size);</code></pre>
 
 <h3 id="s7-4">7.4 Cache Line &amp; False Sharing（伪共享）</h3>
 <div class="card">
-<p>缓存一致性以 <strong>64 字节 cache line</strong> 为单位。两线程各写自己的变量、却落在同一行上 → MESI 乒乓，慢 10–100 倍。</p>
+<p>多核 CPU 的缓存一致性以 <strong>64 字节 cache line</strong>（缓存行，CPU 缓存搬运数据的最小单位）为单位。两个线程各写各的变量、变量却恰好落在同一行上 → MESI（缓存一致性协议，各核靠它互相通知「我改了这行数据」）乒乓——一行数据在两个核之间来回失效传递，性能慢 10–100 倍。</p>
 <div class="diagram-wrap">
 <svg viewBox="0 0 780 220" xmlns="http://www.w3.org/2000/svg" style="font-family:sans-serif;min-width:640px;height:auto" role="img" aria-label="伪共享：同一 cache line 上两个变量被不同核写入会乒乓；alignas 隔离后各占一行">
   <text x="390" y="22" text-anchor="middle" fill="var(--red)" font-size="14" font-weight="bold">❌ False Sharing 场景</text>
@@ -1415,7 +1415,7 @@ munmap(p, sb.st_size);</code></pre>
 
 <h3 id="s7-6">7.6 信号处理的陷阱</h3>
 <div class="card">
-<p>handler 时机不可控，只能做 <strong>async-signal-safe</strong> 的事：<code>write</code> / <code>_exit</code> / <code>sig_atomic_t</code>。禁止 <code>printf</code>、<code>malloc</code>、mutex、STL、抛异常。</p>
+<p>信号 handler（信号处理函数，内核收到 SIGTERM 等信号时打断你的程序去执行的那段代码）的执行时机不可控——它可能落在任何一条指令中间，所以只能做 <strong>async-signal-safe</strong>（异步信号安全，即信号处理函数里也调不会出事的白名单函数）的事：<code>write</code> / <code>_exit</code> / 读写 <code>sig_atomic_t</code>。禁止在 handler 里调 <code>printf</code>、<code>malloc</code>、mutex、STL、抛异常。</p>
 <div class="fig">
 <svg viewBox="0 0 720 150" role="img" aria-label="信号不要在 handler 里做业务：signalfd 或 self-pipe 把信号变成事件循环里的一个 fd" style="min-width:560px;height:auto">
   <rect class="box-r" x="16" y="20" width="220" height="110" rx="10"/>
@@ -1668,7 +1668,7 @@ int sfd = signalfd(-1, &amp;mask, SFD_NONBLOCK | SFD_CLOEXEC);
 <div class="note"><strong>概览，不是深入版。</strong>读完进程/内存后只要知道：容器为何 OOM、为何 throttle、为何 syscall 被拦。展开请看 <a href="cgroup_namespace_containers.html">容器底层原理</a>（八种 namespace、cgroup v2 手工建组、<code>cpu.stat</code>/<code>memory.events</code>、OverlayFS、runc 六步）与 <a href="linux_security_model.html">Linux 安全模型</a>（capabilities 五个集合、seccomp 白名单、SELinux/AppArmor、逃逸路径）。</div>
 
 <div class="card">
-<p>容器不是虚拟机。隔离来自内核：<strong>namespace</strong>看什么、<strong>cgroup</strong>用多少、<strong>seccomp/cap/LSM</strong>做什么。</p>
+<p>容器不是虚拟机，它没有自己的内核。隔离全部来自宿主机内核提供的三套机制：<strong>namespace</strong>（命名空间，让容器「看不见」别人的进程、网络、文件系统）决定能看见什么、<strong>cgroup</strong>（control group，给一组进程圈出资源上限，如最多用 2 核 4G）决定能用多少、<strong>seccomp/cap/LSM</strong>（系统调用过滤、root 权限细分、强制访问控制）决定能做什么。</p>
 </div>
 
 <h3 id="s8-1">8.1 三大隔离原语的分工</h3>
@@ -1687,6 +1687,8 @@ int sfd = signalfd(-1, &amp;mask, SFD_NONBLOCK | SFD_CLOEXEC);
 <div class="highlight-box">
 <strong>记忆口诀</strong>：namespace = <em>看不见</em>；cgroup = <em>用不多</em>；seccomp/cap = <em>做不了</em>。
 </div>
+
+<p>（展开说：namespace 让容器看不到宿主机和其他容器的资源；cgroup 给容器圈定资源上限；seccomp 和 capabilities 从「能调哪些系统调用、root 有哪些特权」上设卡。）</p>
 
 <h3 id="s8-2">8.2 Linux Namespaces 全家族（8 种）</h3>
 <table>
@@ -1733,10 +1735,10 @@ int sfd = signalfd(-1, &amp;mask, SFD_NONBLOCK | SFD_CLOEXEC);
     <span class="cm">// 解除挂载留待父进程，避免污染宿主 /proc</span>
 }</code></pre>
 
-<p>跑起来：容器内 PID=1、<code>hostname=container01</code>、网络只有 lo。隔离 mnt 后必须重挂 <code>/proc</code>，否则 <code>ps</code> 看到的还是宿主机。Docker 再加 cgroup、rootfs、镜像层。</p>
+<p>跑起来之后你会发现：容器内自己是 PID=1、<code>hostname=container01</code>、网络只有 lo（回环网卡）。注意隔离 mnt 后必须重挂 <code>/proc</code>，否则 <code>ps</code> 看到的还是宿主机的进程。Docker 在此基础上再加 cgroup、rootfs、镜像层。</p>
 
 <h3 id="s8-3">8.3 cgroup v2 —— C++ 服务的资源天花板</h3>
-<p>v2 是单一层级；systemd / runc 默认走 v2。</p>
+<p>v2 是单一层级（所有资源统一挂在一棵树上，不再像 v1 那样每种资源一棵树）；systemd / runc 默认走 v2。</p>
 
 <table>
 <thead><tr><th>关键文件</th><th>含义</th><th>设置示例</th></tr></thead>
@@ -1765,7 +1767,7 @@ int sfd = signalfd(-1, &amp;mask, SFD_NONBLOCK | SFD_CLOEXEC);
 </table>
 
 <h3 id="s8-4">8.4 capabilities —— 把 root 切成 40 块</h3>
-<p>Linux 把 root 拆成 40+ 个 <code>CAP_*</code>。容器默认约 14 个；<code>CAP_SYS_ADMIN</code>（“新 root”）通常丢掉。</p>
+<p>Linux 把 root 这一超级用户身份拆成 40+ 个 <code>CAP_*</code>（capability，细粒度的特权单位，比如「绑低端端口」「加载内核模块」各是一块）。容器默认只带约 14 个；<code>CAP_SYS_ADMIN</code>（「新 root」，几乎等于全权，管 mount、建 namespace 等）通常被丢掉。</p>
 
 <table>
 <thead><tr><th>常见 capability</th><th>能力</th><th>谁需要</th></tr></thead>
@@ -1782,7 +1784,7 @@ int sfd = signalfd(-1, &amp;mask, SFD_NONBLOCK | SFD_CLOEXEC);
 </div>
 
 <h3 id="s8-5">8.5 seccomp-bpf —— 拦截 syscall 的最后一道闸</h3>
-<p>seccomp 用 BPF 过滤 syscall。Docker 默认拦约 44 个危险调用。升级 glibc 后新 syscall（<code>clone3</code> / <code>statx</code>）不在旧白名单 → 莫名 <code>EPERM</code>：升级 Docker 20.10.10+ / runc 1.0.3+，或自定义 profile。</p>
+<p>seccomp（secure computing mode，给进程装一道系统调用防火墙）用 BPF（Berkeley Packet Filter，这里指内核里的一套可编程过滤器）过滤 syscall。Docker 默认拦约 44 个危险调用。升级 glibc 后新 syscall（<code>clone3</code> / <code>statx</code>）不在旧白名单里 → 程序莫名收到 <code>EPERM</code>：解法是升级 Docker 20.10.10+ / runc 1.0.3+，或自定义 profile。</p>
 <table>
 <tr><th>调用</th><th>作用</th></tr>
 <tr><td><code>seccomp_init(SCMP_ACT_ALLOW)</code></td><td>默认放行（再逐条禁）</td></tr>

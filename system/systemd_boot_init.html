@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linux 启动流程与 systemd · 固件到 PID 1 / initramfs / unit 模型 / socket 激活 / journald / 启动排障 — Tech Notes</title>
-<meta name="description" content="Linux 启动流程与 systemd：UEFI 与 GRUB2、initramfs 为何存在与怎么救、unit 依赖的需求与顺序两个维度、Type= 选错的后果、Restart 限流坑、socket 激活与零停机重启、systemd 与 cgroup v2 的唯一管理者关系、unit 级沙箱加固、journald 查询与持久化、systemd-analyze 的正确读法与三种救援模式">
+<meta name="description" content="用大白话讲 Linux 启动流程与 systemd：UEFI/GRUB2 五次交接怎么排障、initramfs 为什么存在、unit 依赖的需求与顺序、Type= 选错的坑、socket 激活与零停机重启、cgroup v2 管理与限额、journald 持久化、systemd-analyze 与三种救援模式。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/systemd_boot_init.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/systemd_boot_init.html">
 <meta property="og:title" content="Linux 启动流程与 systemd · 固件到 PID 1 / initramfs / unit 模型 / socket 激活 / journald / 启动排障">
-<meta property="og:description" content="Linux 启动流程与 systemd：UEFI 与 GRUB2、initramfs 为何存在与怎么救、unit 依赖的需求与顺序两个维度、Type= 选错的后果、Restart 限流坑、socket 激活与零停机重启、systemd 与 cgroup v2 的唯一管理者关系、unit 级沙箱加固、journald 查询与持久化、systemd-analyze 的正确读法与三种救援模式">
+<meta property="og:description" content="用大白话讲 Linux 启动流程与 systemd：UEFI/GRUB2 五次交接怎么排障、initramfs 为什么存在、unit 依赖的需求与顺序、Type= 选错的坑、socket 激活与零停机重启、cgroup v2 管理与限额、journald 持久化、systemd-analyze 与三种救援模式。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Linux 启动流程与 systemd · 固件到 PID 1 / initramfs / unit 模型 / socket 激活 / journald / 启动排障">
-<meta name="twitter:description" content="Linux 启动流程与 systemd：UEFI 与 GRUB2、initramfs 为何存在与怎么救、unit 依赖的需求与顺序两个维度、Type= 选错的后果、Restart 限流坑、socket 激活与零停机重启、systemd 与 cgroup v2 的唯一管理者关系、unit 级沙箱加固、journald 查询与持久化、systemd-analyze 的正确读法与三种救援模式">
+<meta name="twitter:description" content="用大白话讲 Linux 启动流程与 systemd：UEFI/GRUB2 五次交接怎么排障、initramfs 为什么存在、unit 依赖的需求与顺序、Type= 选错的坑、socket 激活与零停机重启、cgroup v2 管理与限额、journald 持久化、systemd-analyze 与三种救援模式。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -169,7 +169,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
 
     <section class="chapter" id="s1">
       <div class="ch-head"><div class="num">01</div><div class="t"><h2>从按下电源到 shell</h2><div class="sub">五次交接，每一次都可能卡住</div></div></div>
-      <p>开机是五次交接。<strong>「开不了机」没有信息量</strong>——第一步永远是看屏幕最后一条信息属于哪一棒：往前的都已经成功。第 ①②④ 棒没有 journald，只能靠屏幕和串口；第 ⑤ 棒开始才有日志。</p>
+      <p>开机整个过程可以看成<strong>五次交接</strong>：固件（主板上的 UEFI/BIOS，开机最先跑的固件程序）把控制权交给引导器，引导器交给内核，内核交给 initramfs，最后交给 systemd。所以「开不了机」这句话本身没有信息量——排障第一步永远是看屏幕上最后一条信息属于哪一棒：能显示出来，说明它前面的环节都已经成功。注意第 ①②④ 棒运行时 journald（系统日志服务）还没起来，只能靠屏幕和串口看；到第 ⑤ 棒才开始有日志可查。</p>
 
       <div class="fig">
         <svg viewBox="0 0 900 210" width="900" height="210" role="img" aria-label="Linux 启动的五次交接：固件、引导器、内核、initramfs、systemd，以及每一环典型的卡住表现">
@@ -216,7 +216,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
       </div>
 
       <h3>UEFI 与传统 BIOS 的实质差别</h3>
-      <p>差别不是「新旧」，是<strong>固件能不能读文件系统</strong>。BIOS 只会把 MBR 头 512 字节读进内存再跳转，GRUB 才被迫拆成 stage1 / stage1.5 / stage2。UEFI 自己读 FAT32，引导器是 ESP 上一个普通 <code>.efi</code>，启动项记在 NVRAM。</p>
+      <p>两者的实质差别不是「新与旧」，而是<strong>固件能不能直接读文件系统</strong>。传统 BIOS 只会把磁盘 MBR（主引导记录，磁盘第一个扇区）开头 512 字节读进内存然后跳过去执行，空间小到塞不下完整引导器，GRUB 才被迫拆成 stage1 / stage1.5 / stage2 三段接力。UEFI 不一样：它自己就能读 FAT32 分区，引导器只是 ESP（EFI 系统分区）上一个普通的 <code>.efi</code> 文件，启动项列表记在主板 NVRAM（一块掉电不丢的存储）里。</p>
 
       <div class="cheatsheet"><table>
         <thead><tr><th>维度</th><th>传统 BIOS</th><th>UEFI</th></tr></thead>
@@ -242,13 +242,13 @@ th{background:var(--bg-card-2);color:var(--accent)}
 
       <div class="box danger"><strong>永远不要手改 <code>grub.cfg</code></strong>——它由 <code>grub-mkconfig</code> 生成，内核升级会覆盖。永久改只动 <code>/etc/default/grub</code> 再 <code>update-grub</code> / <code>grub2-mkconfig</code>。</div>
 
-      <div class="intuition">服务器一定要配<strong>串口控制台</strong>（<code>console=ttyS0,115200</code>）。第 ①②④ 棒发生的一切都没有 journald 记录，只往控制台打印。没有串口（或 IPMI SOL）的机器一旦卡在这几棒，你连「它卡在哪」都看不到，只能去机房插显示器。</div>
+      <div class="intuition">服务器一定要配<strong>串口控制台</strong>（<code>console=ttyS0,115200</code>——把内核输出复制一份到串口，远程管理卡能抓到）。原因如前所述：第 ①②④ 棒发生的一切都没有 journald 记录，只往控制台打印。没有串口（或 IPMI SOL，通过管理卡远程看的串口）的机器一旦卡在这几棒，你连「它卡在哪」都看不到，只能去机房插显示器。</div>
     </section>
 
     <section class="chapter" id="s2">
       <div class="ch-head"><div class="num">02</div><div class="t"><h2>initramfs 到底做什么</h2><div class="sub">一个为了解决「鸡生蛋」而存在的临时根</div></div></div>
 
-      <div class="def"><strong>initramfs</strong>（initial RAM filesystem）：一个被打包成 cpio 归档、随内核一起加载进内存的<strong>临时根文件系统</strong>。内核挂载它、执行里面的 <code>/init</code>，由这个用户态程序完成「找到并挂载真正的根」，然后切换过去。</div>
+      <div class="def"><strong>initramfs</strong>（initial RAM filesystem，初始内存文件系统）：一个被打包成 cpio 归档、随内核一起加载进内存的<strong>临时根文件系统</strong>。内核先挂载它、执行里面的 <code>/init</code> 程序，由这个用户态程序完成「找到并挂载真正的根」，然后再把整个系统切换到真根上去。</div>
 
       <div class="fig">
         <svg viewBox="0 0 960 292" style="min-width:720px;height:auto" role="img" aria-label="initramfs 解决鸡生蛋：根在 LVM 或加密盘上，驱动和 lvm、cryptsetup 却还在根里；内核先挂内存里的临时根，由 /init 把门撬开再 switch_root">
@@ -309,7 +309,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
       <div class="ch-head"><div class="num">03</div><div class="t"><h2>systemd 的心智模型</h2><div class="sub">依赖有两个正交的维度，这是最大的坑</div></div></div>
 
       <h3>它到底解决了 SysV init 的什么问题</h3>
-      <p>SysV 三个脚本绕不过去的缺陷：<code>S01</code>–<code>S99</code> 只能串行；双 fork 后 PID 文件不可靠；「是否健康」每个脚本自己定义。systemd 用显式依赖 + 并行、每个服务一个 cgroup、统一的 active/failed 状态机来接。</p>
+        <p>SysV init（老一代的启动管理系统，靠一堆带编号的 shell 脚本逐个启动服务）有三个绕不过去的缺陷：<code>S01</code>–<code>S99</code> 的编号决定了只能串行启动；服务用双 fork 脱离后台后，靠 PID 文件追踪进程非常不可靠；「服务是否健康」每个脚本自己定义，没有统一标准。systemd 用三件事接住：显式声明依赖 + 并行启动、每个服务放进一个 cgroup、统一的 active/failed 状态机。</p>
 
       <div class="cheatsheet"><table>
         <thead><tr><th>Unit 类型</th><th>管什么</th><th>典型例子</th></tr></thead>
@@ -326,7 +326,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
       </table></div>
 
       <h3>依赖的两个维度：需求 ≠ 顺序</h3>
-      <p><code>Requires=</code> 只说「必须一起启动」，<strong>完全不管先后</strong>。只写它，数据库和应用会被同时拉起——应用连上一个还没监听的端口然后失败。</p>
+<p>systemd 的 unit（单元——systemd 管理各种东西的统一配置单位）用两个正交的维度表达依赖，最容易被混为一谈：<code>Requires=</code> 只说「必须一起启动」，<strong>完全不管先后顺序</strong>。只写它的话，数据库和应用会被同时拉起——应用抢去连一个还没监听的端口，然后连接失败。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 268" style="min-width:720px;height:auto" role="img" aria-label="Requires 与 After 是两个正交维度：横轴是要不要一起启动，纵轴是谁先谁后；只写其中一个都会错">
@@ -374,10 +374,10 @@ th{background:var(--bg-card-2);color:var(--accent)}
         </div>
       </div>
 
-      <div class="box danger"><code>After=network.target</code> 几乎总不是你想要的——它只表示网络<strong>管理服务已启动</strong>，不表示网卡有 IP。要等可用网络必须 <code>Wants=</code> + <code>After=network-online.target</code>（这个 target 默认不会被拉起，只写 After 等于没写）。这是「开机起不来、手动 restart 却好」的头号原因。</div>
+      <div class="box danger"><code>After=network.target</code> 几乎总不是你想要的——它只表示网络<strong>管理服务已启动</strong>，不表示网卡已经拿到 IP。要等「真正可用的网络」必须同时写 <code>Wants=</code> + <code>After=network-online.target</code>（这个 target 默认不会被拉起，所以只写 After 等于没写——它压根不在启动集合里）。这是「开机起不来、手动 restart 却好」的头号原因。</div>
 
       <h3>覆盖优先级与 drop-in</h3>
-      <p>同名 unit 后者整体覆盖前者。整体覆盖意味着你得把整个文件抄一份，上游改了什么都收不到。正确做法是 drop-in：只写要改的那几行。</p>
+<p>同名 unit 的规则是：排在前面的目录整体覆盖排在后面的。但「整体覆盖」意味着你得把整个文件抄一份，上游软件包更新了原始文件，你那份也收不到任何改动。正确做法是 drop-in（覆盖片段——放在 <code>unit名.d/</code> 目录下的小配置文件，只覆盖你写的那几行）：只写要改的那几行，其余照旧跟随上游。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="unit 覆盖栈：最底层发行版 vendor，中间 /run 运行时，上层 /etc 管理员整文件覆盖，最顶上是 unit.d 目录里的 drop-in 片段按文件名合并">
@@ -417,7 +417,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
       <div class="ch-head"><div class="num">04</div><div class="t"><h2>service unit 详解</h2><div class="sub">Type= 和 Restart= 是两个最常配错的地方</div></div></div>
 
       <h3>Type=：「服务算启动完成」的判定时刻</h3>
-      <p><code>Type=</code> 只回答一件事：<strong>systemd 何时认为服务起来了，可以去启动下一个？</strong>选错的后果不是跑不起来，而是依赖顺序全乱，或 systemd 误判服务挂了。</p>
+      <p><code>Type=</code> 只回答一件事：<strong>systemd 在哪个时刻认为服务起来了、可以放心去启动下一个？</strong>选错的后果不是服务跑不起来，而是依赖顺序全乱：要么下游启动太早连不上，要么 systemd 误判服务挂了反复重启。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 280" style="min-width:720px;height:auto" role="img" aria-label="Type 时间线：simple 在 fork 之后就算完成，exec 等到 execve 成功，forking 等父进程退出，notify 等程序自己报 READY，oneshot 等进程退出">
@@ -512,7 +512,7 @@ th{background:var(--bg-card-2);color:var(--accent)}
       <div class="box danger">撞墙后报 <code>start request repeated too quickly</code>，status 里是 <code>start-limit-hit</code>。<strong><code>reset-failed</code> 清计数，不是 <code>daemon-reload</code>。</strong>真要频繁重启，把 <code>RestartSec</code> 调到 5s，比放宽 Burst 更合理。</div>
 
       <h3>sd_notify 与看门狗</h3>
-      <p><code>Type=notify</code> 让程序自己说「我准备好了」。配合 <code>WatchdogSec=</code> 还能定期报平安，抓住「进程还在、已经死锁」这种退出码发现不了的故障。喂狗必须放在真正的工作循环里——独立线程定时喂只能证明喂狗线程活着。</p>
+      <p><code>Type=notify</code> 让程序通过 <code>sd_notify()</code> 主动告诉 systemd「我准备好了」，而不是让 systemd 猜。配合 <code>WatchdogSec=</code>（看门狗——规定时间内没收到心跳就认定服务卡死）还能让程序定期报平安，抓住「进程还在、其实已经死锁」这种靠退出码发现不了的故障。喂狗必须放在真正的工作循环里——如果放在独立线程里定时喂，那只能证明喂狗线程活着，主逻辑卡死了也发现不了。</p>
 
 <pre><span class="pp">#include</span> <span class="str">&lt;systemd/sd-daemon.h&gt;</span>   <span class="cm">// 链接 libsystemd</span>
 
@@ -592,7 +592,7 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
     <section class="chapter" id="s5">
       <div class="ch-head"><div class="num">05</div><div class="t"><h2>socket 激活与并行启动</h2><div class="sub">systemd 打破启动串行的核心武器</div></div></div>
 
-      <p>并行启动最难的是依赖：客户端要等服务端监听好端口。systemd 自己先把所有监听套接字建好，然后所有服务同时启动——连接躺在 accept 队列里，不会被拒绝，只会被延迟。顺带还能<strong>按需启动</strong>（第一个连接才拉起服务）和零停机重启。</p>
+      <p>并行启动最难的坎是依赖：客户端要等服务端把端口监听好才能连。socket 激活（socket activation）的思路是把监听这件事从服务手里拿走：systemd 开机先把所有监听套接字建好，然后所有服务<strong>同时</strong>启动——提前到来的连接躺在内核的 accept 队列（已建立连接的等候区）里，不会被拒绝，只会被延迟。顺带还白得两个能力：<strong>按需启动</strong>（第一个连接到来才拉起服务）和零停机重启。</p>
 
       <div class="analogy">
         <div class="at">生活类比：先装信箱，再搬进来</div>
@@ -698,13 +698,13 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
         </ul>
       </div>
 
-      <div class="box tip">这种零停机<strong>只对短连接成立</strong>：请求在 accept 队列里多等几百毫秒，客户端察觉不到。长连接不吃这一套——连接握在旧进程手里，重启就是断连，而且断的那一刻所有客户端会同时回来重连。几十万条长连接怎么滚动升级（分批断连、重连打散、握手 CPU 会不会被打爆）见 <a href="../architect/high_concurrency_gateway.html#s11">IoT 接入网关架构设计 · 发布与容量</a>。<strong>判据</strong>：连接寿命远小于发布间隔，本节这套就够；连接一挂就是几小时几天，发布流程本身要按那一篇设计。</div>
+      <div class="box tip">这种零停机<strong>只对短连接成立</strong>：请求在 accept 队列里多等几百毫秒，客户端察觉不到。长连接不吃这一套——连接握在旧进程手里，重启就是断连，而且断的那一刻所有客户端会同时回来重连。几十万条长连接怎么滚动升级（分批断连、重连打散、握手 CPU 会不会被打爆）见 <a href="../architect/high_concurrency_gateway.html#s11">IoT 接入网关架构设计 · 发布与容量</a>。<strong>判据</strong>：连接寿命远小于发布间隔，本节这套就够用；连接一挂就是几小时几天，发布流程本身要按那一篇设计。</div>
     </section>
 
     <section class="chapter" id="s6">
       <div class="ch-head"><div class="num">06</div><div class="t"><h2>systemd 与 cgroup</h2><div class="sub">它是 cgroup v2 层级的唯一管理者</div></div></div>
 
-      <p>每个服务一个 cgroup，<strong>根本价值是「可靠地知道一个服务包含哪些进程」</strong>。PID 文件会过期、被抢占、双 fork 后追踪不到；cgroup 由内核维护，进程无法逃逸。「一个服务的所有后代」第一次可枚举、可一次性 kill。</p>
+      <p>systemd 给每个服务分配一个专属 cgroup（控制组——内核提供的进程分组机制，同组进程可以统一查看和限制资源）。这件事的<strong>根本价值是「可靠地知道一个服务包含哪些进程」</strong>。相比之下，PID 文件会过期、记录的 PID 可能被别的进程复用、服务双 fork 脱离后台后就追踪不到；而 cgroup 的成员关系由内核维护，进程自己逃不出去。「一个服务的所有后代」第一次变得可枚举、可一次性 kill。</p>
 
       <div class="fig">
         <svg viewBox="0 0 760 240" width="760" height="240" role="img" aria-label="systemd 的 cgroup 三层结构：根切分为 system slice、user slice 与 machine slice，各自下挂 service 与 scope">
@@ -785,7 +785,7 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
     <section class="chapter" id="s7">
       <div class="ch-head"><div class="num">07</div><div class="t"><h2>unit 级安全加固</h2><div class="sub">不改一行代码就能收窄攻击面</div></div></div>
 
-      <p>unit 里加十几行，就能把被攻破后的杀伤范围压一个数量级。底层是 namespace / capabilities / seccomp（见 <a href="linux_security_model.html">Linux 安全模型</a>），systemd 把它们收成声明式指令。</p>
+      <p>在 unit 文件里加十几行配置，就能把服务被攻破之后的杀伤范围压低一个数量级。底层用的还是 namespace（命名空间——让进程看到隔离过的系统视图）/ capabilities（能力——把 root 权限拆成可单独收回的小项）/ seccomp（系统调用过滤）那一套内核机制（见 <a href="linux_security_model.html">Linux 安全模型</a>），systemd 的贡献是把它们包装成了声明式指令——写一行配置就生效，不用改代码。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="unit 安全加固三层：ProtectSystem 把文件系统只读，NoNewPrivileges 禁止提权，CapabilityBoundingSet 丢掉不需要的能力">
@@ -835,7 +835,7 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
     <section class="chapter" id="s8">
       <div class="ch-head"><div class="num">08</div><div class="t"><h2>journald 日志</h2><div class="sub">二进制格式换来的和失去的</div></div></div>
 
-      <p>journald 存带索引的二进制：换来结构化字段（<code>_SYSTEMD_UNIT</code> / <code>_PID</code> / <code>_UID</code>）和按 unit、boot 检索，丢掉 <code>cat</code>/<code>grep</code>。元数据由内核填，应用冒不了名。默认还不持久化。</p>
+      <p>journald（systemd 的日志服务）存的是带索引的二进制格式，而不是纯文本。换来的是结构化字段（<code>_SYSTEMD_UNIT</code> / <code>_PID</code> / <code>_UID</code>）和按 unit、按启动轮次检索的能力；丢掉的是 <code>cat</code>/<code>grep</code> 直接翻文本的便利。字段元数据由内核填写，应用想冒名顶替也冒不了。另外要注意：它默认不持久化，重启即丢。</p>
 
       <div class="fig">
         <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="journal 默认写在 /run 的 tmpfs 上重启即丢，生产必须落到 /var/log/journal 才持久">
@@ -904,7 +904,7 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
         <figcaption>按 blame 排序砍服务是最常见的无效优化。只压缩 critical-chain 上的节点才有意义</figcaption>
       </div>
 
-      <div class="box danger"><code>blame</code> 是各 unit 自己花了多久，不是拖慢开机多久。耗时 20 秒但完全并行的服务贡献是 <strong>0</strong>；200ms 卡在关键链上可能让后面全排队。<strong>只看 <code>critical-chain</code>。</strong></div>
+      <div class="box danger"><code>blame</code> 显示的是每个 unit 各自花了多久，不是它拖慢开机多久。一个耗时 20 秒但完全并行、没人等它的服务，对总时长的贡献是 <strong>0</strong>；反过来一个只花 200ms 却卡在关键链上的服务，可能让后面所有服务排队。<strong>优化只看 <code>critical-chain</code>。</strong></div>
 
       <div class="cheatsheet"><table>
         <thead><tr><th>现象</th><th>先看什么</th><th>常见原因</th></tr></thead>
@@ -949,7 +949,7 @@ WantedBy=multi-user.target        <span class="cm"># systemctl enable 时挂到�
       <div class="case">
         <h4>典型场景 · 加了一行 fstab 之后机器起不来了</h4>
         <div class="sym">卡在 <code>A start job is running for /data</code>，90 秒后进 emergency。</div>
-        <p>systemd 把 fstab 每行生成 <code>.mount</code>，<code>local-fs.target</code> 依赖它们。设备不在就等到 <code>DefaultTimeoutStartSec</code> 超时，启动中断。非关键挂载写 <code>defaults,nofail,x-systemd.device-timeout=10s</code>。救援：<code>init=/bin/bash</code> → <code>mount -o remount,rw /</code> → 改 fstab → <code>sync</code> → <code>echo b &gt; /proc/sysrq-trigger</code>。远程机器改完先 <code>daemon-reload &amp;&amp; mount -a</code>，不要直接 reboot。</p>
+        <p>原因是 systemd 会把 fstab 的每一行生成为一个 <code>.mount</code> unit，并让 <code>local-fs.target</code> 依赖它们。一旦某个设备不在，这个挂载任务就阻塞到 <code>DefaultTimeoutStartSec</code> 超时，整个启动被拖垮。预防方法：非关键挂载一律写 <code>defaults,nofail,x-systemd.device-timeout=10s</code>（允许失败、只等 10 秒）。救援路径：<code>init=/bin/bash</code> → <code>mount -o remount,rw /</code> → 改 fstab → <code>sync</code> → <code>echo b &gt; /proc/sysrq-trigger</code>。远程机器改完先 <code>daemon-reload &amp;&amp; mount -a</code> 验证，不要直接 reboot。</p>
       </div>
 
       <div class="checklist">

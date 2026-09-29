@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linux 内核网络栈与流量治理 · 收发包路径 / netfilter / netns / tc / XDP / 调优排障</title>
-<meta name="description" content="Linux 内核网络栈完全指南：一个包从网卡 DMA 到 socket 缓冲区的完整路径、NAPI 与软中断、RSS/RPS/RFS/XPS、netfilter 五个 hook 与 conntrack 表满、路由与 rp_filter、netns/veth/bridge 手工搭容器网络、tc qdisc 与 bufferbloat、XDP 与 AF_XDP、accept 队列与 TIME_WAIT 调优、分层丢包定位工作流，含 12 道面试题。">
+<meta name="description" content="用大白话讲清 Linux 内核网络栈：一个包从网卡 DMA 走到 socket 缓冲区要过哪几关、NAPI 与软中断怎么分工、netfilter/conntrack 表为什么会打满、tc 与 XDP 各管什么、丢包该从哪一层查起，含 12 道面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/kernel_network_stack.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/kernel_network_stack.html">
 <meta property="og:title" content="Linux 内核网络栈与流量治理 · 收发包路径 / netfilter / netns / tc / XDP / 调优排障">
-<meta property="og:description" content="Linux 内核网络栈完全指南：一个包从网卡 DMA 到 socket 缓冲区的完整路径、NAPI 与软中断、RSS/RPS/RFS/XPS、netfilter 五个 hook 与 conntrack 表满、路由与 rp_filter、netns/veth/bridge 手工搭容器网络、tc qdisc 与 bufferbloat、XDP 与 AF_XDP、accept 队列与 TIME_WAIT 调优、分层丢包定位工作流，含 12 道面试题。">
+<meta property="og:description" content="用大白话讲清 Linux 内核网络栈：一个包从网卡 DMA 走到 socket 缓冲区要过哪几关、NAPI 与软中断怎么分工、netfilter/conntrack 表为什么会打满、tc 与 XDP 各管什么、丢包该从哪一层查起，含 12 道面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Linux 内核网络栈与流量治理 · 收发包路径 / netfilter / netns / tc / XDP / 调优排障">
-<meta name="twitter:description" content="Linux 内核网络栈完全指南：一个包从网卡 DMA 到 socket 缓冲区的完整路径、NAPI 与软中断、RSS/RPS/RFS/XPS、netfilter 五个 hook 与 conntrack 表满、路由与 rp_filter、netns/veth/bridge 手工搭容器网络、tc qdisc 与 bufferbloat、XDP 与 AF_XDP、accept 队列与 TIME_WAIT 调优、分层丢包定位工作流，含 12 道面试题。">
+<meta name="twitter:description" content="用大白话讲清 Linux 内核网络栈：一个包从网卡 DMA 走到 socket 缓冲区要过哪几关、NAPI 与软中断怎么分工、netfilter/conntrack 表为什么会打满、tc 与 XDP 各管什么、丢包该从哪一层查起，含 12 道面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -116,7 +116,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 65 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 70 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -160,7 +160,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★★</span>
       <span class="pill cyan">面试高频 · SRE 必备</span>
-      <span class="pill green">阅读时长 ~65 min</span>
+      <span class="pill green">阅读时长 ~70 min</span>
       <span class="pill amber">前置 网络编程 · 进程调度</span>
     </div>
     <div class="meta">
@@ -179,7 +179,7 @@
     <div class="t"><h2>收包与发包的完整路径</h2><p class="sub">从网卡 DMA 到 socket 缓冲区</p></div>
   </div>
 
-  <p>绝大多数后端工程师对网络的认知止步于 <code>socket() / bind() / listen() / accept() / read()</code>。这套 API 之下，一个以太网帧要经过<strong>硬件、中断、软中断、协议栈、socket 队列</strong>五个截然不同的执行环境才能到达你的 <code>read()</code>。搞不清这条路径，排障时就只能猜——「丢包了」这三个字，在这条路径上至少有八个含义完全不同的位置。</p>
+  <p>绝大多数后端工程师对网络的认知止步于 <code>socket() / bind() / listen() / accept() / read()</code> 这几个接口。而在这套 API 之下，一个以太网帧（帧——链路层的一次传输单位，相当于一个写好收发地址的包裹）要经过<strong>硬件、中断、软中断（软中断——把「必须立刻做」和「可以稍后做」拆开的机制：网卡只登记「有活来了」，重活交给稍后的软中断慢慢干）、协议栈、socket 队列</strong>五个截然不同的执行环境（执行环境——代码此刻以什么身份、受什么限制在跑：能不能睡眠、归谁调度，每一段的答案都不同）接力传递，才能到达你的 <code>read()</code>。搞不清这条路径，排障时就只能猜——「丢包了」这三个字，在这条路径上至少有八个含义完全不同的位置。</p>
 
   <div class="analogy">收包路径像<strong>机场到你家的国际快递</strong>。货机落地（网卡收到帧），包裹先卸到<strong>货站的固定格口</strong>（RX ring buffer，格口数量有限，装满了后面的货只能扔）；货站给分拣中心<strong>打一个电话</strong>说「有货了」（硬中断），但不会每来一件货打一次电话——那样接线员会被打崩，所以是「打一次电话，然后分拣员自己过来一次搬走一批」（NAPI 轮询）。分拣员把同一个收件人的十个小包<strong>合并成一个大箱</strong>（GRO）省得后面重复走流程，再依次过海关（netfilter）、查地址簿决定是本市派送还是转运（路由），最后放进你家<strong>楼下的快递柜</strong>（<code>sk_receive_queue</code>）。你什么时候下楼取（<code>recv()</code>）是你的事——但快递柜满了，后来的包裹就退回了。</div>
 
@@ -312,7 +312,7 @@
 
   <h3>1.1 收包：五种执行上下文的接力</h3>
 
-  <p>这条路径<strong>不在一个执行上下文里跑完</strong>：DMA 不占 CPU，硬中断必须极短，软中断优先于普通进程，<code>recv()</code> 才是你的线程。跨上下文意味着<strong>每一段都有自己的排队点和丢弃计数器</strong>。</p>
+  <p>这条路径<strong>不在一个执行上下文里跑完</strong>：DMA 那一段不占 CPU，硬中断那段必须极短，软中断优先于普通进程运行，直到 <code>recv()</code> 这一段才真正回到你的线程手里。跨上下文带来的直接后果是：<strong>每一段都有自己的排队点和丢弃计数器</strong>——包在哪个环节被丢，就得去查那个环节自己的账本。</p>
 
   <table>
     <thead><tr><th>阶段</th><th>执行上下文</th><th>关键函数</th><th>出问题看哪个计数器</th></tr></thead>
@@ -329,17 +329,17 @@
     </tbody>
   </table>
 
-  <p>硬件 DMA <strong>完全不占 CPU</strong>：描述符补不上，网卡只能在硬件层丢掉后续帧（<code>rx_missed_errors</code>）。硬中断几乎什么都不干——关本队列中断、<code>napi_schedule()</code>、触发 <code>NET_RX_SOFTIRQ</code>，立刻返回。软中断超 <code>netdev_budget</code> / <code>netdev_budget_usecs</code> 就把剩下的活推给 <code>ksoftirqd/N</code>，同时 <code>time_squeeze</code> 加一。大流量机器上它吃满一个核是<strong>溢出通道，不是异常本身</strong>。</p>
+  <p>硬件 DMA（DMA——Direct Memory Access，直接内存访问：网卡不经过 CPU、自己把收到的数据写进内存）<strong>完全不占 CPU</strong>：网卡按描述符（描述符——ring buffer 格子里的一条记录，写明「这批数据放在哪、有多长」）领取内存用，驱动若来不及补充新描述符，网卡只能在硬件层丢掉后续帧（<code>rx_missed_errors</code>）。硬中断几乎什么都不干——只做三件事：关掉本队列的中断、调用 <code>napi_schedule()</code> 登记「有活来了」、触发 <code>NET_RX_SOFTIRQ</code>，然后立刻返回。软中断负责干重活，但每个轮次有预算：一旦超过 <code>netdev_budget</code>（一次最多处理多少个包）/ <code>netdev_budget_usecs</code>（一次最多花多少微秒），就把剩下的活推给 <code>ksoftirqd/N</code>（每个 CPU 一个的内核线程，专门接手软中断干不完的活），同时 <code>time_squeeze</code> 计数加一，意思是「这轮不是没活干，而是被预算掐断了」。大流量机器上它吃满一个核是<strong>溢出通道，不是异常本身</strong>。</p>
 
-  <p>驱动 <code>poll()</code> 把 DMA 页挂进 skb 的 <code>frags[]</code>，不拷字节。GRO 把同流连续小包合成一个大 skb，后面 IP / TCP / netfilter / 唤醒全都只走一遍——内核栈能扛 10G 小包，代价是<strong>抓包看到的不是线上真实的包</strong>（§9）。<code>netif_receive_skb()</code> 先喂 tcpdump tap 和 tc ingress，再 <code>ip_rcv()</code>：PREROUTING → 路由（本机 <code>ip_local_deliver</code> / 转发 <code>ip_forward</code>）→ <code>tcp_v4_rcv</code> 四元组查 socket。</p>
+  <p>轮询阶段里，驱动 <code>poll()</code> 把 DMA 收到的数据页直接挂进 skb 的 <code>frags[]</code>（分页数组——大数据不搬进 skb 本体，只挂一个指向原内存页的引用），一个字节都不拷。GRO 在这一步把同一流上连续到达的小包合成一个大 skb（「同流」指属于同一对 IP:端口 的连接；合并之后，后面的 IP / TCP / netfilter / 唤醒用户进程全都只走一遍）——内核栈能扛 10G 小包的底气就在这里，代价是<strong>抓包看到的不是线上真实的包</strong>（§9）。接下来 <code>netif_receive_skb()</code> 是通用接收入口：它先喂 tcpdump tap（抓包监听点）和 tc ingress（入口方向的流量控制），再进 <code>ip_rcv()</code>：先过 PREROUTING，然后查路由决定去向——目的地是本机就走 <code>ip_local_deliver</code>，要转发给别的机器就走 <code>ip_forward</code>——最后 <code>tcp_v4_rcv</code> 拿四元组（源 IP、源端口、目的 IP、目的端口）查出这个包归哪个 socket。</p>
 
-  <p>入队有个关键分支：用户进程正持锁时，软中断不能动接收队列，skb 只能进 <code>sk_backlog</code>；否则直接进 <code>sk_receive_queue</code>。backlog 也受 <code>sk_rcvbuf</code> 约束，溢出记 <code>TcpExtTCPBacklogDrop</code>。</p>
+  <p>包到达 socket 门口时还有一个关键分支：如果用户进程正拿着锁在读队列，软中断就不能去动接收队列，skb 只能先寄放到 <code>sk_backlog</code>（临时候补队列，等进程放锁后再倒进正式队列）；没人在读时则直接进 <code>sk_receive_queue</code>（正式的接收队列）。backlog 同样受 <code>sk_rcvbuf</code>（这个 socket 允许占用的接收缓冲上限）约束，装不下的部分溢出后记到 <code>TcpExtTCPBacklogDrop</code>。</p>
 
   <div class="intuition">这一分支解释了一个很多人踩过的现象：<strong>应用越慢，丢包越多，而且丢的位置会变</strong>。应用读得慢 → <code>sk_receive_queue</code> 堆积 → 触及 <code>sk_rcvbuf</code> 上限 → 新包在软中断里被丢（<code>TCPRcvQDrop</code>）；同时应用长时间持锁 → 软中断只能走 backlog → backlog 也满 → <code>TCPBacklogDrop</code>。两个计数器指向的都是「应用侧慢」，但很多人只盯着网卡计数器，怎么调 ring size 都没用。</div>
 
   <h3>1.2 sk_buff：为什么整条路径尽量不拷贝</h3>
 
-  <p>1500 字节的包若每层都拷一次，10Gbps 就是每秒几 GB 额外内存带宽。skb 的约束是：<strong>数据只在「网卡 DMA 进来」和「拷给用户态」两端各碰一次，中间全靠指针腾挪。</strong></p>
+  <p>算一笔账就明白为什么不能层层拷贝：一个 1500 字节的包若每层都拷一次，10Gbps 的流量就是每秒几 GB 的额外内存带宽，什么业务都别想跑了。所以 skb 的设计约束是：<strong>数据只在「网卡 DMA 进来」和「拷给用户态」两端各碰一次，中间全靠指针腾挪。</strong></p>
 
   <div class="fig">
     <svg viewBox="0 0 920 250" style="min-width:680px;height:auto" role="img" aria-label="sk_buff 四个指针：head 到 end 围成一块缓冲，data 与 tail 夹着线性数据，headroom 给 skb_push 加头，end 之后是 skb_shared_info 的 frags 分页数组">
@@ -387,9 +387,9 @@
   <h3>1.3 发包：对称，但不完全对称</h3>
 
   <p>发送侧看起来是收包的镜像，但有三个会在生产里咬人的差异。</p>
-  <p><strong>① 有一次不可避免的拷贝。</strong> <code>send()</code> 的用户态缓冲内核必须拷进 skb——TCP 要留副本重传，用户可能立刻改 buffer。想跳过用 <code>MSG_ZEROCOPY</code>（页被 pin，完成通知走 <code>MSG_ERRQUEUE</code>），或源头本就在页缓存里的 <code>sendfile()</code> / <code>splice()</code>。</p>
-  <p><strong>② 多一层 qdisc。</strong> <code>dev_queue_xmit()</code> 先选 TX 队列（XPS 按 CPU，否则按 skb hash），再交给 qdisc：立刻发（<code>noqueue</code>）、排队（<code>fq_codel</code> / <code>htb</code>）、或<strong>直接丢</strong>（队列满）。这是内核<strong>主动丢你自己的包</strong>的唯一地方，见 §6。</p>
-  <p><strong>③ 一个 skb ≠ 一个包。</strong> 开 TSO 后内核可把最大 64KB 的巨型 skb 交给网卡，由硬件按 MSS 切帧、填 TCP 头和校验和。网卡不支持时内核用软件做同样的事，叫 GSO。</p>
+  <p><strong>① 有一次不可避免的拷贝。</strong> <code>send()</code> 传进来的用户态缓冲，内核必须先拷一份进 skb 才敢发——原因有二：TCP 要留副本用于重传，而且用户拿到返回值后可能立刻改写这块 buffer。真想跳过这次拷贝，可以用 <code>MSG_ZEROCOPY</code>（数据页被 pin 住不许动，完成通知走 <code>MSG_ERRQUEUE</code> 这条旁路），或者用数据源头本就在页缓存里的 <code>sendfile()</code> / <code>splice()</code>，天然无需拷贝。</p>
+  <p><strong>② 多一层 qdisc。</strong> 发包不是拿到就能发：先由 <code>dev_queue_xmit()</code> 选出用哪条 TX 队列（XPS 按 CPU 决定去向，否则按包的 hash 分摊），然后交给 qdisc（排队规则——发包前的最后一道排队纪律，决定谁先走、谁等着、装不下时丢谁）处置，它有三种处理：立刻放行（<code>noqueue</code>）、先排队（<code>fq_codel</code> / <code>htb</code>）、或队列满时<strong>直接丢</strong>。这是内核<strong>主动丢你自己的包</strong>的唯一地方，见 §6。</p>
+  <p><strong>③ 一个 skb ≠ 一个包。</strong> 开了 TSO 之后，内核可以把最大 64KB 的巨型 skb 直接交给网卡，由硬件按 MSS（对端一次能接收的最大分段长度）切帧、填 TCP 头和校验和。若网卡不支持这件事，内核就用软件做同样的事，名字换成 GSO。</p>
 
   <table>
     <thead><tr><th>卸载特性</th><th>方向</th><th>做什么</th><th>查看 / 开关</th><th>排障时的影响</th></tr></thead>
@@ -415,7 +415,7 @@
     <div class="t"><h2>网卡与驱动层</h2><p class="sub">ring buffer、中断合并、多队列与 RSS/RPS/RFS/XPS</p></div>
   </div>
 
-  <p>这一层的问题有个共同特征：<strong>应用层完全无感，只表现为「偶尔丢包」「延迟毛刺」「某个核 si 打满」</strong>。而且它的计数器和内核栈的计数器分别在两个地方，不知道去哪看就永远查不出来。</p>
+  <p>这一层的问题有个共同特征：<strong>应用层完全无感，只表现为「偶尔丢包」「延迟毛刺」「某个核 si 打满」</strong>（si——top 里 softirq 软中断所占的 CPU 百分比）。而且它的计数器和内核栈的计数器分别记在两个地方：前者在驱动自己的账本里，后者在内核的统计文件里。不知道去哪看，就永远查不出来。</p>
 
   <h3>2.1 RX ring 满了会怎样：两个容易混淆的计数器</h3>
 
@@ -447,7 +447,7 @@
 
   <h3>2.2 中断合并：用延迟换 CPU</h3>
 
-  <p>网卡每收到一个包就中断一次，10Gbps 小包场景下就是每秒上千万次中断——CPU 全部时间都在做上下文保存与恢复。<strong>中断合并（interrupt coalescing）</strong>让网卡「攒够 N 个包或等够 T 微秒再中断一次」。</p>
+  <p>网卡每收到一个包就中断一次 CPU，在 10Gbps 小包场景下就是每秒上千万次中断——CPU 的时间全部耗在做中断前后的现场保存与恢复上，正经活反而没空干。<strong>中断合并（interrupt coalescing）</strong>的思路是让网卡别一惊一乍：攒够 N 个包、或等够 T 微秒，再统一中断一次。相当于快递员不必每到一个包裹就给你打一次电话，攒一小车再送一次。</p>
 
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
@@ -467,7 +467,7 @@
 
   <h3>2.3 NAPI：中断与轮询的混合体</h3>
 
-  <div class="def"><strong>NAPI</strong>（New API）：Linux 的网络收包框架。<strong>空闲时用中断</strong>（省 CPU），<strong>一忙就切轮询</strong>（省中断）。</div>
+  <div class="def"><strong>NAPI</strong>（New API）：Linux 的网络收包框架，好比一个智能门铃。<strong>空闲时用中断</strong>（没活就安心等着，省 CPU），<strong>一忙就切轮询</strong>（活多了就干脆守在门口一件件搬，省得来回按门铃）。</div>
 
   <div class="fig">
     <svg viewBox="0 0 900 220" style="min-width:680px;height:auto" role="img" aria-label="NAPI 门铃：空闲开中断，硬中断关中断并调度轮询，取空才重开中断，预算用尽则转交 ksoftirqd 并累加 time_squeeze">
@@ -513,7 +513,7 @@
 
   <h3>2.4 <code>/proc/net/softnet_stat</code>：最被低估的一个文件</h3>
 
-  <p>每 CPU 一行、全是十六进制、没有表头。第 2 列只统计 <code>enqueue_to_backlog()</code> 因队列满而丢的包——<strong>物理网卡走 NAPI 直通，ring 满不会记在这里</strong>。</p>
+  <p>这个文件的观感很劝退：每 CPU 一行、全是十六进制、没有表头。但只要认得几列就够用：第 2 列只统计 <code>enqueue_to_backlog()</code> 因为 per-CPU 队列满而丢的包——<strong>物理网卡走 NAPI 直通，ring 满不会记在这里</strong>，别在这个文件里找网卡丢包。</p>
 
   <table>
     <thead><tr><th>列</th><th>字段</th><th>含义</th><th>不为零意味着什么</th></tr></thead>
@@ -549,7 +549,7 @@
 
   <h3>2.6 RPS / RFS / XPS：软件侧的三块补丁</h3>
 
-  <p>RSS 需要硬件支持且队列数有限。硬件不够时，三个软件机制分别补三个痛点——<strong>不是三选一</strong>。</p>
+  <p>RSS 需要 hardware 支持且队列数有限。当硬件不给力时，三个软件机制分别补上三个不同的痛点——它们<strong>不是三选一</strong>，而是各管一段：RPS 补「多个核一起收」、RFS 补「包送到对的核」、XPS 补「发送侧不挤一把锁」。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 250" style="min-width:680px;height:auto" role="img" aria-label="RSS 硬件按四元组哈希投递到多队列；RPS 在软中断里把包分给其它 CPU 的 backlog；RFS 把包送到上次 recvmsg 的那个 CPU；XPS 让发送 CPU 固定走某条 TX 队列">
@@ -606,11 +606,11 @@
     <div class="t"><h2>netfilter 与 conntrack</h2><p class="sub">五个 hook、表与链的优先级、连接跟踪表打满</p></div>
   </div>
 
-  <p>netfilter 是内核网络栈里<strong>唯一一个「可以任意插手每个包」的框架</strong>：防火墙、NAT、负载均衡（IPVS）、容器网络（Docker、kube-proxy 的 iptables 模式）全都建在它上面。它的能力有多强，踩坑的花样就有多多——生产环境里最难查的一类网络故障，往往就藏在某条没人记得是谁加的规则里，或者藏在 conntrack 表里。</p>
+  <p>netfilter 是内核网络栈里<strong>唯一一个「可以任意插手每个包」的框架</strong>：防火墙、NAT（Network Address Translation，网络地址转换——改写包的源或目的地址/端口，让多台机器共用一个出口 IP）、负载均衡（IPVS）、容器网络（Docker、kube-proxy 的 iptables 模式）全都建在它上面。它的能力有多强，踩坑的花样就有多多——生产环境里最难查的一类网络故障，往往就藏在某条没人记得是谁加的规则里，或者藏在 conntrack 表里。</p>
 
   <h3>3.1 五个 hook 点与包的走向</h3>
 
-  <div class="def"><strong>netfilter hook</strong>：内核在 IP 层的五个固定位置埋下的回调点。每个 hook 上挂着一串按<strong>优先级数字从小到大</strong>排序的处理函数，iptables 的每张「表」其实就是注册在某几个 hook 上、拥有特定优先级的一组回调。<strong>「表」决定优先级，「链」决定挂在哪个 hook 上。</strong></div>
+  <div class="def"><strong>netfilter hook</strong>：内核在 IP 层的五个固定位置埋下的回调点（好比高速路上固定的五个收费站，所有车必须过、过时都能被检查）。每个 hook 上挂着一串按<strong>优先级数字从小到大</strong>排序的处理函数，iptables 的每张「表」其实就是注册在某几个 hook 上、拥有特定优先级的一组回调。<strong>「表」决定优先级，「链」决定挂在哪个 hook 上。</strong></div>
 
   <div class="fig">
     <svg viewBox="0 0 900 380" role="img" aria-label="netfilter 五个 hook 点与包的走向：入向包经 PREROUTING 后做路由判定，目的为本机则走 INPUT 上送本地进程，否则走 FORWARD 再到 POSTROUTING 出网卡；本地进程发出的包经 OUTPUT、路由判定、POSTROUTING 出网卡">
@@ -682,7 +682,7 @@
 
   <h3>3.2 iptables 的性能天花板与 nftables</h3>
 
-  <p>iptables 规则是线性链表；kube-proxy iptables 模式几千 Service 就是几万条比较，而且 <code>iptables-restore</code> 全量替换要拿大锁。nftables 用字节码 + 原生 set/map，事务式提交。</p>
+  <p>iptables 的规则是一条条排好的线性链表，包来了就从头到尾逐条比对；kube-proxy iptables 模式下几千个 Service 就是几万条比较，每个包都要过一遍。而且 <code>iptables-restore</code> 更新规则时是全量替换、还要拿一把大锁，替换期间别的更新都得等。nftables 换了思路：把规则编译成字节码跑在内核虚拟机上，配上原生的 set/map（哈希集合/映射，一次查找就能命中，不用逐条扫），更新采用事务式提交——要么全部生效、要么全部回滚。</p>
 
   <table>
     <thead><tr><th>维度</th><th>iptables（legacy）</th><th>nftables</th></tr></thead>
@@ -712,7 +712,7 @@
 
   <div class="def"><strong>conntrack</strong>（连接跟踪）：内核为每一条「流」维护一个条目，记录五元组、双向的转换关系、状态和超时时间。它是<strong>有状态防火墙和 NAT 的基础</strong>——没有它，就无法表达「只允许我主动发起的连接的回包进来」。代价是：每条流占一个哈希表条目（约 300 字节量级）和一次哈希查找，<strong>而且它是全局共享的有限资源</strong>。</div>
 
-  <p>conntrack 的状态和 TCP 自身的状态<strong>不是一回事</strong>，面试里经常被混淆：</p>
+  <p>conntrack 的状态和 TCP 自身的状态<strong>不是一回事</strong>，面试里经常被混淆：前者是内核站在「有没有见过这条流的双向包」角度打的标签，后者是 TCP 协议自己的连接生命周期阶段。</p>
 
   <table>
     <thead><tr><th>conntrack 状态</th><th>含义</th><th>典型规则用法</th></tr></thead>
@@ -725,7 +725,7 @@
     </tbody>
   </table>
 
-  <p>此外 TCP 连接在 conntrack 内部还有自己的一套子状态机（<code>SYN_SENT</code> / <code>SYN_RECV</code> / <code>ESTABLISHED</code> / <code>FIN_WAIT</code> / <code>CLOSE_WAIT</code> / <code>LAST_ACK</code> / <code>TIME_WAIT</code> / <code>CLOSE</code>），每个子状态有独立的超时时间。<strong>其中 <code>nf_conntrack_tcp_timeout_established</code> 默认是 432000 秒（5 天）</strong>——这个值大得离谱，是很多表满事故的根源。</p>
+  <p>此外 TCP 连接在 conntrack 内部还有自己的一套子状态机（<code>SYN_SENT</code> / <code>SYN_RECV</code> / <code>ESTABLISHED</code> / <code>FIN_WAIT</code> / <code>CLOSE_WAIT</code> / <code>LAST_ACK</code> / <code>TIME_WAIT</code> / <code>CLOSE</code>），分别对应握手、 Established、挥手等各个阶段，每个子状态有独立的超时时间——超时没等到下一个包，条目就被回收。<strong>其中 <code>nf_conntrack_tcp_timeout_established</code> 默认是 432000 秒（5 天）</strong>——这个值大得离谱：一条连上后闲置的连接会在表里挂满 5 天才被清走，很多表满事故的根源就在这里。</p>
 
   <h3>3.4 conntrack 表打满：现象、定位与止血</h3>
 
@@ -792,7 +792,7 @@
 
   <h3>3.5 NAT 端口耗尽</h3>
 
-  <p>SNAT / MASQUERADE 要给每条出向连接分配一个「源 IP + 源端口」的组合，使回包能被唯一还原。一个源 IP 大约只有 <strong>2.8 万到 6 万个可用端口</strong>（受 <code>net.ipv4.ip_local_port_range</code> 约束）。当大量容器共用一个宿主机 IP 访问<strong>同一个目的 IP:Port</strong>（比如所有 Pod 都连同一个 Redis 或同一个外部 API）时，可用组合会被迅速耗尽。</p>
+  <p>SNAT / MASQUERADE 要给每条出向连接分配一个「源 IP + 源端口」的组合，作为这条连接的专属编号，让回包能被唯一还原到正确的机器。<strong>2.8 万到 6 万</strong>这个数就是瓶颈：一个源 IP 可用的端口就这么多个（受 <code>net.ipv4.ip_local_port_range</code> 约束）。当大量容器共用一个宿主机 IP 访问<strong>同一个目的 IP:Port</strong>（比如所有 Pod 都连同一个 Redis 或同一个外部 API）时，组合空间被迅速挤满，新连接分配不到端口，就耗尽了。</p>
 
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
@@ -823,11 +823,11 @@
     <div class="t"><h2>路由与邻居</h2><p class="sub">FIB 查找、策略路由、rp_filter 三档、ARP 表老化</p></div>
   </div>
 
-  <p>路由决定包<strong>往哪个接口发、下一跳是谁</strong>；邻居子系统（ARP / NDP）解决「知道了下一跳的 IP，可它的 MAC 是多少」。这两层平时透明得让人忘了它们存在，一旦机器有多张网卡、或者进了容器 / VPN / 双栈环境，它们就是故障率最高的地方。</p>
+  <p>路由决定包<strong>往哪个接口发、下一跳是谁</strong>；邻居子系统（ARP——Address Resolution Protocol，根据 IP 查出同网段设备的 MAC 地址 / NDP——IPv6 版的 ARP）解决「知道了下一跳的 IP，可它的 MAC 是多少」。这两层平时透明得让人忘了它们存在，一旦机器有多张网卡、或者进了容器 / VPN / 双栈环境，它们就是故障率最高的地方。</p>
 
   <h3>4.1 路由查找：三张表、一棵 trie</h3>
 
-  <div class="def"><strong>FIB</strong>（Forwarding Information Base）：内核里真正用于查找的转发表，按<strong>最长前缀匹配</strong>组织成压缩前缀树（<code>fib_trie</code>）。早期内核在 FIB 之前还有一层「路由缓存」（routing cache），因为容易被哈希碰撞攻击且在多核上争抢严重，<strong>已在 Linux 3.6 移除</strong>；现在每个包直接查 trie，配合 per-CPU 的 <code>dst_entry</code> 引用来摊薄开销。</div>
+  <div class="def"><strong>FIB</strong>（Forwarding Information Base，转发信息库）：内核里真正用于查找的转发表，按<strong>最长前缀匹配</strong>（最长前缀匹配——目的地址和多条路由都部分吻合时，选掩码最长、最具体的那条）组织成压缩前缀树（<code>fib_trie</code>；trie——一种按前缀逐位分叉的树结构，查一次只跟地址位数有关，不随规则总数变慢）。早期内核在 FIB 之前还有一层「路由缓存」（routing cache），因为容易被哈希碰撞攻击且在多核上争抢严重，<strong>已在 Linux 3.6 移除</strong>；现在每个包直接查 trie，配合 per-CPU 的 <code>dst_entry</code> 引用来摊薄开销。</div>
 
   <p>系统默认三张表，按 <code>ip rule</code> 优先级依次查：<code>local</code>（本机地址与广播，内核自动维护）→ <code>main</code>（平时 <code>ip route add</code> 进这张）→ <code>default</code>（通常空）。排障最有用的不是 <code>ip route show</code>，而是 <code>ip route get</code>——让内核<strong>真的跑一遍查找</strong>。</p>
 
@@ -843,7 +843,7 @@
 
   <h3>4.2 策略路由：源地址、mark 与多张表</h3>
 
-  <p>普通路由只看<strong>目的地址</strong>。策略路由按源地址、入接口、fwmark、TOS 选不同表——多线路出口、VPN 分流、容器多网卡的标准工具。</p>
+  <p>普通路由只看<strong>目的地址</strong>决定去向。策略路由则多了一层判断：按源地址、入接口、fwmark（防火墙给包打的标记，可当「这包走哪条策略」的标签用）、TOS 选不同的路由表来查——它是多线路出口、VPN 分流、容器多网卡的标准工具。</p>
 
   <div class="fig">
     <svg viewBox="0 0 920 260" style="min-width:700px;height:auto" role="img" aria-label="双网卡回包走错口：请求从 eth1 进来，回包查 main 表默认路由走 eth0，源 IP 仍是 eth1 的地址，被对端 rp_filter 丢掉；策略路由按源地址把回包钉回 eth1">
@@ -884,7 +884,7 @@
 
   <h3>4.3 rp_filter：三个取值，一条容易被忽略的合并规则</h3>
 
-  <div class="def"><strong>反向路径过滤</strong>（Reverse Path Filtering，RFC 3704）：收到一个包时，内核用它的<strong>源地址</strong>反查路由表——「如果我要给这个源地址发包，会从哪个接口出去？」如果答案不是这个包进来的接口，就认为源地址被伪造，丢弃。它是防 IP 欺骗的基础手段，也是<strong>非对称路由环境下最常见的「莫名其妙丢包」元凶</strong>。</div>
+  <div class="def"><strong>反向路径过滤</strong>（Reverse Path Filtering，RFC 3704）：收到一个包时，内核用它的<strong>源地址</strong>反查路由表，问自己一个问题——「如果我要给这个源地址发包，会从哪个接口出去？」如果答案不是这个包进来的接口，就认为源地址被伪造，丢弃。好比门卫核对来访者的地址：「按你报的住址，我送信该走东门，你怎么从西门进来了？」可疑，拒收。它是防 IP 欺骗的基础手段，也是<strong>非对称路由环境下最常见的「莫名其妙丢包」元凶</strong>。</div>
 
   <table>
     <thead><tr><th>取值</th><th>名称</th><th>行为</th><th>适用场景</th></tr></thead>
@@ -946,7 +946,7 @@
     <div class="t"><h2>网络命名空间与虚拟设备</h2><p class="sub">netns / veth / bridge / macvlan / ipvlan / tun-tap</p></div>
   </div>
 
-  <p>容器网络听起来很复杂，其实只是几个内核原语的组合。把这几个原语单独拆开理解一遍，再看 Docker、CNI、Service Mesh 的网络方案，会发现它们都是同一套积木的不同搭法。</p>
+  <p>容器网络听起来很复杂，其实只是几个内核原语（原语——内核直接提供的最基础能力件，好比积木的几块标准件）的组合。把这几个原语单独拆开理解一遍，再看 Docker、CNI、Service Mesh 的网络方案，会发现它们都是同一套积木的不同搭法。</p>
 
   <h3>5.1 netns：一整套独立的网络栈</h3>
 
@@ -980,7 +980,7 @@
 
   <h3>5.3 手工搭一套「容器网络」</h3>
 
-  <p>下面几步和 Docker bridge 模式在内核层面完全一样。拓扑见图，面试题 7 有可跑命令，正文不再贴脚本。</p>
+  <p>下面几步和 Docker bridge 模式在内核层面完全一样——区别只是 Docker 用脚本替你敲了这些命令。拓扑见图，面试题 7 有可跑命令，正文不再贴脚本。</p>
 
   <div class="fig">
     <svg viewBox="0 0 880 300" role="img" aria-label="手工搭建容器网络的拓扑：netns ns1 内的 ceth0 通过 veth pair 连到宿主机的 veth0，veth0 挂在网桥 br0 上，br0 作为网关，宿主机开启 ip_forward 并用 iptables MASQUERADE 把 172.18.0.0/24 的源地址换成 eth0 的地址后发往外网">
@@ -1062,11 +1062,11 @@
     <div class="t"><h2>流量控制 tc</h2><p class="sub">qdisc 分类、bufferbloat 与 fq_codel、netem 与 htb</p></div>
   </div>
 
-  <p><code>tc</code>（traffic control）是内核里被严重低估的一个子系统。大多数人只知道它能限速，其实它同时是<strong>延迟治理工具</strong>（fq_codel 治 bufferbloat）、<strong>故障注入工具</strong>（netem 造延迟丢包）和<strong>eBPF 挂载点</strong>（clsact，见 §7）。而且它有个特点：<strong>默认配置在很多机器上就是错的</strong>，只是没人去看。</p>
+  <p><code>tc</code>（traffic control，流量控制）是内核里被严重低估的一个子系统。大多数人只知道它能限速，其实它同时是<strong>延迟治理工具</strong>（fq_codel 治 bufferbloat）、<strong>故障注入工具</strong>（netem 造延迟丢包）和<strong>eBPF 挂载点</strong>（clsact，见 §7）。而且它有个特点：<strong>默认配置在很多机器上就是错的</strong>，只是没人去看。</p>
 
   <h3>6.1 qdisc 是什么，它在路径的哪一段</h3>
 
-  <div class="def"><strong>qdisc</strong>（queueing discipline，排队规则）：挂在网络设备发送方向上的<strong>调度器</strong>。<code>dev_queue_xmit()</code> 把 skb 交给 qdisc，qdisc 决定「下一个发哪个包、什么时候发、要不要丢」。它是内核里<strong>唯一会主动丢弃你自己发出的包</strong>的地方——发送缓冲区满了 <code>send()</code> 会阻塞或返回 <code>EAGAIN</code>，而 qdisc 队列满了是<strong>静悄悄地丢</strong>。</div>
+  <div class="def"><strong>qdisc</strong>（queueing discipline，排队规则）：挂在网络设备发送方向上的<strong>调度器</strong>。<code>dev_queue_xmit()</code> 把 skb 交给 qdisc 后，由它决定「下一个发哪个包、什么时候发、要不要丢」。它是内核里<strong>唯一会主动丢弃你自己发出的包</strong>的地方——这一点很关键：发送缓冲区满了 <code>send()</code> 至少会阻塞或返回 <code>EAGAIN</code> 让你知道，而 qdisc 队列满了是<strong>静悄悄地丢</strong>，应用完全无感。</div>
 
   <div class="analogy">qdisc 像<strong>高速公路收费站</strong>。车（包）到了收费站不是立刻放行，而是按某种规则排队：先到先得（pfifo）、按车道分优先级（prio）、每条车道轮流放一辆（fq_codel）、每小时最多放 N 辆（tbf/htb）。收费站的<strong>停车场大小</strong>就是队列深度：太小，车流一波动就把车赶走（丢包）；太大，最后一辆车要在场里等半小时——车没丢，但迟到了。<strong>bufferbloat 说的就是「停车场造得太大」这件事。</strong></div>
 
@@ -1089,9 +1089,9 @@
 
   <h3>6.2 bufferbloat：包没丢，但延迟涨了十倍</h3>
 
-  <div class="def"><strong>bufferbloat</strong>：为了「不丢包」把缓冲配太大，TCP 感知不到拥塞，把队列填满并维持（standing queue）。带宽跑满，每个包却多等几百毫秒。</div>
+  <div class="def"><strong>bufferbloat</strong>（缓冲区膨胀）：为了「不丢包」把缓冲配得太大，反而坏事——队列再长 TCP 也感知不到拥塞，于是放心地把队列填满并长期维持满队（standing queue，常驻队列）。结果带宽跑满了，每个包却要在队里多等几百毫秒。</div>
 
-  <p>典型症状：「一开始下载，别的什么都用不了了」。空闲 ping 20ms，一有大流量变成 800ms——这个差值就是量化指标。</p>
+  <p>典型症状：「一开始下载，别的什么都用不了了」。空闲时 ping 是 20ms，一有大流量就变成 800ms——这两个数的差值就是排队延迟的量化指标。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 230" style="min-width:680px;height:auto" role="img" aria-label="bufferbloat：左侧 FIFO 一条长队列 standing queue 延迟几百毫秒；右侧 fq_codel 按流分到上千个子队列，CoDel 看驻留时间惩罚大象流，小流几乎零排队">
@@ -1129,7 +1129,7 @@
 
   <h3>6.3 读懂 <code>tc -s qdisc show</code></h3>
 
-  <p>重点看<strong>速率</strong>：<code>dropped</code> 在涨、瞬时 <code>backlog Nb Np</code> 持续非零。其余字段见下表。</p>
+  <p>看这份输出要抓重点：<strong>看速率而不是绝对值</strong>——<code>dropped</code> 在不在涨、瞬时 <code>backlog Nb Np</code>（此刻积压的字节数/包数）是否持续非零。其余字段见下表。</p>
 
   <table>
     <thead><tr><th>字段</th><th>含义</th><th>怎么判读</th></tr></thead>
@@ -1147,7 +1147,7 @@
 
   <h3>6.4 netem：主动制造故障</h3>
 
-  <p>混沌工程在网络侧的入口。<strong>netem 只作用于出向</strong>，要模拟入向损伤需要借助 <code>ifb</code>（Intermediate Functional Block）设备把入向流量重定向出来。</p>
+  <p>netem 是混沌工程（主动给系统注入故障、验证它扛不扛得住的做法）在网络侧的入口。要注意 <strong>netem 只作用于出向</strong>，要模拟入向损伤需要借助 <code>ifb</code>（Intermediate Functional Block，一个中转虚拟设备）把入向流量重定向出来再处理。</p>
 
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
@@ -1198,7 +1198,7 @@
 
   <h3>7.1 XDP 在路径上的位置决定了它的价值</h3>
 
-  <div class="def"><strong>XDP</strong>（eXpress Data Path）：在<strong>驱动的收包函数里</strong>、<strong>分配 sk_buff 之前</strong>执行的 eBPF 程序。它拿到的是一块裸内存（<code>xdp_md</code> 里的 <code>data</code> / <code>data_end</code> 指针），返回一个动作码决定这个包的命运。因为跳过了 skb 分配、GRO、netfilter、路由的全部开销，单核可以做到千万级 pps 的丢弃或转发。</div>
+  <div class="def"><strong>XDP</strong>（eXpress Data Path，快速数据路径）：在<strong>驱动的收包函数里</strong>、<strong>分配 sk_buff 之前</strong>执行的 eBPF 程序（eBPF——内核提供的一套安全沙箱，允许把经过验证的小程序动态加载进内核执行）。它拿到的是一块裸内存（<code>xdp_md</code> 里的 <code>data</code> / <code>data_end</code> 指针，程序自己负责判断边界），看完后返回一个动作码，这个码决定包的命运。因为跳过了 skb 分配、GRO、netfilter、路由的全部开销，单核可以做到千万级 pps（packets per second，每秒包数）的丢弃或转发。</div>
 
   <div class="fig">
     <svg viewBox="0 0 900 210" role="img" aria-label="XDP 与 tc-bpf 在收包路径上的位置：XDP 在驱动 poll 内、sk_buff 分配之前；tc ingress（clsact）在 netif_receive_skb 之后、协议栈之前；netfilter PREROUTING 更靠后；socket 层最后">
@@ -1335,7 +1335,7 @@ SEC(<span class="str">"xdp"</span>)
 
   <h3>7.3 AF_XDP：把包直接甩给用户态</h3>
 
-  <div class="def"><strong>AF_XDP</strong>：新的 socket 地址族。用户态分配共享内存（<strong>UMEM</strong>），通过四个无锁环与内核交换<strong>描述符</strong>而不是数据。XDP 用 <code>XDP_REDIRECT</code> 投进 <code>XSKMAP</code>，驱动支持零拷贝时网卡直接 DMA 到 UMEM。</div>
+  <div class="def"><strong>AF_XDP</strong>：一个新的 socket 地址族，专给「用户态想直接收发包」的场景用。思路是：用户态先分配一块共享内存（<strong>UMEM</strong>），之后内核和用户态通过四个无锁环（环形缓冲区，读写各执一端就不需要加锁）只交换<strong>描述符</strong>（「数据在第几块」的编号）而不是搬数据本身。XDP 侧用 <code>XDP_REDIRECT</code> 把包投进 <code>XSKMAP</code>，若驱动支持零拷贝，网卡可以直接 DMA 到 UMEM 里。</div>
 
   <div class="fig">
     <svg viewBox="0 0 880 230" style="min-width:660px;height:auto" role="img" aria-label="AF_XDP 四个环：FILL 用户把空块交给内核，RX 内核交回收到的包，TX 用户请内核发送，COMPLETION 内核交回已发完的块，中间是 UMEM 共享内存">
@@ -1386,7 +1386,7 @@ SEC(<span class="str">"xdp"</span>)
     </tbody>
   </table>
 
-  <div class="intuition"><strong>Cilium 的分工</strong>：XDP 只做必须极快的（DDoS、NodePort 首跳）；Service / NetworkPolicy / 可观测全在 tc-bpf，因为能读 skb 完整上下文、能挂 egress。别把连接跟踪手写进 XDP。</div>
+  <div class="intuition"><strong>Cilium 的分工</strong>：XDP 只做必须极快的那几件事（DDoS 清洗、NodePort 首跳）；Service / NetworkPolicy / 可观测全放在 tc-bpf，因为它能读 skb 完整上下文、也能挂到出向。连接跟踪这种复杂逻辑别手写进 XDP。</div>
 
   <h3>7.5 什么时候值得放弃内核栈</h3>
 
@@ -1417,7 +1417,7 @@ SEC(<span class="str">"xdp"</span>)
 
   <h3>8.1 两个队列：SYN queue 与 accept queue</h3>
 
-  <p><code>listen()</code> 之后内核维护<strong>两个</strong>队列，很多人只知道一个。</p>
+  <p><code>listen()</code> 之后内核会替这个监听端口维护<strong>两个</strong>队列：一个装「握手进行到一半」的连接，一个装「握手已完成、等应用来取」的连接。很多人只知道其中一个，排障时就会看错地方。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 210" style="min-width:680px;height:auto" role="img" aria-label="SYN queue 装半连接 SYN_RECV，满了丢 SYN 或改用 syncookies；accept queue 装已完成握手等 accept 的连接，满了默认静默丢 ACK">
@@ -1457,7 +1457,7 @@ LISTEN  128     128           0.0.0.0:8080
 
   <h3>8.2 TIME_WAIT：被误解最深的状态</h3>
 
-  <div class="def"><strong>TIME_WAIT</strong>：<strong>主动关闭</strong>连接的那一端，在发出最后一个 ACK 后进入的状态，持续 <strong>2×MSL</strong>（Linux 里写死为 60 秒，<code>TCP_TIMEWAIT_LEN</code>，<strong>没有 sysctl 可以改</strong>）。它存在的两个理由缺一不可：① 保证最后那个 ACK 丢失时，对方重传的 FIN 还能被正确响应，否则对方会收到 RST；② 让网络中该连接的迟到报文自然消亡，防止被<strong>相同四元组</strong>的新连接错误接收。</div>
+  <div class="def"><strong>TIME_WAIT</strong>：<strong>主动关闭</strong>连接的那一端，在发出最后一个 ACK 后进入的状态，持续 <strong>2×MSL</strong>（MSL——报文在网络里能存活的最长时间；Linux 里把这个时长写死为 60 秒，<code>TCP_TIMEWAIT_LEN</code>，<strong>没有 sysctl 可以改</strong>）。它存在的两个理由缺一不可：① 保证最后那个 ACK 丢失时，对方重传的 FIN 还能被正确响应，否则对方会收到 RST；② 让网络中该连接的迟到报文自然消亡，防止被<strong>相同四元组</strong>的新连接错误接收。</div>
 
   <div class="analogy">TIME_WAIT 像<strong>退租后押金的观察期</strong>。你搬走了，但房东要留 60 天：万一还有你的快递寄到这个地址，得有人签收退回；也防止下一位租客收到本该给你的信。<strong>觉得「几万个 TIME_WAIT 是资源泄漏」的人，是把观察期当成了占用。</strong> 事实上一个 TIME_WAIT 只占一个很小的 <code>tcp_timewait_sock</code>（远小于完整 socket），几万个也就几 MB 内存。</div>
 
@@ -1475,7 +1475,7 @@ LISTEN  128     128           0.0.0.0:8080
 
   <h3>8.3 缓冲区：自动调优，以及怎么把它关坏</h3>
 
-  <p>TCP 接收缓冲默认按 BDP 在 <code>tcp_rmem</code> 的 min/max 之间伸缩。<code>rmem_max</code> 只约束<strong>显式 setsockopt</strong>；<code>tcp_mem</code> 是全系统页数水位，超 pressure 会压缩并记 <code>TCPMemoryPressures</code>。<code>ss -tm</code> 的 <code>rb</code>/<code>tb</code>/<code>d</code> 是单连接实况。</p>
+  <p>TCP 接收缓冲默认开着自动调优：内核按 BDP（带宽 × 延迟——把管道「灌满」所需的内存量）在 <code>tcp_rmem</code> 的 min/max 之间自动伸缩。三个参数各管一段：<code>rmem_max</code> 只约束<strong>显式 setsockopt</strong> 设的值；<code>tcp_mem</code> 是全系统的页数水位线，超过 pressure 水位后内核会压缩各连接的缓冲并记 <code>TCPMemoryPressures</code>；想看单条连接的实况，用 <code>ss -tm</code> 的 <code>rb</code>/<code>tb</code>/<code>d</code> 三个字段。</p>
 
   <div class="vs">
     <div class="bad"><h5>❌ 应用里显式 setsockopt(SO_RCVBUF)</h5>
@@ -1497,13 +1497,13 @@ LISTEN  128     128           0.0.0.0:8080
     </tbody>
   </table>
 
-  <p>切 BBR 必须同时把 qdisc 换成 <code>fq</code>。灰度用 <code>setsockopt(TCP_CONGESTION, "bbr")</code>。判据只有一句：<strong>链路上有没有与拥塞无关的丢包</strong>。有（跨洲 / 移动 / 劣质公网）才值得切；内网亚毫秒丢包近 0 基本没收益——那是抄大礼包。</p>
+  <p>切 BBR 时必须同时把 qdisc 换成 <code>fq</code>，因为它依赖精确的发送节奏。灰度验证用 <code>setsockopt(TCP_CONGESTION, "bbr")</code> 逐连接来。值不值得切，判据只有一句：<strong>链路上有没有与拥塞无关的丢包</strong>。有（跨洲 / 移动 / 劣质公网）才值得切；内网亚毫秒 RTT、丢包率近 0 的场景基本没收益——那种场景跟着抄大礼包只是心理安慰。</p>
 
   <h3>8.5 SO_REUSEPORT：多进程共享监听端口</h3>
 
   <p>传统的多进程服务器有两种做法，都有问题：父进程 <code>listen()</code> 后 fork，所有子进程在同一个 fd 上 <code>accept()</code>（<strong>惊群</strong>：一个连接到来唤醒所有进程，只有一个成功）；或者用 epoll 监听同一个 listen fd（<strong>epoll 惊群</strong>，需要 <code>EPOLLEXCLUSIVE</code> 缓解）。</p>
 
-  <p><code>SO_REUSEPORT</code> 让<strong>多个 socket 绑定同一个「IP:Port」</strong>，内核在收到 SYN 时按四元组哈希<strong>直接选中其中一个</strong>，只唤醒那一个进程。每个 socket 有自己独立的 accept 队列。</p>
+  <p><code>SO_REUSEPORT</code> 让<strong>多个 socket 绑定同一个「IP:Port」</strong>成为合法操作。之后内核在收到 SYN 时按四元组哈希<strong>直接选中其中一个 socket</strong>，只唤醒挂在它上面的那一个进程，别的进程继续安睡。每个 socket 有自己独立的 accept 队列，互不抢活。</p>
 
 <pre><span class="kw">int</span> fd = socket(AF_INET, SOCK_STREAM, <span class="num">0</span>);
 <span class="kw">int</span> on = <span class="num">1</span>;
@@ -1558,7 +1558,7 @@ listen(fd, <span class="num">8192</span>);
     <div class="t"><h2>丢包定位工作流</h2><p class="sub">分层地图、逐层工具、抓包位置的选择</p></div>
   </div>
 
-  <p>「丢包」不是一个诊断结论，它是一个<strong>现象类别</strong>。前面八章的每一层都能丢包，而且每一层的丢包都有专属的计数器。这一章把它们串成一套可执行的流程：<strong>从现象出发，用计数器缩小到某一层，再用工具定位到具体原因</strong>。</p>
+  <p>「丢包」不是一个诊断结论，它只是一个<strong>现象类别</strong>。前面八章的每一层都能丢包，而且每一层的丢包都有专属的计数器记账。这一章把它们串成一套可执行的流程：<strong>从现象出发，用计数器缩小到某一层，再用工具定位到具体原因</strong>。</p>
 
   <h3>9.1 先分流：三种现象对应不同的路径</h3>
 
@@ -1638,8 +1638,8 @@ listen(fd, <span class="num">8192</span>);
 
   <h3>9.3 逐层工具与判读</h3>
 
-  <p><code>ethtool -S</code> 看含 drop/err/miss 的项，<strong>看两次采样之间的增量</strong>，绝对值没诊断价值。<code>ip -s link</code> 的 dropped 是软件侧（§2.1），<code>rx_errors</code> 是物理层。softnet 第 2/3 列见 §2.4。</p>
-  <p><code>nstat -n; sleep 10; nstat</code>——先清零，看这 10 秒谁在涨。默认打印距上次增量；<code>-a</code> 绝对值不更新历史，<code>-z</code> 连零值也打印。</p>
+  <p>用 <code>ethtool -S</code> 看名字含 drop/err/miss 的项时，<strong>要看两次采样之间的增量</strong>——累计的绝对值没有诊断价值，涨得快不快才有意义。<code>ip -s link</code> 的 dropped 是软件侧丢的（§2.1），<code>rx_errors</code> 则指向物理层。softnet 第 2/3 列的判读见 §2.4。</p>
+  <p><code>nstat -n; sleep 10; nstat</code> 是标准用法——先把历史清零，再看这 10 秒里谁在涨。nstat 默认打印距上次的增量；加 <code>-a</code> 看绝对值但不更新历史，加 <code>-z</code> 连零值也打印出来。</p>
 
   <table>
     <thead><tr><th>计数器</th><th>含义</th><th>什么值算异常</th></tr></thead>
@@ -1659,7 +1659,7 @@ listen(fd, <span class="num">8192</span>);
     </tbody>
   </table>
 
-  <p><code>ss -ti</code> 一眼分开三种「上不去」：<code>rwnd_limited</code> 高 = 对端窗口不够；<code>sndbuf_limited</code> 高 = 本端发送缓冲不够；两者都低但 <code>cwnd</code> 小 = 拥塞控制在压。<code>rtt</code> 高要对比空闲 ping。</p>
+  <p>吞吐上不去的原因，用 <code>ss -ti</code> 一眼就能分成三种：<code>rwnd_limited</code> 高 = 对端接收窗口不够大；<code>sndbuf_limited</code> 高 = 本端发送缓冲不够用；两者都低但 <code>cwnd</code> 小 = 拥塞控制在压着发。另外 <code>rtt</code> 高时要对比空闲时的 ping 才有意义。</p>
 
   <h3>9.4 抓包：位置的选择，以及 GRO/TSO 这个坑</h3>
 
@@ -1689,7 +1689,7 @@ listen(fd, <span class="num">8192</span>);
 
   <h3>9.5 精确定位内核在哪一行丢的包</h3>
 
-  <p>当计数器只能告诉你「协议栈丢了」但不知道具体在哪时，用内核的丢包追踪。<code>skb:kfree_skb</code> 这个 tracepoint 会在<strong>每一次内核丢弃 skb</strong> 时触发，带上调用位置。</p>
+  <p>当计数器只能告诉你「协议栈丢了」但说不出具体丢在哪一步时，可以动用内核自带的丢包追踪。<code>skb:kfree_skb</code> 这个 tracepoint（内核埋的静态追踪点，经过时触发你的探针程序）会在<strong>每一次内核丢弃 skb</strong> 时触发，并带上调用发生的位置，聚合起来就能看到丢包集中在哪条代码路径。</p>
 
 <pre>$ bpftrace -e 'tracepoint:skb:kfree_skb { @[kstack(6)] = count(); }'
 @[

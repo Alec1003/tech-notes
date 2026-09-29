@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ IO 与 Linux 内核深度解析 · 面试与学习指南</title>
-<meta name="description" content="C++ IO 与 Linux 内核深度解析：从 std::cout 到 io_uring：覆盖用户态到内核态完整数据通路、五类 I/O 模型、零拷贝、VFS、页缓存与块层调度的系统化指南">
+<meta name="description" content="C++ IO 与 Linux 内核通俗指南：讲清数据从程序到磁盘的完整通路，五类 I/O 模型、零拷贝、VFS、Page Cache、io_uring 与块层调度，看懂每层机制为什么这样设计">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/io_linux_kernel_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/io_linux_kernel_guide.html">
 <meta property="og:title" content="C++ IO 与 Linux 内核深度解析 · 面试与学习指南">
-<meta property="og:description" content="C++ IO 与 Linux 内核深度解析：从 std::cout 到 io_uring：覆盖用户态到内核态完整数据通路、五类 I/O 模型、零拷贝、VFS、页缓存与块层调度的系统化指南">
+<meta property="og:description" content="C++ IO 与 Linux 内核通俗指南：讲清数据从程序到磁盘的完整通路，五类 I/O 模型、零拷贝、VFS、Page Cache、io_uring 与块层调度，看懂每层机制为什么这样设计">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ IO 与 Linux 内核深度解析 · 面试与学习指南">
-<meta name="twitter:description" content="C++ IO 与 Linux 内核深度解析：从 std::cout 到 io_uring：覆盖用户态到内核态完整数据通路、五类 I/O 模型、零拷贝、VFS、页缓存与块层调度的系统化指南">
+<meta name="twitter:description" content="C++ IO 与 Linux 内核通俗指南：讲清数据从程序到磁盘的完整通路，五类 I/O 模型、零拷贝、VFS、Page Cache、io_uring 与块层调度，看懂每层机制为什么这样设计">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -484,7 +484,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 35 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 45 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -529,7 +529,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★★</span>
     <span class="pill cyan">系统底层 高密度</span>
-    <span class="pill green">阅读时长 ~35 min</span>
+    <span class="pill green">阅读时长 ~45 min</span>
     <span class="pill amber">前置 Linux / C++ 基础</span>
   </div>
   <div class="meta">
@@ -549,7 +549,7 @@
   </div>
 
   <h3 id="s2-1">1.1 用户态 vs 内核态</h3>
-  <p>用户态 Ring 3 跑应用，内核态 Ring 0 跑内核。I/O 必须陷入：碰硬件要特权指令。</p>
+  <p>用户态（Ring 3，CPU 权限分级里的最低档，普通应用代码都跑在这里）跑应用，内核态（Ring 0，权限最高的一档，只有操作系统内核能待）跑内核。I/O 必须陷入（trap，即主动切换到内核态）：因为直接碰硬件要特权指令（只有 Ring 0 才被允许执行的 CPU 指令），应用程序没资格自己动手，只能敲门请内核代办。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -606,7 +606,7 @@ graph TB
 
   <div class="callout tip">
     <div class="callout-title">▶ 工程启示</div>
-    <p>syscall 不是免费的。高频 I/O 靠<strong>批量化</strong>、<strong>缓冲</strong>、<strong>io_uring 批提交</strong>减少陷入。</p>
+    <p>syscall（系统调用，程序请内核帮忙做事的一次「敲门」）不是免费的：每敲一次门，都要付出用户态与内核态之间来回切换的开销，这个开销在上表里和访问一次内存同一量级。所以高频 I/O 靠<strong>批量化</strong>（把许多小操作攒成一大批一次提交）、<strong>缓冲</strong>（先攒在内存里、攒够了再一次性写出）、<strong>io_uring 批提交</strong>（新一代异步接口允许一次敲门带走一整批请求）来减少陷入内核的次数。</p>
   </div>
 
   <h3 id="s2-3">1.3 文件描述符 (File Descriptor) 模型</h3>
@@ -632,7 +632,7 @@ graph LR
     </div>
   </div>
 
-  <p>fd 是进程级小整数，经 FD Table → Open File → inode 才到磁盘。<code>dup()</code> 共享偏移；<code>fork()</code> 复制表但共享 Open File Entry——这是管道能工作的原因。</p>
+  <p>fd（file descriptor，文件描述符）是进程级的小整数编号，它本身不存文件内容，而是要沿着 FD Table（每个进程一张的「编号→文件」对照表）→ Open File（全系统共享的打开文件表，记着当前读写偏移、标志位）→ inode（索引节点，文件在磁盘上的「户口档案」）这条链一层层指向真正的磁盘数据。<code>dup()</code> 复制出的新 fd 和旧 fd 指向同一个 Open File Entry，所以它们共享同一个读写偏移；<code>fork()</code> 生成的子进程会复制整张 FD Table，但表里的指针仍指向原来的 Open File Entry——父子因此共用同一个文件位置，这也是管道（pipe）能工作的原因。</p>
 </section>
 
 <section class="chapter" id="s3">
@@ -706,7 +706,7 @@ classDiagram
     </div>
   </div>
 
-  <p><strong>streambuf 是 iostream 的心脏</strong>：<code>cout &lt;&lt; x</code> → <code>sputc</code> → 缓冲满时 <code>overflow()</code> → <code>write()</code>。自定义 streambuf 把 put 区接到 socket 即可，不必再包一层 iostream 样板。</p>
+  <p><strong>streambuf 是 iostream 的心脏</strong>（负责真正装数据的缓冲区部件，好比 iostream 这台机器的传送带）：<code>cout &lt;&lt; x</code> 一步步走到 <code>sputc</code>（往缓冲区放一个字符），缓冲放满时触发 <code>overflow()</code>（满溢处理，把攒下的数据倒出去），最终才调用 <code>write()</code> 进入内核。所以想自定义输出目标，只要写一个自己的 streambuf、把 put 区（写缓冲区）接到 socket 上即可，不必再包一层 iostream 样板代码。</p>
   <table>
     <thead><tr><th>API</th><th>行为</th><th>坑</th></tr></thead>
     <tbody>
@@ -776,7 +776,7 @@ graph TB
   </table>
 
   <h3 id="s4-3">3.3 fwrite vs write 性能对比实验</h3>
-  <p>写 100 万条 ~100B 日志，差距几乎全是陷入次数：</p>
+  <p>写 100 万条 ~100B 日志，各方案的差距几乎全都来自陷入内核的次数不同（每次 write 都要敲一次内核的门，敲一百万次门本身就比干活还贵）：</p>
   <table>
     <thead><tr><th>方案</th><th>行为</th><th>判据</th></tr></thead>
     <tbody>
@@ -787,7 +787,7 @@ graph TB
   </table>
   <div class="callout danger">
     <div class="callout-title">✗ fork 与 stdio 缓冲</div>
-    <p><code>printf("hello"); fork();</code> 未 flush 时子进程复制同一份缓冲区，输出出现两遍。fork 前 <code>fflush(stdout)</code>，或直接 <code>write()</code>。</p>
+    <p><code>printf("hello"); fork();</code> 未 flush 时，stdio 缓冲区里那份还没写出的 "hello" 会被子进程原样复制一份，结果父子各刷一次、输出出现两遍。fork 前 <code>fflush(stdout)</code>（把缓冲区强行倒空），或直接 <code>write()</code>（绕开 stdio 缓冲）。</p>
   </div>
 </section>
 
@@ -802,7 +802,7 @@ graph TB
   <div class="note">本章讲 VFS 抽象。磁盘布局、<code>fsync</code>/<code>fdatasync</code>、新建文件还要 fsync 父目录、以及 <code>df</code> vs <code>du</code> 对不上，见 <a href="filesystem_storage_stack.html">文件系统与存储栈</a>。</div>
 
   <h3 id="s5-1">4.1 VFS (Virtual File System) 抽象</h3>
-  <p>VFS 提供"一切皆文件"：100+ 种文件系统（ext4/xfs/procfs/sockfs…）靠四个对象屏蔽差异。</p>
+  <p>VFS（Virtual File System，虚拟文件系统——内核里的一层「统一前台」，对上提供同一套 open/read/write 接口）提供"一切皆文件"：Linux 支持 100+ 种文件系统（ext4/xfs/procfs/sockfs…），VFS 靠四个对象（superblock、inode、dentry、file，见下图）把各家差异屏蔽在前台之后，应用程序不必关心底下到底是哪种盘。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -884,7 +884,7 @@ sequenceDiagram
 
   <div class="callout info">
     <div class="callout-title">▶ 硬链接 vs 软链接</div>
-    <p><strong>硬链接</strong>：多个 dentry 指向同一 inode，<code>i_nlink=0</code> 才释放，不能跨文件系统。<strong>软链接</strong>：独立 inode，内容是路径字符串，可跨文件系统，多一次解析。</p>
+    <p><strong>硬链接</strong>：多个 dentry（目录项，即路径上的一个名字）指向同一个 inode，好比同一个人有多个称呼；要等 <code>i_nlink</code>（链接计数）减到 0、所有名字都删光才真正释放，且不能跨文件系统。<strong>软链接</strong>：自己占一个独立 inode，内容只是目标路径的字符串，相当于一张写着地址的便利贴，可跨文件系统，但访问时要多解析一层。</p>
   </div>
 </section>
 
@@ -897,7 +897,7 @@ sequenceDiagram
   </div>
 
   <h3 id="s6-1">5.1 I/O 两阶段模型</h3>
-  <p>一次 I/O 只有两段：<strong>等数据准备</strong>、<strong>拷到用户缓冲</strong>。五种模型的差别就是这两段堵不堵。</p>
+  <p>一次 I/O 只有两段：<strong>等数据准备</strong>（等磁盘/网卡把数据送到内核）和<strong>拷到用户缓冲</strong>（把数据从内核搬到程序的内存里）。五种模型的差别，其实就是这两段各自「堵不堵」——线程会不会被卡住干等。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -942,11 +942,11 @@ graph LR
 
   <div class="callout tip">
     <div class="callout-title">▶ 关键区分</div>
-    <p><strong>同步/异步</strong>看阶段 2 拷贝是否由内核完成；<strong>阻塞/非阻塞</strong>看阶段 1 调用方等不等。所以多路复用仍是同步 I/O——只是把"等"从 <code>read</code> 挪到了 <code>select</code>。</p>
+    <p><strong>同步/异步</strong>看阶段 2 的拷贝是否由内核替你完成（异步 I/O 连「搬数据」都不用你管，内核全包）；<strong>阻塞/非阻塞</strong>看阶段 1 调用方要不要干等。所以多路复用仍是同步 I/O——它只是把「等」这一步从 <code>read</code> 挪到了 <code>select</code> 上，数据到了还是得你自己去拷。</p>
   </div>
 
   <h3 id="s6-3">5.3 代码对比</h3>
-  <p>上图已经画出五条路径，这里只记调用形态。ET 读尽见 §6.3，io_uring 主循环见 §10.6。</p>
+  <p>上图已经画出五条路径，这里只记调用形态（每个模型写代码时长什么样）。ET 读尽见 §6.3，io_uring 主循环见 §10.6。</p>
   <table>
     <thead><tr><th>模型</th><th>核心调用</th><th>坑</th></tr></thead>
     <tbody>
@@ -1008,11 +1008,11 @@ graph TB
   <div class="grid-2">
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(59,130,246,0.2);color:var(--accent-blue);">LT</span>水平触发 (Level Trigger)</div>
-      <p>只要可读/可写就持续通知。默认模式，编程简单；兼容阻塞 fd。</p>
+      <p>只要可读/可写就持续通知（像水位的「水平线」：水位没降到线以下就一直报警）。默认模式，编程简单；兼容阻塞 fd。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(244,63,94,0.2);color:var(--accent-rose);">ET</span>边缘触发 (Edge Trigger)</div>
-      <p>状态<strong>变化时</strong>才通知。必须非阻塞 fd，且循环 read 直到 EAGAIN。Nginx/Redis 标配。</p>
+      <p>状态<strong>变化时</strong>才通知（像「水位上涨」这个事件本身：涨的那一刻提醒一次，之后不再吭声）。必须配非阻塞 fd，且收到通知后要循环 read 直到 EAGAIN（读到内核说「暂时没数据了」为止），否则漏读的数据再没人提醒。Nginx/Redis 标配。</p>
     </div>
   </div>
 
@@ -1038,7 +1038,7 @@ graph TB
 
   <div class="callout warn">
     <div class="callout-title">⚠ epoll 惊群</div>
-    <p>多进程 <code>epoll_wait</code> 同一个 listen fd，来连接时全被唤醒。解法：Linux 4.5+ <code>EPOLLEXCLUSIVE</code>、<code>SO_REUSEPORT</code>，或 Nginx accept mutex。</p>
+    <p>多进程 <code>epoll_wait</code> 盯着同一个 listen fd（监听连接的套接字），新连接一来，等在这上面的进程会被全部唤醒、又只有一个能抢到活，白白折腾一场——这就是「惊群」。解法：Linux 4.5+ <code>EPOLLEXCLUSIVE</code>（内核只唤醒一个）、<code>SO_REUSEPORT</code>（每个进程各守一个独立队列），或 Nginx 的 accept mutex（先拿到锁的进程才有资格去 accept）。</p>
   </div>
 </section>
 
@@ -1051,7 +1051,7 @@ graph TB
   </div>
 
   <h3 id="s8-1">7.1 mmap 原理</h3>
-  <p>把文件映射进进程 VA，访问内存即访问文件；内核按缺页从 Page Cache / 磁盘填页。</p>
+  <p>mmap 把文件直接映射进进程 VA（Virtual Address space，虚拟地址空间——程序自己「看到」的那片内存地址），之后访问这段内存就等于访问文件；你第一次访问某页时 CPU 触发 page fault（缺页异常，相当于「这页还没搬进来」的提醒），内核再按需从 Page Cache（页缓存，内核拿空闲内存做的文件缓存）或磁盘把该页填上。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1110,7 +1110,7 @@ graph LR
   </table>
 
   <h3 id="s8-3">7.3 mmap 的典型应用</h3>
-  <p>SQLite / LMDB 把 B+Tree 映射进内存，交给内核 LRU；<code>shm_open</code>+<code>mmap</code> 做共享内存 IPC；<code>execve</code> 用 mmap 按需加载 ELF。</p>
+  <p>SQLite / LMDB 把 B+Tree（一种按页组织的树形索引结构）整棵映射进内存，页面留走全交给内核 LRU（最近最少使用淘汰算法，内核自动决定哪页留、哪页丢）；<code>shm_open</code>+<code>mmap</code> 做共享内存 IPC（进程间通信）；<code>execve</code> 启动程序时也用 mmap 按需加载 ELF（可执行文件格式），用到哪页才加载哪页。</p>
 
   <div class="callout warn">
     <div class="callout-title">⚠ mmap 的陷阱</div>
@@ -1132,7 +1132,7 @@ graph LR
   </div>
 
   <h3 id="s9-1">8.1 传统发送 vs 零拷贝</h3>
-  <p>HTTP 静态文件：盘 → 网。下面三张图是同一条路径的三种代价。</p>
+  <p>HTTP 静态文件场景：数据从磁盘（盘）到网卡（网）。下面三张图是同一条路径的三种代价——传统方式每传一次都要在内核和用户空间之间来回倒手，零拷贝则尽量让数据不离开内核。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1216,7 +1216,7 @@ graph TB
   </div>
 
   <h3 id="s10-1">9.1 Page Cache 机制</h3>
-  <p>内核把空闲物理内存当文件缓存：读优先命中，写先标 dirty 再回写。</p>
+  <p>内核把空闲物理内存当文件缓存用：读的时候优先在这里找（命中就不用碰磁盘），写的时候先把页标成 dirty（脏页，即「内容改了但还没写回磁盘」的缓存页），之后由内核择机批量回写。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1251,7 +1251,7 @@ graph LR
   </table>
 
   <h3 id="s10-3">9.3 Direct I/O (O_DIRECT)</h3>
-  <p>绕过 Page Cache，用户 buf 与磁盘直 DMA。自己管缓存时避免双重缓存，延迟更可预测。约束：buf / offset / size 必须按块对齐（512B 或 4KB），用 <code>posix_memalign</code>；小 I/O 没有缓存聚合，更慢。</p>
+  <p>Direct I/O（O_DIRECT，直通 I/O）绕过 Page Cache：用户的 buf 和磁盘之间直接 DMA（Direct Memory Access，设备自己搬数据、不经 CPU 转手）传输。数据库这类自己管缓存的程序用它避免「内核一份缓存、自己再来一份」的双重缓存，延迟也更可预测。约束：buf / offset / size 必须按块对齐（512B 或 4KB，地址得是块大小的整数倍），要用 <code>posix_memalign</code> 申请对齐内存；代价是小 I/O 失去缓存聚合，反而更慢。</p>
 
   <pre data-lang="C++"><code><span class="com">// Direct I/O 的正确用法 (数据库/日志系统)</span>
 <span class="kw">constexpr</span> <span class="ty">size_t</span> BLOCK = <span class="num">4096</span>;
@@ -1269,7 +1269,7 @@ graph LR
 
   <div class="callout info">
     <div class="callout-title">▶ 谁在用 Direct I/O</div>
-    <p>自己管缓存才划算：InnoDB Buffer Pool、RocksDB 的 SST（WAL 仍普通 I/O + fsync）、Ceph / ScyllaDB（稳定延迟，常配 io_uring）。</p>
+    <p>自己管缓存才划算：InnoDB Buffer Pool（InnoDB 自己的内存缓冲池）、RocksDB 的 SST（LSM 型存储引擎的底层文件）、Ceph / ScyllaDB（为了稳定延迟，常配 io_uring）。</p>
   </div>
   <div class="callout tip">
     <div class="callout-title">▶ 它们为什么宁可自己管缓存</div>
@@ -1297,11 +1297,11 @@ graph LR
 
   <div class="callout info">
     <div class="callout-title">▶ 真正异步</div>
-    <p>不只是"阶段 2 由内核拷"——而是<strong>提交不堵、完成不堵、文件和网络同一套接口</strong>。</p>
+    <p>不只是「阶段 2 由内核拷」——而是<strong>提交不堵、完成不堵、文件和网络用同一套接口</strong>：调用线程把请求递出去就能走，结果回来取时也不必停下干等。</p>
   </div>
 
   <h3 id="s11-2">10.2 io_uring 革命 (Linux 5.1+)</h3>
-  <p>Jens Axboe 的核心：用户/内核共享两个 Ring，提交和完成都可以不走 syscall。</p>
+  <p>作者 Jens Axboe 的核心设计：用户和内核共享两个 Ring（环形队列），提交和完成这两个方向的消息各自走一个环，甚至可以完全不走 syscall——像应用和内核之间挂了两块「共用黑板」，要做什么写上去，做完了在另一块上贴结果，全程不必反复敲内核的门。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1340,7 +1340,7 @@ graph TB
   </table>
 
   <h3 id="s11-4">10.4 SQE 与 CQE：一次请求的生命周期</h3>
-  <p>SQE / CQE 在 mmap 共享内存里，靠 head/tail 无锁推进。生命周期见下图，字段只记会踩坑的几项：</p>
+  <p>SQE（Submission Queue Entry，提交队列里的一条请求）和 CQE（Completion Queue Entry，完成队列里的一条回执）都放在 mmap 出来的共享内存里，双方只改各自的 head/tail 指针就能无锁推进。生命周期见下图，字段只记会踩坑的几项：</p>
   <table>
     <thead><tr><th>结构</th><th>关键字段</th><th>坑</th></tr></thead>
     <tbody>
@@ -1370,7 +1370,7 @@ sequenceDiagram
     </div>
   </div>
 
-  <p>图里比 epoll 多出来的三件事：一次 syscall 可塞一批 SQE；普通文件 / <code>fsync</code> / <code>openat</code> 也能异步；CQ 在共享内存，收割不必再陷入。</p>
+  <p>图里比 epoll 多出来的三件事：一次 syscall 可以塞进一批 SQE；普通文件 / <code>fsync</code> / <code>openat</code> 也能异步；CQ 在共享内存里，收割结果不必再陷入内核。</p>
 
   <h3 id="s11-5">10.5 三种运行模式</h3>
   <table>
@@ -1384,7 +1384,7 @@ sequenceDiagram
 
   <div class="callout warn">
     <div class="callout-title">⚠ SQPOLL 的取舍</div>
-    <p>内核线程 <code>iou-sqp-$pid</code> 轮询 SQ，连 <code>io_uring_submit</code> 都能省。代价是空转吃一核（idle 毫秒后才睡），只适合 I/O 饱和的存储/代理；需要 <code>CAP_SYS_NICE</code> 或 Linux 5.11+。</p>
+    <p>内核线程 <code>iou-sqp-$pid</code> 持续轮询 SQ，有新请求就主动取走，连 <code>io_uring_submit</code> 这一次敲门都能省。代价是这个线程空转会吃掉一整个核（要 idle 若干毫秒才肯睡），所以只适合 I/O 打满的存储/代理类服务；启用还需要 <code>CAP_SYS_NICE</code> 权限或 Linux 5.11+。</p>
   </div>
 
   <h3 id="s11-6">10.6 提交和收割的主循环模板</h3>
@@ -1456,7 +1456,7 @@ sequenceDiagram
   </div>
 
   <h3 id="s12-1">11.1 TCP 接收路径：从网卡到用户 buffer</h3>
-  <p>调 RSS / GRO / SO_REUSEPORT / busy poll，动的就是下图标了号的那几层。</p>
+  <p>调 RSS（网卡多队列把流量分到多个 CPU）/ GRO（把多个小包合并成大包再交协议栈）/ SO_REUSEPORT（多进程各绑同端口各守一队）/ busy poll（应用主动轮询网卡、不等中断），动的就是下图标了号的那几层。</p>
   <div class="mermaid-wrapper">
     <div class="mermaid">
 graph TB
@@ -1489,7 +1489,7 @@ graph TB
   </div>
 
   <h3 id="s12-2">11.1.2 sk_buff：内核网络数据的"万能载体"</h3>
-  <p><code>sk_buff</code> 从驱动传到 socket 都是同一块。每过一层只移动指针暴露新 header，payload 不拷。路由转发、TCP 乱序 <code>frag_list</code>、tcpdump clone（共享 payload）都靠这个。</p>
+  <p><code>sk_buff</code>（内核里描述一个网络包的结构体）从驱动一路传到 socket 都是同一块内存。每过一层只移动指针、暴露新的 header（包头），payload（有效数据）不拷贝。路由转发、TCP 乱序重排用的 <code>frag_list</code>（分片链表）、tcpdump 抓包时的 clone（多个 skb 共享同一份 payload），都靠这个设计。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1534,11 +1534,11 @@ graph TB
 
   <div class="callout tip">
     <div class="callout-title">▶ 关键观察</div>
-    <p><code>write</code> 返回只表示进了 <code>sk_write_queue</code>，不等于已上网。真发出去还受窗口、拥塞、Qdisc、TX 环约束。"发完再返回"用 <code>MSG_ZEROCOPY</code> errqueue；"对端收到"只能应用层 ACK 或 <code>TCP_USER_TIMEOUT</code>。</p>
+    <p><code>write</code> 返回只表示数据进了 <code>sk_write_queue</code>（发送队列），不等于已经上网。真正发出去还受 TCP 窗口、拥塞控制、Qdisc（流量排队规则）、TX 环等层层约束。想知道「发完再返回」用 <code>MSG_ZEROCOPY</code> 的 errqueue 通知；想知道「对端收到了」只能靠应用层 ACK 或 <code>TCP_USER_TIMEOUT</code>。</p>
   </div>
 
   <h3 id="s12-4">11.3 accept 背后的两个队列（半连接 / 全连接）</h3>
-  <p><code>listen()</code> 后内核维护两个队列，<code>accept()</code> 取的是第二个：</p>
+  <p><code>listen()</code> 之后内核会维护两个队列——半连接队列（放握手进行到一半的连接）和全连接队列（放握手已完成、只等 accept 来取的连接），<code>accept()</code> 取的是第二个：</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1567,18 +1567,18 @@ sequenceDiagram
 
   <div class="callout warn">
     <div class="callout-title">⚠ 线上经典事故</div>
-    <p><code>accept</code> 慢 → 全连接队列打满 → ACK 被丢 → 客户端重传，表现为偶发连接超时。<code>ss -lnt</code> 看 listen socket 的 Recv-Q（当前长度）/ Send-Q（上限）。</p>
+    <p>accept 处理慢 → 全连接队列被打满 → 后续完成握手的 ACK 被内核丢弃 → 客户端只能重传，外在表现就是偶发连接超时。用 <code>ss -lnt</code> 看 listen socket 的 Recv-Q（当前队列长度）/ Send-Q（队列上限）。</p>
   </div>
 
   <h3 id="s12-5">11.4 Reactor / Proactor 模式</h3>
   <div class="grid-2">
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(59,130,246,0.2);color:var(--accent-blue);">R</span>Reactor (同步非阻塞)</div>
-      <p><strong>就绪通知</strong>：epoll 说"可读了"，业务自己 read。Nginx / Redis / Netty / muduo。</p>
+      <p><strong>就绪通知</strong>：epoll 只告诉你「可以读了」，读的动作还是业务自己动手。Nginx / Redis / Netty / muduo。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(139,92,246,0.2);color:var(--accent-violet);">P</span>Proactor (真异步)</div>
-      <p><strong>完成通知</strong>：提交请求，内核干完再回调。Windows IOCP / io_uring。</p>
+      <p><strong>完成通知</strong>：提交请求后就可以走，内核把活全干完再回调你。Windows IOCP / io_uring。</p>
     </div>
   </div>
 
@@ -1621,11 +1621,11 @@ graph TB
 
   <div class="callout tip">
     <div class="callout-title">▶ eventfd</div>
-    <p>别的线程不能直接碰本 loop 的 epoll。标准做法：把 <code>eventfd</code> 注册进 epoll，跨线程 <code>write(eventfd, &amp;1, 8)</code> 唤醒，回调里 drain 任务队列。muduo / libevent / Node.js 同一套路。</p>
+    <p>别的线程不能直接碰本 loop 的 epoll（事件循环的登记表只能由它自己改）。标准做法：把 <code>eventfd</code>（一个「写字就变可读」的特殊 fd）注册进 epoll，跨线程 <code>write(eventfd, &amp;1, 8)</code> 把循环唤醒，回调里再把任务队列排空。muduo / libevent / Node.js 同一套路。</p>
   </div>
 
   <h3 id="s12-8">11.7 C10K → C10M：瓶颈到底在哪？</h3>
-  <p>C10K 靠 epoll + 非阻塞就能过；C10M 要跨几个数量级：</p>
+  <p>C10K（单机 1 万并发连接）靠 epoll + 非阻塞就能迈过；C10M（1 千万连接）要在几个数量级上另想办法：</p>
   <table>
     <thead><tr><th>瓶颈</th><th>原因</th><th>对策</th></tr></thead>
     <tbody>
@@ -1678,7 +1678,7 @@ graph TB
   </div>
 
   <h3 id="s13-2">12.2 bio 与 request：块层的两个核心对象</h3>
-  <p>文件系统把"写 4KB 到 offset X"翻成扇区请求，封装成 <strong>bio</strong>；块层再合并/拆成 <strong>request</strong> 下发硬件。</p>
+  <p>文件系统把「写 4KB 到 offset X」翻译成扇区级的请求，封装成 <strong>bio</strong>（Block I/O，块层的基本搬运单元，应用视角的一次 I/O）；块层再把一堆 bio 合并或拆分，组装成 <strong>request</strong>（硬件视角的一条命令）下发给硬件。</p>
   <table>
     <thead><tr><th>对象</th><th>关键字段</th><th>坑 / 判据</th></tr></thead>
     <tbody>
@@ -1688,7 +1688,7 @@ graph TB
   </table>
 
   <h3 id="s13-3">12.3 plug / unplug：I/O 的"蓄水池"</h3>
-  <p>每个 bio 立即下发就无法合并。块层先 <code>blk_start_plug</code> 把请求攒在 per-task 链表里：</p>
+  <p>如果每个 bio 一到就立刻下发，相邻的请求就没机会合并。所以块层先 <code>blk_start_plug</code>（「插上插头」，开始蓄水），把请求攒在每个任务自己的链表里：</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1709,7 +1709,7 @@ sequenceDiagram
     HW-->>FS: I/O 完成回调
     </div>
   </div>
-  <p>顺序大块写会被合并；随机小写合并率低——这是内核侧"顺序比随机快"的原因之一。plug 是 per-task 的，阻塞或切进程会主动 unplug，防止蓄水变成延迟。</p>
+  <p>顺序大块写会被合并成大请求；随机小写因为地址不相邻、合并率低——这是内核侧「顺序比随机快」的原因之一。plug 是 per-task（每个任务一份）的，一旦进程阻塞或被切走，内核会主动 unplug（拔掉插头、把水放走），防止蓄水反而变成延迟。</p>
 
   <h3 id="s13-4">12.4 I/O 调度器</h3>
   <table>
@@ -1722,7 +1722,7 @@ sequenceDiagram
     </tbody>
   </table>
 
-  <p>NVMe 用 <code>none</code>：设备自己会重排，软件再排一遍只增加延迟。mq-deadline 给读更短 deadline，因为读通常是同步阻塞。</p>
+  <p>NVMe 盘用 <code>none</code>：设备内部自己会重排请求，软件再排一遍只会白增加延迟。mq-deadline 给读设更短的 deadline（截止时间），因为读通常来自同步阻塞的调用，等不起。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -1735,7 +1735,7 @@ sequenceDiagram
   </table>
 
   <h3 id="s13-5">12.5 blk-mq 多队列</h3>
-  <p>单队列 + 自旋锁扛不住多核 NVMe。blk-mq：每 CPU 一个软件队列，硬件队列数由设备决定，消掉提交路径的锁。</p>
+  <p>老的「单队列 + 一把自旋锁」设计扛不住多核机器上的 NVMe。blk-mq（multi-queue，多队列架构）改成：每个 CPU 一个软件队列，硬件队列数由设备决定，这样提交路径上的锁竞争就基本消掉了。</p>
 
   <div class="mermaid-wrapper">
     <div class="mermaid">
@@ -1771,10 +1771,10 @@ graph TB
     style HW fill:#d1fae5,stroke:#059669
     </div>
   </div>
-  <p>提交路径 per-CPU 无锁；完成中断走 MSI-X 回到提交核。映射关系看 <code>/sys/block/&lt;dev&gt;/mq/N/cpu_list</code>。</p>
+  <p>提交路径每 CPU 自己的队列、无锁竞争；完成中断经 MSI-X（一种按队列定向投递的中断方式）送回提交它的那个核。映射关系看 <code>/sys/block/&lt;dev&gt;/mq/N/cpu_list</code>。</p>
 
   <h3 id="s13-6">12.6 IRQ 亲和、NUMA 与 I/O 热路径优化</h3>
-  <p>铁律：<strong>提交、完成、业务处理在同一个 CPU，至少同一个 NUMA 节点</strong>。</p>
+  <p>铁律：<strong>提交、完成、业务处理放在同一个 CPU，至少同一个 NUMA 节点</strong>（NUMA——多路服务器里每个 CPU 插座自带一片本地内存，跨节点访问要慢一截；让数据和处理它的核待在同一侧，才不用来回搬）。</p>
   <table>
     <thead><tr><th>手段</th><th>做法</th><th>判据</th></tr></thead>
     <tbody>

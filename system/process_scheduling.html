@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linux 进程调度器 · CFS / EEVDF / 实时调度 / 负载均衡 / 抢占 / 调优排障 — Tech Notes</title>
-<meta name="description" content="Linux 进程调度器：调度类与优先级空间 · CFS 虚拟运行时间与权重 · EEVDF 的 lag 与虚拟截止 · 实时调度 SCHED_FIFO/DEADLINE 与 RT throttling · SMP 负载均衡与绑核隔离 · 抢占模型与上下文切换成本 · perf sched / runqlat 调优实战与 12 道面试题">
+<meta name="description" content="用大白话讲 Linux 调度器：调度类与优先级三套数值、CFS 的 vruntime 记账、EEVDF 的 lag 与虚拟截止、SCHED_FIFO/SCHED_DEADLINE 实时调度、负载均衡与绑核隔离、抢占与上下文切换成本，附 perf sched / runqlat 排障思路与 12 道面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/process_scheduling.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/process_scheduling.html">
 <meta property="og:title" content="Linux 进程调度器 · CFS / EEVDF / 实时调度 / 负载均衡 / 抢占 / 调优排障">
-<meta property="og:description" content="Linux 进程调度器：调度类与优先级空间 · CFS 虚拟运行时间与权重 · EEVDF 的 lag 与虚拟截止 · 实时调度 SCHED_FIFO/DEADLINE 与 RT throttling · SMP 负载均衡与绑核隔离 · 抢占模型与上下文切换成本 · perf sched / runqlat 调优实战与 12 道面试题">
+<meta property="og:description" content="用大白话讲 Linux 调度器：调度类与优先级三套数值、CFS 的 vruntime 记账、EEVDF 的 lag 与虚拟截止、SCHED_FIFO/SCHED_DEADLINE 实时调度、负载均衡与绑核隔离、抢占与上下文切换成本，附 perf sched / runqlat 排障思路与 12 道面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Linux 进程调度器 · CFS / EEVDF / 实时调度 / 负载均衡 / 抢占 / 调优排障">
-<meta name="twitter:description" content="Linux 进程调度器：调度类与优先级空间 · CFS 虚拟运行时间与权重 · EEVDF 的 lag 与虚拟截止 · 实时调度 SCHED_FIFO/DEADLINE 与 RT throttling · SMP 负载均衡与绑核隔离 · 抢占模型与上下文切换成本 · perf sched / runqlat 调优实战与 12 道面试题">
+<meta name="twitter:description" content="用大白话讲 Linux 调度器：调度类与优先级三套数值、CFS 的 vruntime 记账、EEVDF 的 lag 与虚拟截止、SCHED_FIFO/SCHED_DEADLINE 实时调度、负载均衡与绑核隔离、抢占与上下文切换成本，附 perf sched / runqlat 排障思路与 12 道面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -166,7 +166,7 @@ code{font-family:var(--mono)}
 
     <section class="chapter" id="ch1">
       <div class="ch-head"><div class="num">01</div><div class="t"><h2>为什么需要调度器</h2><div class="sub">几千个线程抢几十个核</div></div></div>
-      <p>几十个核、成千上万可运行线程。调度器要同时满足<strong>公平</strong>（别饿死）、<strong>吞吐</strong>（少切换）、<strong>响应</strong>（交互要快）、<strong>确定</strong>（实时不能拖）——无法同时最优。</p>
+      <p>一台机器只有几十个 CPU 核，系统里却随时挂着成千上万个想跑的线程——狼多肉少，必须有人决定谁先跑、谁等着。这个做决定的角色就是<strong>调度器</strong>（scheduler，内核里负责分配 CPU 时间的组件）。它要同时满足四个互相打架的目标：<strong>公平</strong>（谁都不能被饿死）、<strong>吞吐</strong>（整体干活要多、切换要少）、<strong>响应</strong>（交互任务要快）、<strong>确定</strong>（实时任务的截止时间不能拖）——而这四个目标无法同时最优，调度工作的本质就是在它们之间做取舍。</p>
       <div class="analogy">
         <div class="at">生活类比：医院分诊台</div>
         <p>CPU 核是<strong>医生</strong>，线程是<strong>病人</strong>。急诊（实时）插队，普通门诊按公平排，还不能让谁永远排不上。医生频繁换病人会浪费在「重新了解病情」（刷新 cache / TLB）。</p>
@@ -197,7 +197,7 @@ code{font-family:var(--mono)}
       </div>
 
       <h3>先厘清「可运行」到底指什么</h3>
-      <p>调度器只看 <strong>TASK_RUNNING</strong>：正在跑的 + 在 runqueue 里等的。睡眠任务不在候选集，这直接决定 load / <code>vmstat</code> 该怎么读。</p>
+      <p>调度器挑人时只认一种状态：<strong>TASK_RUNNING</strong>（可运行状态）。它包含两类线程——正在 CPU 上跑的，和排在 runqueue（运行队列，每个核旁边等着上 CPU 的那条队伍）里的。睡着了的任务（等 I/O、等锁、等事件）不在候选集里，调度器根本不看它们一眼。这一点直接决定了 load（负载均值）和 <code>vmstat</code> 这类指标该怎么读。</p>
       <div class="cheatsheet"><table>
         <thead><tr><th>状态</th><th>含义</th><th>是否参与调度</th><th>是否计入 load average</th></tr></thead>
         <tbody>
@@ -212,8 +212,8 @@ code{font-family:var(--mono)}
       <div class="tool-card danger">
         <h4>最常见的误读：load average 不是 CPU 利用率</h4>
         <ul>
-          <li>Linux load 是 <strong>R + D</strong> 的指数平均（传统 Unix 只算 R）。8 核 load 50 可能 CPU 全闲——50 个进程卡在坏盘的 <code>D</code>。</li>
-          <li>判据用 <code>vmstat</code> 的 <code>r</code>（可运行队列）和 <code>b</code>（不可中断阻塞），比 load 准。这时候去调 nice、加核全是白费。</li>
+          <li>Linux 的 load 是 <strong>R + D</strong> 两种状态任务数的指数平均（传统 Unix 只算 R）。所以 8 核机器 load 高到 50，CPU 却可能完全是闲的——因为这 50 个进程都卡在坏盘的 <code>D</code> 状态里等 I/O，根本不是在等 CPU。</li>
+          <li>更准的判据是 <code>vmstat</code> 的 <code>r</code> 列（可运行队列长度，即正在等 CPU 的任务数）和 <code>b</code> 列（不可中断阻塞的任务数），比 load 靠谱。如果高 load 其实是 D 状态堆出来的，这时去调 nice、加核全是白费——病根在存储，不在调度。</li>
         </ul>
       </div>
       <div class="cheatsheet"><table>
@@ -229,7 +229,7 @@ code{font-family:var(--mono)}
 
     <section class="chapter" id="ch2">
       <div class="ch-head"><div class="num">02</div><div class="t"><h2>调度类与优先级空间</h2><div class="sub">Linux 有多套调度策略叠在一起</div></div></div>
-      <p>Linux 不是一个算法，而是分层的<strong>调度类</strong>，按优先级从高到低：<strong>Stop → Deadline → RT → CFS/EEVDF → Idle</strong>。高优先级类里只要还有可运行任务，低优先级类一轮都轮不到——<strong>类间是严格优先，不是加权</strong>，所以一个失控的 RT 真能把普通任务全饿死。</p>
+      <p>Linux 内核里其实不止一个调度算法，而是好几套<strong>调度类</strong>（sched class——每套管一类任务、自带一套挑人规则）叠成的分层结构，按优先级从高到低是：<strong>Stop → Deadline → RT → CFS/EEVDF → Idle</strong>。挑人规则很残酷：只要高优先级类里还有一个能跑的任务，低优先级类就一个都轮不上——<strong>类与类之间是严格优先，不是按比例加权</strong>。所以一个跑飞了的 RT（实时）任务，真能把下面所有普通任务活活饿死。</p>
       <div class="cheatsheet"><table>
         <thead><tr><th>调度类</th><th>策略</th><th>用途</th></tr></thead>
         <tbody>
@@ -259,7 +259,7 @@ code{font-family:var(--mono)}
       </div>
 
       <h3>一张图看懂优先级数值的三套坐标系</h3>
-      <p>「优先级」至少有三种数值：内核 <code>prio</code>（0–139，<strong>越小越高</strong>）、实时 <code>rtprio</code>（1–99，<strong>越大越高</strong>）、普通任务 <code>nice</code>（−20–19）。混用是面试和排障最容易翻车的地方。</p>
+      <p>「优先级」这个词在 Linux 里至少对应三种不同的数值，很多人混着用：<strong>内核 prio</strong>（0–139，数值<strong>越小</strong>优先级越<strong>高</strong>）、<strong>实时 rtprio</strong>（1–99，数值<strong>越大</strong>越<strong>高</strong>，方向正好和 prio 相反）、<strong>普通任务 nice</strong>（−20–19，越大越谦让）。三套坐标系方向不一致，混用是面试和排障最容易翻车的地方。</p>
       <div class="fig">
         <svg viewBox="0 0 700 168" width="700" height="168" role="img" aria-label="Linux 优先级数值空间：内核 prio 0 到 139，其中 0 到 99 为实时，100 到 139 对应 nice 负 20 到 19">
           <rect x="20" y="34" width="300" height="40" rx="6" fill="color-mix(in srgb, var(--danger) 18%, var(--bg-card))" stroke="var(--danger)"/>
@@ -280,9 +280,9 @@ code{font-family:var(--mono)}
       <div class="tool-card amber">
         <h4>nice 值：普通任务的「谦让度」</h4>
         <ul>
-          <li>−20（最不谦让）到 +19（最谦让），默认 0。内核用 <code>sched_prio_to_weight[]</code>，<strong>每差 1 级权重约 1.25 倍</strong>：nice 0 = 1024，nice 5 ≈ 335，nice 19 = 15。</li>
-          <li>两个 CPU 密集任务抢一个核：nice 0 vs 5 ≈ <code>1024 : 335 ≈ 75% : 25%</code>。空闲时谁都跑满，nice 不起作用。</li>
-          <li>普通用户只能<strong>调高</strong> nice；调低要 <code>CAP_SYS_NICE</code>。<code>SCHED_BATCH</code> 不做唤醒抢占优化；<code>SCHED_IDLE</code> 权重极低，适合后台索引。</li>
+          <li>nice 的取值范围是 −20（最不谦让、抢得最狠）到 +19（最谦让），默认 0。内核查 <code>sched_prio_to_weight[]</code> 这张表把 nice 换算成权重，<strong>每差 1 级权重约 1.25 倍</strong>：nice 0 = 1024，nice 5 ≈ 335，nice 19 = 15。</li>
+          <li>两个 CPU 密集任务抢一个核时，nice 0 vs 5 拿到的时间约是 <code>1024 : 335 ≈ 75% : 25%</code>。但注意：核有空闲时谁都跑满，这时 nice 不起作用——它只在肉不够分时才决定怎么切。</li>
+          <li>普通用户只能<strong>调高</strong>自己的 nice（更谦让）；调低要 <code>CAP_SYS_NICE</code> 特权。<code>SCHED_BATCH</code> 不做唤醒抢占优化（适合不在乎响应的批处理）；<code>SCHED_IDLE</code> 权重极低，适合后台建索引这类「别人都不要 CPU 才轮到我」的活。</li>
         </ul>
       </div>
       <div class="cheatsheet"><table>
@@ -294,14 +294,14 @@ code{font-family:var(--mono)}
         </tbody>
       </table></div>
 
-      <div class="intuition">优先级反转：高优先级 RT 等一把被低优先级持有的锁，中优先级再抢走低优先级的 CPU——高优先级被间接饿死。1997 年火星探路者号反复重启就是这个。解法：<strong>优先级继承（PI mutex）</strong>，持锁者临时继承等待者的优先级。§5 给出用法。</div>
+      <div class="intuition">优先级反转（priority inversion——高优先级任务反而被低优先级任务间接卡住）：高优先级 RT 任务等一把被低优先级任务持有的锁，这时一个不相干的中优先级任务又抢走了低优先级任务的 CPU——结果高优先级任务被「间接饿死」。1997 年火星探路者号反复重启就是这个毛病。解法是<strong>优先级继承（PI mutex，优先级继承互斥锁）</strong>：持锁者临时继承等锁者的优先级，让它赶紧把锁放掉。§5 给出用法。</div>
     </section>
 
     <section class="chapter" id="ch3">
       <div class="ch-head"><div class="num">03</div><div class="t"><h2>CFS：完全公平调度</h2><div class="sub">2007–2023 的默认调度器</div></div></div>
-      <p>CFS 的核心：<strong>让每个任务获得理想公平份额</strong>。用 <strong>vruntime</strong> 记账（按权重加权），<strong>永远挑最小的那个跑</strong>——最亏欠的先跑。</p>
+      <p>CFS（Completely Fair Scheduler，完全公平调度器）的核心目标只有一句话：<strong>让每个任务拿到理想的公平份额</strong>。它的做法是用 <strong>vruntime</strong>（虚拟运行时间——把任务实际跑的时间按权重折算后的「公平记账值」）给每个任务记账，然后<strong>永远挑 vruntime 最小的那个上 CPU</strong>——谁的账最少，说明系统最亏欠谁，就让谁先跑。</p>
 
-      <div class="def"><strong>vruntime</strong>：实际 CPU 时间按权重缩放。<code>Δvruntime = Δ真实时间 × (1024 / 权重)</code>。nice 0 权重正好 1024，vruntime 等于真实时间；nice −5（权重 3121）跑 1 秒只记 0.33 秒，于是被反复选中。</div>
+<div class="def"><strong>vruntime</strong>：实际 CPU 时间按权重缩放后的记账值，公式是 <code>Δvruntime = Δ真实时间 × (1024 / 权重)</code>。nice 0 的权重正好是 1024，此时 vruntime 就等于真实时间；而 nice −5（权重 3121）的任务跑 1 秒只记 0.33 秒的账，于是它在红黑树里总显得「吃亏」，会被反复选中——这正是高权重任务多拿 CPU 的实现方式。</div>
 
       <div class="fig">
         <svg viewBox="0 0 720 268" style="min-width:560px;height:auto" role="img" aria-label="CFS 红黑树按 vruntime 排序，永远取最左也就是亏欠最多的任务">
@@ -340,7 +340,7 @@ code{font-family:var(--mono)}
       </table></div>
 
       <h3>组调度：为什么容器里的 CPU 份额是分层的</h3>
-      <p>公平只做在任务层，开 200 个线程的容器就能挤死只有 2 个线程的容器。组调度先按 <code>cpu.weight</code> 在 cgroup 之间切一刀，再在组内按 vruntime 分。</p>
+      <p>如果公平只做在单个任务这一层，一个开了 200 个线程的容器就能靠人海战术挤死只有 2 个线程的容器——线程多者胜，这显然不合理。组调度（group scheduling）的解法是分两层切：先按 <code>cpu.weight</code>（cgroup 里声明各组相对重要性的权重）在 cgroup 之间切一刀大饼，再在组内部按 vruntime 给各任务公平分配。好比公司先按部门分预算，部门内再按人分——人多的大部门不能吃掉全部。</p>
 
       <div class="fig">
         <svg viewBox="0 0 660 200" width="660" height="200" role="img" aria-label="组调度层级：根 cgroup 下两个服务按权重分配 CPU，各自内部再按任务公平分配">
@@ -384,7 +384,7 @@ code{font-family:var(--mono)}
 
     <section class="chapter" id="ch4">
       <div class="ch-head"><div class="num">04</div><div class="t"><h2>EEVDF：CFS 的继任者</h2><div class="sub">Linux 6.6（2023）起的默认调度器</div></div></div>
-      <p>CFS 只保证<strong>长期公平</strong>，任务无法表达「我只要一点点 CPU，但要马上拿到」。想降延迟只能调 nice，而 nice 同时改了份额。<strong>EEVDF</strong>（内核 6.6 起默认）把「份额」和「延迟」拆成两个维度。</p>
+      <p>CFS 只保证<strong>长期公平</strong>，它有个盲区：任务没办法表达「我只要一点点 CPU，但我要马上拿到」。比如一个心跳线程，每秒只需要几百微秒，却希望每次唤醒都能立刻上 CPU。在 CFS 下想降延迟只能调 nice，但 nice 一动，份额也跟着变了——两个目标绑死在一个旋钮上。<strong>EEVDF</strong>（内核 6.6 起的默认调度器）做的事，就是把「份额」和「延迟」拆成两个可以独立调节的维度。</p>
 
       <div class="fig">
         <svg viewBox="0 0 760 248" style="min-width:580px;height:auto" role="img" aria-label="EEVDF 用 lag 管公平、用虚拟截止管延迟；CFS 只有 vruntime 一个旋钮">
@@ -432,14 +432,14 @@ code{font-family:var(--mono)}
           <tr><td><code>grep PLACE_LAG /sys/kernel/debug/sched/features</code></td><td>确认当前是不是 EEVDF</td><td>出现 <code>PLACE_LAG</code> / <code>RUN_TO_PARITY</code> 即是</td></tr>
         </tbody>
       </table></div>
-      <p>6.12 起普通任务可用 <code>sched_setattr()</code> 的 <code>sched_runtime</code> 请求自定义时间片（仍是 <code>SCHED_OTHER</code>，份额不变）。心跳 / 控制面线程可以要 0.3 ms；计算密集线程别用——切换会吃掉吞吐。内核不支持时返回 <code>EINVAL</code>，要能降级。</p>
+      <p>6.12 起普通任务可以用 <code>sched_setattr()</code> 的 <code>sched_runtime</code> 参数请求自定义时间片（策略仍是 <code>SCHED_OTHER</code>，份额不变，只是每次上 CPU 跑多久变了）。心跳 / 控制面线程可以要 0.3 ms 这种小片，让自己更快被轮到；计算密集线程就别这么干——切换变频繁会吃掉吞吐。内核不支持时该调用返回 <code>EINVAL</code>，代码要能降级处理。</p>
 
       <div class="box star">面试官想听的是「EEVDF 解决了 CFS 的什么问题」而不是算法细节。标准答案：<strong>CFS 把"份额"和"延迟"耦合在 nice 这一个旋钮上，EEVDF 用 lag 管公平、用请求时间片管延迟，把两者解耦了。</strong>能再补一句「所以低延迟服务不再需要靠调低 nice 来蹭响应速度」就很到位。</div>
     </section>
 
     <section class="chapter" id="ch5">
       <div class="ch-head"><div class="num">05</div><div class="t"><h2>实时调度与 PREEMPT_RT</h2><div class="sub">当「公平」不够，你要「确定」</div></div></div>
-      <p>普通调度追求平均；实时追求<strong>最坏情况可控</strong>——不是「快」，是<strong>可预测</strong>。</p>
+      <p>普通调度追求的是「平均下来不错」；实时调度追求的是<strong>最坏情况可控</strong>——重点不是「快」，而是<strong>可预测</strong>：不管系统多忙，每一次响应都在承诺的期限内。</p>
       <div class="cheatsheet"><table>
         <thead><tr><th>策略</th><th>行为</th><th>典型用途</th></tr></thead>
         <tbody>
@@ -450,7 +450,7 @@ code{font-family:var(--mono)}
       </table></div>
 
       <h3>把一个线程变成实时线程</h3>
-      <p>三件套缺一不可：<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>（关键路径上缺页是毫秒级不确定性）、<code>pthread_setschedparam(..., SCHED_FIFO, ...)</code>（无 <code>CAP_SYS_NICE</code> 会 <code>EPERM</code>）、<code>PTHREAD_PRIO_INHERIT</code> 的 mutex（防优先级反转，不是可选项）。业务实时优先级落在 <strong>10–60</strong>，99 会压过 <code>migration/</code> 和 <code>watchdog/</code>。</p>
+      <p>三件套缺一不可：<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code>（把内存锁在物理内存里——否则关键路径上一次缺页就是毫秒级的不确定性）、<code>pthread_setschedparam(..., SCHED_FIFO, ...)</code>（没有 <code>CAP_SYS_NICE</code> 特权会得到 <code>EPERM</code>）、以及带 <code>PTHREAD_PRIO_INHERIT</code> 的 mutex（防优先级反转，这是必需品不是可选项）。业务实时优先级建议落在 <strong>10–60</strong>：用 99 会压过内核自己的 <code>migration/</code>（负责搬任务的内核线程）和 <code>watchdog/</code>，反而捅出大篓子。</p>
       <div class="cheatsheet"><table>
         <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
         <tbody>
@@ -460,7 +460,7 @@ code{font-family:var(--mono)}
       </table></div>
 
       <h3>SCHED_DEADLINE 与准入控制</h3>
-      <p>FIFO 的优先级是<strong>相对</strong>的——只知道谁比谁高，不知道系统还扛不扛得住。DEADLINE 直接声明「每 10 ms 需要 2 ms CPU」，内核做<strong>准入控制</strong>：所有 DEADLINE 的 <code>runtime / period</code> 之和超容量，<code>sched_setattr</code> 返回 <code>EBUSY</code>——<strong>宁可不让你跑，也不让已承诺的任务违约</strong>。</p>
+      <p>FIFO 的优先级是<strong>相对</strong>的——它只告诉你谁比谁高，却回答不了「系统整体还扛不扛得住」。DEADLINE 换了个思路：任务直接向内核声明「每 10 ms 需要 2 ms CPU」，由内核做<strong>准入控制</strong>（admission control——先算一遍账，装得下才收，装不下就拒收）：如果所有 DEADLINE 任务的 <code>runtime / period</code> 之和超过系统容量，<code>sched_setattr</code> 直接返回 <code>EBUSY</code>——<strong>宁可不让你跑，也不让已经承诺的任务违约</strong>。</p>
 
 <pre><span class="kw">struct</span> sched_attr attr = {<span class="num">0</span>};
 attr.size            = <span class="kw">sizeof</span>(attr);
@@ -506,12 +506,12 @@ attr.sched_period    =  <span class="num">10</span> * <span class="num">1000</sp
         </tbody>
       </table></div>
 
-      <p><strong>PREEMPT_RT</strong> 不改调度策略，而是把内核改成几乎处处可抢占——自旋锁变 RT mutex、中断下半部线程化，最坏延迟从毫秒压到微秒。2024 年合入主线（6.12）。详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
+      <p><strong>PREEMPT_RT</strong>（实时化内核补丁）不改任何调度策略，而是把内核本身改造成几乎处处可抢占——自旋锁换成可睡眠的 RT mutex、中断下半部也被线程化成可调度的普通任务，于是最坏调度延迟从毫秒级压到微秒级。2024 年合入主线（6.12）。详见 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT 深入</a>。</p>
     </section>
 
     <section class="chapter" id="ch6">
       <div class="ch-head"><div class="num">06</div><div class="t"><h2>多核负载均衡</h2><div class="sub">调度器是 per-CPU 的</div></div></div>
-      <p>每个 CPU 一个 runqueue，避免全局锁。代价是负载可能不均。<strong>负载均衡器</strong>在三个时机搬任务。</p>
+      <p>Linux 的调度器是按核各自为政的：每个 CPU 维护自己的 runqueue，好处是挑任务不需要全局锁。<strong>负载均衡器</strong>（load balancer——专门负责在核之间搬任务、抹平忙闲差的机制）就在三个时机搬运任务。</p>
 
       <div class="box tip">调度延迟还有一个不那么显眼的下游影响：<strong>它才是「定时器不准」的主要来源。</strong>定时器到期只是把线程放进 runqueue，什么时候真正跑起来由这一章讲的调度决定——空闲时几微秒，繁忙时可达毫秒级，远大于定时器硬件本身的误差。所以「提高定时器精度」这个需求，大部分时候要在这一章解决，而不是去调定时器。展开见 <a href="time_and_clocks.html#s6-3">时间与时钟 · 精度的损耗链</a>。</div>
 
@@ -560,7 +560,7 @@ attr.sched_period    =  <span class="num">10</span> * <span class="num">1000</sp
       <div class="box tip">本章讲的是调度器<strong>怎么把线程摊到核上</strong>。如果看到的现象是「加了核，吞吐反而降了」，先别怀疑均衡器：更常见的原因是共享资源的串行段加上跨核一致性开销，两者合起来就是那条会掉头向下的 USL 曲线，怎么压几个并发度点把两个系数拟合出来、进而判断该纵向加核还是横向扩机器，见 <a href="../architect/capacity_backpressure_design.html#s4">容量估算与背压 · USL</a>。<strong>判据</strong>：<code>perf sched</code> / runqlat 显示线程在<u>等 CPU</u>，是本章的调度问题；没人等 CPU、但每核吞吐随核数增加而下降，是争用问题，加机器也一样不涨。</div>
 
       <h3 id="ch6-affinity">默认不可控、可以绑核</h3>
-      <p>调度对象是<strong>线程</strong>不是进程。默认 soft affinity：尽量留原核保热缓存，该核忙了就 migrate。对应用是黑盒——这次核 2、下次核 5，false sharing / 多核内存序 bug 会<strong>时有时无</strong>。</p>
+      <p>调度的对象是<strong>线程</strong>而不是进程——一个进程里的多个线程各自独立排队。默认行为叫 soft affinity（软亲和）：调度器尽量让线程留在原来的核上，以保住 cache 里的热度；但原核一忙起来它就会被 migrate（迁移）到别的核。对应用来说这是黑盒——这次跑在核 2、下次跑在核 5，于是 false sharing（伪共享——两个核的线程不小心频繁争用同一缓存行）/ 多核内存序 bug 会<strong>时有时无</strong>，极难复现。</p>
       <div class="fig">
         <svg viewBox="0 0 640 90" width="640" height="90" role="img" aria-label="线程从核0迁移到核3">
           <rect x="8" y="18" width="88" height="36" rx="6" fill="var(--bg-card)" stroke="var(--accent)"/>
@@ -653,7 +653,7 @@ pthread_getaffinity_np(pthread_self(), <span class="kw">sizeof</span>(set), &amp
 
     <section class="chapter" id="ch7">
       <div class="ch-head"><div class="num">07</div><div class="t"><h2>抢占与上下文切换</h2><div class="sub">切换不是免费的</div></div></div>
-      <p>抢占判定很朴素：内核在检查点看 <code>TIF_NEED_RESCHED</code>，置位了就 <code>schedule()</code>。检查点包括<strong>系统调用返回用户态、中断返回、显式 <code>cond_resched()</code>、以及可抢占内核上持锁计数归零</strong>。标志由「更高优先级被唤醒」或「时间片 / 虚拟截止到期」置上。</p>
+      <p><strong>抢占</strong>（preemption——把正在 CPU 上跑的任务强行请下去、换别人上）的判定逻辑很朴素：内核在若干「检查点」看一眼 <code>TIF_NEED_RESCHED</code> 标志，发现它被置位了就调用 <code>schedule()</code> 换人。检查点包括<strong>系统调用返回用户态时、中断返回时、代码里显式调用的 <code>cond_resched()</code>、以及可抢占内核上持锁计数归零时</strong>。而这个标志由两类事件置上：「更高优先级的任务被唤醒」或「时间片 / 虚拟截止时间到期」。</p>
 
       <div class="cheatsheet"><table>
         <thead><tr><th>抢占模型</th><th>内核态可抢占性</th><th>最坏延迟量级</th><th>典型场景</th></tr></thead>
@@ -788,7 +788,7 @@ $ sudo bpftrace -e '
 [1, 2)   41022 |@@@@    |
 [16, 32)     4 |        |  <span class="cm">← 长尾：硬实时即违约</span></pre>
 
-      <div class="box danger">不要照抄「调度器优化参数大礼包」。<code>sched_*</code> 默认值是社区在大量负载上调出来的，<strong>改了多半更差</strong>，而且随内核版本变动（EEVDF 已删掉几个）。正确顺序：先用 <code>perf sched</code> / runqlat 证明瓶颈在调度延迟，再针对性地改<strong>一个</strong>参数并测量。</div>
+      <div class="box danger">不要照抄网上流传的「调度器优化参数大礼包」。<code>sched_*</code> 系列默认值是内核社区在大量真实负载上反复调出来的，<strong>不看场景乱改多半更差</strong>，而且这些参数随内核版本一直在变（EEVDF 已经删掉了好几个老旋钮）。正确顺序是：先用 <code>perf sched</code> / runqlat 证明瓶颈确实在调度延迟上，再针对性地改<strong>一个</strong>参数，改完立刻测量对比。</div>
     </section>
 
     <section class="chapter" id="ch9">
@@ -831,7 +831,7 @@ $ sudo bpftrace -e '
       <div class="case">
         <h4>案例 2 · 实时线程每隔几秒抖一次</h4>
         <div class="sym"><code>SCHED_FIFO</code> 50 的控制线程，99.9% 周期 &lt; 50 μs，每几秒一次 300 μs 尖峰。</div>
-        <p><code>perf sched timehist</code> 抓到尖峰时上 CPU 的是同核 <code>kworker</code> 和网卡软中断。<strong>硬中断 / 软中断不受调度器优先级约束</strong>——来了就打断你。处方：§6 四件套，把 IRQ 赶到别的核。</p>
+        <p><code>perf sched timehist</code> 抓到尖峰时刻上 CPU 的正是同核的 <code>kworker</code>（内核工作线程）和网卡软中断。原因在于：<strong>硬中断 / 软中断不受调度器优先级约束</strong>——它们不是任务，来了就打断你，你的 FIFO 50 也拦不住。处方：§6 四件套，把 IRQ 赶到别的核。</p>
         <div class="cheatsheet"><table>
           <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
           <tbody>
@@ -844,7 +844,7 @@ $ sudo bpftrace -e '
       <div class="case">
         <h4>案例 3 · 同样的压测，吞吐每次差 20%</h4>
         <div class="sym">32 线程计算服务，8 万到 10 万 QPS 随机波动，代码和数据完全一样。</div>
-        <p>跨 NUMA 迁移：内存在 node 0，线程被均衡到 node 1，访存走 UPI。搬走哪些线程是随机的，远端比例不同，吞吐就飘。单节点放不下就按节点<strong>分片</strong>，比让调度器「自己看着办」可靠。NUMA 细节见 <a href="./numa_memory_advanced.html">NUMA + 高级内存</a>。</p>
+        <p>根因是跨 NUMA 迁移：这个服务的内存在 node 0（一个 NUMA 节点，访问本节点内存快、跨节点慢），线程却被负载均衡搬到了 node 1 的核上，每次访存都要走 UPI 跨节点互连。均衡器每次搬哪些线程是随机的，远端访存比例不同，吞吐就跟着飘。单节点放不下就按节点<strong>分片</strong>，比让调度器「自己看着办」可靠。NUMA 细节见 <a href="./numa_memory_advanced.html">NUMA + 高级内存</a>。</p>
         <div class="cheatsheet"><table>
           <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
           <tbody>

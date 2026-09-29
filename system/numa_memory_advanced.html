@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NUMA + 高级内存管理 · HugePages / slab / cgroup memory / madvise — Tech Notes</title>
-<meta name="description" content="NUMA + 高级内存管理：NUMA 全景 · HugePages 工程实战 · slab/buddy 内核分配器 · cgroup v2 memory · 5 个真实优化 case · 调试 checklist">
+<meta name="description" content="NUMA 与高级内存管理白话指南：numactl 用法、HugePages 大页实战、slab 与 buddy 分配器、cgroup v2 memory 与 OOM killer、5 个真实优化 case 与调试 checklist">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/numa_memory_advanced.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/numa_memory_advanced.html">
 <meta property="og:title" content="NUMA + 高级内存管理 · HugePages / slab / cgroup memory / madvise">
-<meta property="og:description" content="NUMA + 高级内存管理：NUMA 全景 · HugePages 工程实战 · slab/buddy 内核分配器 · cgroup v2 memory · 5 个真实优化 case · 调试 checklist">
+<meta property="og:description" content="NUMA 与高级内存管理白话指南：numactl 用法、HugePages 大页实战、slab 与 buddy 分配器、cgroup v2 memory 与 OOM killer、5 个真实优化 case 与调试 checklist">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="NUMA + 高级内存管理 · HugePages / slab / cgroup memory / madvise">
-<meta name="twitter:description" content="NUMA + 高级内存管理：NUMA 全景 · HugePages 工程实战 · slab/buddy 内核分配器 · cgroup v2 memory · 5 个真实优化 case · 调试 checklist">
+<meta name="twitter:description" content="NUMA 与高级内存管理白话指南：numactl 用法、HugePages 大页实战、slab 与 buddy 分配器、cgroup v2 memory 与 OOM killer、5 个真实优化 case 与调试 checklist">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -208,7 +208,7 @@
       </ul>
 
       <div class="intuition">
-        <strong>关键认知</strong>：<u>2020+ 服务器普遍 2+ NUMA node</u>，而默认 Linux 分内存是「哪个 node 空闲给哪个」，<u>跨 node 访问慢 2–3x</u>。<strong>不懂 NUMA 写大型服务 = 直接吃 30–50% 性能损失</strong>。
+        <strong>关键认知</strong>：<u>2020+ 服务器普遍 2+ NUMA node</u>（NUMA——非统一内存访问，即每个 CPU 插槽管着自己那部分内存，够不着的要绕道），而默认 Linux 分内存是「哪个 node 空闲给哪个」，<u>跨 node 访问慢 2–3x</u>。<strong>不懂 NUMA 写大型服务 = 直接吃 30–50% 性能损失</strong>。
       </div>
 
       <h3>0.2 边界 · 这一页不讲什么</h3>
@@ -242,7 +242,7 @@
         <h2>NUMA · 是什么 + 为什么重要</h2>
       </div></div>
 
-      <p class="lead"><strong>NUMA = Non-Uniform Memory Access</strong>。简言之：<u>不同 CPU 访问不同内存条速度不一样</u>。</p>
+      <p class="lead"><strong>NUMA = Non-Uniform Memory Access</strong>。简言之：<u>不同 CPU 访问不同内存条速度不一样</u>——自己插槽直连的那份快，挂在别人插槽下的那份慢。</p>
 
       <h3>1.1 类比 · 办公室的座位</h3>
 
@@ -304,7 +304,7 @@
 
       <h3>1.3 NUMA penalty 数字</h3>
 
-      <p><strong>口径先说清</strong>：下表是「同一代双路 Intel Xeon（Skylake–Ice Lake 量级）、空载、单线程随机访存」下的<u>量级参考</u>。它的用途是让你知道该期待什么数量级，<strong>不是让你拿去做容量规划</strong>——1.4 节会说明为什么必须自己测。</p>
+      <p><strong>口径先说清</strong>：下表是「同一代双路 Intel Xeon（Skylake–Ice Lake 量级）、空载、单线程随机访存」下的<u>量级参考</u>（延迟单位 ns——纳秒，十亿分之一秒）。它的用途是让你知道该期待什么数量级，<strong>不是让你拿去做容量规划</strong>——1.4 节会说明为什么必须自己测。</p>
 
       <table>
         <thead><tr><th>访问类型</th><th>典型延迟 (Xeon)</th><th>带宽 / 倍率</th></tr></thead>
@@ -323,11 +323,11 @@
         服务器跑高强度内存访问的程序（DB / cache / LLM serving）· <u>如果线程经常跨 node 访问内存 · 实际性能可能损失 30-50%</u>。<strong>且 vmstat / top 看不出 — 你以为是 "CPU 100% busy"，其实 30% CPU 在等远程 RAM</strong>。
       </div>
 
-      <p>上图右下角那句话值得单独记住：<strong>延迟和带宽的劣化幅度不是一个数量级</strong>。延迟侧远端只多一趟互联往返，带宽侧却要把若干条内存通道的流量全挤进 UPI 那几条链路，链路一饱和延迟还会在排队效应下继续恶化。所以微基准「才慢 1.7 倍」、上线压测掉 40% 并不矛盾——<u>微基准是单线程量延迟，生产是几十个线程一起抢带宽</u>。</p>
+      <p>上图右下角那句话值得单独记住：<strong>延迟和带宽的劣化幅度不是一个数量级</strong>。延迟侧远端只多一趟互联往返，带宽侧却要把若干条内存通道的流量全挤进 UPI（Intel 的 CPU 间互联总线，两个插座之间的高速公路）那几条链路，链路一饱和延迟还会在排队效应下继续恶化。所以微基准「才慢 1.7 倍」、上线压测掉 40% 并不矛盾——<u>微基准是单线程量延迟，生产是几十个线程一起抢带宽</u>。</p>
 
       <h3>1.4 这些数字只能自己测 · 别抄 PPT</h3>
 
-      <p>真实平台之间的差异大到抄不了，NUMA 的形态在过去几年还在继续分裂：</p>
+      <p>真实平台之间的差异大到抄不了，NUMA 的形态在过去几年还在继续分裂（拓扑——CPU 与内存怎么分组连接的布局图）：</p>
 
       <table>
         <thead><tr><th>平台形态</th><th>node 数与来源</th><th><code>node distances</code> 非对角值</th><th>远端/本地延迟比（实测量级）</th></tr></thead>
@@ -348,7 +348,7 @@
         </ul>
       </div>
 
-      <p><strong>怎么测。</strong>延迟要用<u>指针追逐</u>：顺序遍历会被硬件预取器完全掩盖，量到的是带宽不是延迟；必须让下一次访存的地址来自上一次的返回值，形成串行依赖链。再把同一个程序放进 <code>numactl</code> 的四种组合各跑一遍——这张 2×2 的表就是本机真实的 NUMA 代价矩阵：</p>
+      <p><strong>怎么测。</strong>延迟要用<u>指针追逐</u>：顺序遍历会被硬件预取器完全掩盖，量到的是带宽不是延迟；必须让下一次访存的地址来自上一次的返回值，形成串行依赖链。再把同一个程序放进 <code>numactl</code> 的四种组合各跑一遍——这张 2×2 的表就是本机真实的 NUMA 代价矩阵（微基准——专门隔离出单个变量来量的小测试程序）：</p>
 
       <table>
         <thead><tr><th>512 MB 工作集 · 单线程随机访存</th><th><code>--membind=0</code></th><th><code>--membind=1</code></th><th>读法</th></tr></thead>
@@ -399,7 +399,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>2.2 numastat 的全局计数器 · numa_miss 与 numa_foreign</h3>
 
-      <p>不带参数的 <code>numastat</code> 打印的是另一套东西：<strong>每个 node 自开机以来的分配计数器</strong>。它是判断「NUMA 有没有出问题」最直接的一手证据，但六个字段的语义相当绕，绕错了会得出完全反向的结论。</p>
+      <p>不带参数的 <code>numastat</code> 打印的是另一套东西：<strong>每个 node 自开机以来的分配计数器</strong>（计数器——只增不减的累计数字，要看趋势得自己做差）。它是判断「NUMA 有没有出问题」最直接的一手证据，但六个字段的语义相当绕，绕错了会得出完全反向的结论。</p>
 
       <div class="cheatsheet">
         <table>
@@ -426,7 +426,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>2.3 精确到 VMA · /proc/&lt;pid&gt;/numa_maps</h3>
 
-      <p><code>numastat -p</code> 是按段类型汇总的粗粒度视图。要精确回答「<u>哪一段</u>虚拟内存落在<u>哪个</u> node、用了什么策略」，只有 <code>numa_maps</code>，每行形如 <code>7f2a90000000 bind:1 anon=262144 dirty=262144 N1=262144 kernelpagesize_kB=4</code>。</p>
+      <p><code>numastat -p</code> 是按段类型汇总的粗粒度视图。要精确回答「<u>哪一段</u>虚拟内存落在<u>哪个</u> node、用了什么策略」，只有 <code>numa_maps</code>，每行形如 <code>7f2a90000000 bind:1 anon=262144 dirty=262144 N1=262144 kernelpagesize_kB=4</code>（VMA——一段连续的虚拟地址区间，进程看到的「内存地图」上一块）。</p>
 
       <ul>
         <li><strong>第 2 列的策略名</strong>（<code>default</code> / <code>bind:1</code> / <code>interleave:0-1</code>）是全系统唯一能直接看到「策略真的挂上去了」的地方，验证 <code>mbind()</code> / <code>numactl</code> 生效就靠它。</li>
@@ -436,7 +436,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>2.4 别忘了设备也有 NUMA 归属</h3>
 
-      <p>NUMA 亲和性不只关系到 CPU 和内存：<strong>PCIe 设备（网卡、NVMe、GPU）也挂在某一个 socket 的 root complex 上</strong>，DMA 读写它的环形缓冲区同样有本地 / 远端之分——ring buffer 在 node0 而网卡挂在 node1，收发包路径上每个描述符都要跨互联。</p>
+      <p>NUMA 亲和性不只关系到 CPU 和内存：<strong>PCIe 设备（网卡、NVMe、GPU）也挂在某一个 socket 的 root complex 上</strong>，DMA 读写它的环形缓冲区同样有本地 / 远端之分——ring buffer 在 node0 而网卡挂在 node1，收发包路径上每个描述符都要跨互联。DMA（直接内存访问——设备不经 CPU 自己搬数据）也一样挑「近路」。</p>
 
       <div class="tool-card">
         <h4>查归属的四个入口 · 判读与陷阱</h4>
@@ -449,7 +449,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>2.5 一个 myth · "我没绑核 = 没 NUMA 问题"</h3>
 
-      <p><strong>错。</strong>默认的 first-touch 会导致一条几乎必然发生的退化路径：进程单线程启动，init 内存全落 node0 → 随后 spawn 出的一半 worker 被调度到 node1 → <strong>这一半线程此后每一次访存都跨 node</strong>。全程不报错、不出现在任何曲线上，只表现为「吞吐比预期低 20–40%」。这就是<u>无意识 NUMA 退化</u>，三条解法（<code>--interleave=all</code>、<code>numa_alloc_local()</code>、让 worker 自己 first-touch）分别在 3.1、3.3、3.5 展开。</p>
+      <p><strong>错。</strong>默认的 first-touch（首次触碰——内存第一次被谁写入就归谁的节点，详见 3.5）会导致一条几乎必然发生的退化路径：进程单线程启动，init 内存全落 node0 → 随后 spawn 出的一半 worker 被调度到 node1 → <strong>这一半线程此后每一次访存都跨 node</strong>。全程不报错、不出现在任何曲线上，只表现为「吞吐比预期低 20–40%」。这就是<u>无意识 NUMA 退化</u>，三条解法（<code>--interleave=all</code>、<code>numa_alloc_local()</code>、让 worker 自己 first-touch）分别在 3.1、3.3、3.5 展开。</p>
     </section>
 
     <!-- ============= Ch3 ============= -->
@@ -460,7 +460,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>3.1 四种内存策略 · 语义与适用</h3>
 
-      <p>内核对「一次匿名页分配落在哪个 node」的决定全部收敛到一个叫 <strong>mempolicy</strong> 的对象上。它只有四种模式，把语义分清，NUMA 编程一半的问题就没了。下图是同一个「要 12 个页、node0 只装得下 8 个」的场景，四种策略各自的落点：</p>
+      <p>内核对「一次匿名页分配落在哪个 node」的决定全部收敛到一个叫 <strong>mempolicy</strong>（内存策略——一张「这段内存该往哪个节点放」的规则卡）的对象上。它只有四种模式，把语义分清，NUMA 编程一半的问题就没了。下图是同一个「要 12 个页、node0 只装得下 8 个」的场景，四种策略各自的落点：</p>
 
       <div class="fig">
         <svg viewBox="0 0 720 218" role="img" aria-label="四种内存策略落点对比图。同样申请十二个页而 node0 只能装下八个：MPOL_DEFAULT 把八个页放在触发缺页的本地 node，剩下四个自动溢出到远端；MPOL_BIND 只允许在指定 node 分配，装不下的部分先触发回收，回收不出来就 OOM，绝不去别的 node；MPOL_PREFERRED 与 DEFAULT 落点相同但优先 node 由你指定，不够时静默回落不会 OOM；MPOL_INTERLEAVE 按页在两个 node 之间轮转，各放六个。" style="min-width:700px;height:auto">
@@ -576,7 +576,7 @@ $ numastat -mn             <span style="color:var(--text-dim)"># 系统级：每
 
       <h3>3.2 set_mempolicy 与 mbind 的区别</h3>
 
-      <p>策略有<strong>两个挂载点</strong>，这是最容易混淆的一处。对应两个系统调用——一个绑<u>线程</u>，一个绑<u>地址区间</u>：</p>
+      <p>策略有<strong>两个挂载点</strong>，这是最容易混淆的一处。对应两个系统调用——一个绑<u>线程</u>，一个绑<u>地址区间</u>（系统调用——程序请求内核办事的标准入口）：</p>
 
 <pre>#include &lt;numaif.h&gt;
 unsigned long mask = 1UL &lt;&lt; 0;      <span style="color:var(--text-dim)">/* nodemask：只用 node 0 */</span>
@@ -615,7 +615,7 @@ mbind(p, SZ, MPOL_INTERLEAVE, &amp;mask2, 8, <span style="color:var(--accent-3)"
 
       <h3>3.3 libnuma API (C/C++ 程序)</h3>
 
-      <p>libnuma（链接 <code>-lnuma</code>）是唯一<u>同时</u>管 CPU 和内存的用户态接口，常用的就这几个：</p>
+      <p>libnuma（链接 <code>-lnuma</code>）是唯一<u>同时</u>管 CPU 和内存的用户态接口，常用的就这几个。所谓「绑核」就是把某个线程限定在指定 CPU 核上运行：</p>
 
       <div class="cheatsheet">
         <table>
@@ -638,7 +638,7 @@ mbind(p, SZ, MPOL_INTERLEAVE, &amp;mask2, 8, <span style="color:var(--accent-3)"
 
       <p>如果这一页你只记一件事，就记这条：<strong>决定物理页落在哪个 node 的，不是「谁调用了 <code>malloc</code>」，而是「谁第一次<u>写</u>了这个页」。</strong></p>
 
-      <p><code>malloc</code> / <code>mmap</code> 返回的只是<strong>一段虚拟地址区间</strong>。物理页要等到<strong>第一次访问触发缺页</strong>时才分配，走的是「当前 CPU 的本地 node 优先」。<u>分配动作和放置决定被解耦到两个时间点、两个可能不同的线程上</u>——这是所有「无意识 NUMA 退化」的总根源。</p>
+      <p><code>malloc</code> / <code>mmap</code> 返回的只是<strong>一段虚拟地址区间</strong>（一张还没对应到真实内存的「地址凭证」）。物理页要等到<strong>第一次访问触发缺页</strong>（page fault——访问的地址还没有真实内存，CPU 报错请内核补上）时才分配，走的是「当前 CPU 的本地 node 优先」。<u>分配动作和放置决定被解耦到两个时间点、两个可能不同的线程上</u>——这是所有「无意识 NUMA 退化」的总根源。</p>
 
       <div class="fig">
         <svg viewBox="0 0 700 312" role="img" aria-label="First-touch 原则三步示意图。第一步：malloc 或 mmap 返回后，八个页只有虚拟地址，没有物理页也没有 node 归属。第二步：线程 A 在 node0 的核上第一次写前四页，这四页落在 node0；线程 B 在 node1 的核上第一次写后四页，这四页落在 node1——同一次 malloc 的内存落到了两个不同的节点。第三步对照实验：如果在分配后加一行 memset，由主线程一个人把八页全写一遍，则八页全部落在主线程所在的 node0，后面谁访问都改不回来。" style="min-width:660px;height:auto">
@@ -686,7 +686,7 @@ mbind(p, SZ, MPOL_INTERLEAVE, &amp;mask2, 8, <span style="color:var(--accent-3)"
         </svg>
       </div>
 
-      <div class="def"><strong>严格说是 first-<u>write</u>-touch。</strong>对匿名私有内存，第一次<strong>读</strong>只把页表项指向内核的<u>全局零页</u>，不分配物理页也不产生 node 归属；只有第一次<strong>写</strong>才触发写时复制、真正落定 node。所以大块 <code>calloc</code> 不会 touch（直接走 <code>mmap</code>，本来就是零），<code>malloc</code> + <code>memset</code> 会全部 touch。文件页 / 共享内存不同：第一次<strong>读</strong>就在读者所在 node 上分配 page cache 页。</div>
+      <div class="def"><strong>严格说是 first-<u>write</u>-touch。</strong>对匿名私有内存，第一次<strong>读</strong>只把页表项指向内核的<u>全局零页</u>（一页大家共用的「全零模板」），不分配物理页也不产生 node 归属；只有第一次<strong>写</strong>才触发写时复制（COW——写的时候才复制一份私有副本）、真正落定 node。所以大块 <code>calloc</code> 不会 touch（直接走 <code>mmap</code>，本来就是零），<code>malloc</code> + <code>memset</code> 会全部 touch。文件页 / 共享内存不同：第一次<strong>读</strong>就在读者所在 node 上分配 page cache 页。</div>
 
       <p><strong>不要相信推理，直接测。</strong>下面这个程序把上图钉死：同一块 buffer 由两个绑在不同 node 的线程各写一半，再用 <code>move_pages(2)</code> 逐页查询真实落点。</p>
 
@@ -756,7 +756,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>3.7 AutoNUMA · 内核替你搬页和搬线程</h3>
 
-      <p>first-touch 只在「分配时就知道谁会用」的前提下有效，真实负载常常不满足。于是内核内置了一套<strong>运行期自动纠偏</strong>机制 AutoNUMA（NUMA balancing）——它默认<u>开启</u>，很多人不知道自己一直在用它。</p>
+      <p>first-touch 只在「分配时就知道谁会用」的前提下有效，真实负载常常不满足。于是内核内置了一套<strong>运行期自动纠偏</strong>机制 AutoNUMA（NUMA balancing——内核定期检查「数据和线程是否分了家」，分了就替你搬回去），它默认<u>开启</u>，很多人不知道自己一直在用它。</p>
 
       <div class="analogy">AutoNUMA 像<strong>办公室里一个勤快的行政</strong>：他定期溜一圈，看到你老去对面团队的柜子取文件就把那批文件搬到你旁边；搬文件不划算（太多、好几个人都在用）就干脆把<u>你的工位</u>挪过去。问题是<strong>他溜一圈和搬东西时，你得停下手上的活让路</strong>。</div>
 
@@ -838,11 +838,11 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
         <h2>HugePages · 大页内存</h2>
       </div></div>
 
-      <p class="lead"><strong>HugePages = 用 2MB / 1GB 替代默认 4KB page</strong> · 减 TLB miss · 大内存程序的标配优化。</p>
+      <p class="lead"><strong>HugePages = 用 2MB / 1GB 替代默认 4KB page</strong>（页——内存按固定大小分块管理的基本单位）· 减 TLB miss · 大内存程序的标配优化。</p>
 
       <h3>4.1 为什么需要大页</h3>
 
-      <p>TLB（Translation Lookaside Buffer）是 CPU 缓存「虚拟页 → 物理页」翻译结果的地方，容量<u>硬件写死</u>：现代 x86-64 大致是 L1 dTLB 几十项（4 KB 与 2 MB 各有独立项）、L2 统一 TLB（STLB）约 1500–2000 项，1 GB 页往往只有十几个专用项。具体数字每代都不同，用 <code>cpuid</code> 或厂商优化手册确认，<strong>别照抄</strong>。</p>
+      <p>TLB（Translation Lookaside Buffer）是 CPU 缓存「虚拟页 → 物理页」翻译结果的地方——相当于贴在 CPU 手边的地址速查卡，容量<u>硬件写死</u>：现代 x86-64 大致是 L1 dTLB 几十项（4 KB 与 2 MB 各有独立项）、L2 统一 TLB（STLB）约 1500–2000 项，1 GB 页往往只有十几个专用项。具体数字每代都不同，用 <code>cpuid</code> 或厂商优化手册确认，<strong>别照抄</strong>。</p>
 
       <p>关键不是「页变大了」，而是<strong>同样多的 TLB 项能覆盖多少内存</strong>——以及一次 miss 要走几级页表：</p>
 
@@ -883,7 +883,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>4.2 算一遍 · 覆盖同样的内存需要多少 TLB 项</h3>
 
-      <p>把上图量化。取保守的 <strong>STLB = 1536 项</strong>，工作集 <strong>100 GB</strong>：</p>
+      <p>把上图量化。取保守的 <strong>STLB = 1536 项</strong>（STLB——第二级统一地址翻译缓存，容量比第一级大但速度稍慢），工作集 <strong>100 GB</strong>：</p>
 
       <table>
         <thead><tr><th>指标</th><th>4 KB 页</th><th>2 MB 页</th><th>1 GB 页</th></tr></thead>
@@ -905,7 +905,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>4.3 两种模式 · 显式 vs 透明</h3>
 
-      <p><strong>Explicit HugePages（hugetlb）</strong>由管理员提前预留一个池，应用用 <code>mmap(MAP_HUGETLB)</code> / hugetlbfs 显式取用，<u>稳定可控但要 reserve、不够时分配失败</u>；<strong>Transparent HugePages（THP）</strong>由内核自动尝试给 2 MB 页，<u>应用无感知，但有 collapse 带来的性能尖刺</u>。</p>
+      <p><strong>Explicit HugePages（hugetlb）</strong>由管理员提前预留一个池（像提前包下的专场车位区），应用用 <code>mmap(MAP_HUGETLB)</code> / hugetlbfs 显式取用，<u>稳定可控但要 reserve、不够时分配失败</u>；<strong>Transparent HugePages（THP）</strong>由内核自动尝试给 2 MB 页（应用完全无感知，像酒店自动给你升套房），<u>应用无感知，但有 collapse 带来的性能尖刺</u>。</p>
 
       <h3>4.4 完整对比 · 十个维度</h3>
 
@@ -935,7 +935,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>4.5 完整命令序列 · 预留 / 挂载 / 验证</h3>
 
-      <p>顺序很重要：<strong>先看支持哪些尺寸 → 按 node 预留 → 确认真的拿到了 → 挂载 hugetlbfs → 放开 memlock → 验证进程用上了</strong>。跳过任何一步都会得到「配了但没生效」。</p>
+      <p>顺序很重要：<strong>先看支持哪些尺寸 → 按 node 预留 → 确认真的拿到了 → 挂载 hugetlbfs → 放开 memlock → 验证进程用上了</strong>。跳过任何一步都会得到「配了但没生效」。hugetlbfs——把大页池以文件形式暴露出来的伪文件系统：</p>
 
       <div class="cheatsheet">
         <table>
@@ -991,7 +991,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <p>「关 THP 因为 khugepaged 会 stall 应用」到处都能看到，但它把三种不同的停顿混成了一种。<strong>要在面试和排障里分清，必须知道停顿发生在哪把锁上。</strong></p>
 
-      <p><code>khugepaged</code> 周期性醒来扫一批页，把「某个 2 MB 对齐区间内已有足够多 4 KB 页在用」的地方<strong>合并（collapse）</strong>成大页：分配 2 MB 连续块（<u>可能触发规整甚至回收</u>）→ <strong>取该进程 <code>mm</code> 的写锁</strong> → 拷贝 512 个页 → 建 PMD 映射、刷 TLB → 释放旧页。<strong>第二步最狠</strong>：<code>mmap_lock</code> 写锁会阻塞这个进程里所有需要读锁的线程，而缺页处理、<code>mmap</code> / <code>madvise</code> 全都要读锁——<u>collapse 期间只要碰到一次缺页就得排队</u>。所以「THP 停顿」实际是三种：</p>
+      <p><code>khugepaged</code>（内核里专门负责「把散页拼成大页」的后台线程）周期性醒来扫一批页，把「某个 2 MB 对齐区间内已有足够多 4 KB 页在用」的地方<strong>合并（collapse）</strong>成大页：分配 2 MB 连续块（<u>可能触发规整甚至回收</u>）→ <strong>取该进程 <code>mm</code> 的写锁</strong> → 拷贝 512 个页 → 建 PMD 映射、刷 TLB → 释放旧页。<strong>第二步最狠</strong>：<code>mmap_lock</code> 写锁会阻塞这个进程里所有需要读锁的线程，而缺页处理、<code>mmap</code> / <code>madvise</code> 全都要读锁——<u>collapse 期间只要碰到一次缺页就得排队</u>。所以「THP 停顿」实际是三种：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1054,11 +1054,11 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
         <h2>slab / buddy / vmalloc · 内核内存分配器</h2>
       </div></div>
 
-      <p class="lead">用户态 <code>malloc</code> 底层是 <code>brk</code> / <code>mmap</code>。<u>内核态自己有 3 个分配器</u> — 知道这些能更好理解 <code>/proc/slabinfo</code> 等观测数据。</p>
+      <p class="lead">用户态 <code>malloc</code> 底层是 <code>brk</code> / <code>mmap</code>。<u>内核态自己有 3 个分配器</u>（分配器——专门负责「把一大块内存切成小块发出去并回收」的管理员）— 知道这些能更好理解 <code>/proc/slabinfo</code> 等观测数据。</p>
 
       <h3>5.1 3 个分配器对比</h3>
 
-      <p>三者<strong>严格分层</strong>，不是三个并列选项：<strong>buddy</strong> 分配大块连续物理页（4 KB ~ 4 MB，2 的幂）是唯一的物理页来源；<strong>slab / SLUB</strong> 从它批发页再切成小对象（<code>dentry</code> / <code>inode</code> / <code>task_struct</code> 等）；<strong>vmalloc</strong> 也从它逐页拿，映射成虚拟连续但物理不连续的大块——<u>慢且占 TLB，能不用就不用</u>。</p>
+      <p>三者<strong>严格分层</strong>，不是三个并列选项：<strong>buddy</strong> 分配大块连续物理页（4 KB ~ 4 MB，2 的幂）是唯一的物理页来源；<strong>slab / SLUB</strong> 从它批发页再切成小对象（<code>dentry</code> / <code>inode</code> / <code>task_struct</code> 等，都是内核里反复创建销毁的「标准件」）；<strong>vmalloc</strong> 也从它逐页拿，映射成虚拟连续但物理不连续的大块——<u>慢且占 TLB，能不用就不用</u>。</p>
 
       <div style="overflow-x:auto;margin:18px 0">
       <svg viewBox="0 0 720 312" role="img" aria-label="内核内存分配器的三层结构图：kmalloc 与 kmem_cache_alloc 经由 Slab/SLUB 层，vmalloc 经由 vmalloc 映射层，两者最终都向 Buddy Allocator 申请物理页；alloc_pages 则绕过上层直接向 Buddy 申请。Buddy 之下是按 zone 划分的物理内存。" style="max-width:100%;height:auto">
@@ -1128,7 +1128,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
         </table>
       </div>
 
-      <p><strong>能不能睡觉，决定用哪个 GFP 标志。</strong>内核分配器的第一个参数不是「要多少」，而是「我处在什么上下文、失败了怎么办」——这是它和用户态 <code>malloc</code> 最本质的差别：</p>
+      <p><strong>能不能睡觉，决定用哪个 GFP 标志。</strong>内核分配器的第一个参数不是「要多少」，而是「我处在什么上下文、失败了怎么办」——GFP（Get Free Pages——内核申请内存时附带的一组「我怎么等得起」的说明标签）——这是它和用户态 <code>malloc</code> 最本质的差别：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1155,7 +1155,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
         <p style="font-size:13.5px;margin:6px 0 0"><code>sudo slabtop -o -s c</code> 按占用排序，最常见的是 <code>dentry</code> 与 <code>ext4_inode_cache</code> 涨到几百 MB 到 GB 级——<u>系统说「内存紧张」，实际上是 cache</u>。此时 <code>drop_caches</code> 会把热元数据一次清空，换来一波缺页与重读风暴；它唯一的正当用途是<u>做基准测试前对齐初始状态</u>。要长期压低元数据缓存，调 <code>vm.vfs_cache_pressure</code>。</p>
       </div>
 
-      <p>排障时直接读 <code>/proc/slabinfo</code> 更有用，因为它给出每个 cache 的<strong>对象尺寸和打包密度</strong>——那才是判断「对象太多还是单个对象太大」的依据：</p>
+      <p>排障时直接读 <code>/proc/slabinfo</code> 更有用，因为它给出每个 cache 的<strong>对象尺寸和打包密度</strong>（cache——同一种「标准件」的专属格子间）——那才是判断「对象太多还是单个对象太大」的依据：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1171,7 +1171,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>5.3 slab 泄漏的排查路径</h3>
 
-      <p>「slab 涨爆」有三种，第一步必须先分清，否则方向全错：</p>
+      <p>「slab 涨爆」有三种，第一步必须先分清，否则方向全错。判定的关键字是「可回收」（reclaim——内存紧张时内核能自动要回来的部分）：</p>
 
       <div class="insight-grid">
         <div class="card green">
@@ -1204,7 +1204,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>5.4 buddy 与外部碎片 · 水位和 order</h3>
 
-      <p>slab 涨爆是「用得多」，buddy 的问题是「凑不出连续块」——空闲内存总量可能很充足，但没有一个 2 MB 对齐的连续区间。这直接决定了 THP 能不能用上、驱动的高阶 DMA 缓冲能不能申请到。</p>
+      <p>slab 涨爆是「用得多」，buddy 的问题是「凑不出连续块」——空闲内存总量可能很充足，但没有一个 2 MB 对齐的连续区间（好比停车场总车位还有几百个，却没有一排连续六个空位能让大巴停）。这直接决定了 THP 能不能用上、驱动的高阶 DMA 缓冲能不能申请到。</p>
 
       <div class="fig">
         <svg viewBox="0 0 700 244" role="img" aria-label="/proc/buddyinfo 中某台机器 Node 0 的 Normal zone 空闲块分布柱状图，纵轴为对数刻度。order 0 有 18422 个 4KB 块，order 1 有 9134 个，order 2 有 4021 个，order 3 有 811 个，order 4 有 102 个，order 5 只剩 9 个，order 6 到 order 10 全部为 0。THP 需要的是 order 9，也就是 2 MB 的连续块，这一列为零，因此大页只能静默回落到 4 KB。空闲总量加起来可能有几百 MB，却一个 2 MB 连续块都拿不出来——这就是外部碎片。" style="min-width:680px;height:auto">
@@ -1290,9 +1290,9 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>5.7 RSS 不等于真实占用</h3>
 
-      <p>这一节讲的是<strong>全站最高频的一类误判</strong>：拿 <code>top</code> 里的 RSS 当作"这个进程占了多少内存"，然后基于它做容量规划、判断泄漏、设置容器 limit。三件事全会错。</p>
+      <p>这一节讲的是<strong>全站最高频的一类误判</strong>：拿 <code>top</code> 里的 RSS 当作"这个进程占了多少内存"，然后基于它做容量规划、判断泄漏、设置容器 limit。三件事全会错。下面把 RSS / PSS / USS 这几个口径一次分清：</p>
 
-      <div class="def"><strong><code>RSS</code></strong> 的严格定义是「<u>当前映射在该进程页表里的物理页总量</u>」。这句话里埋了两个坑：① 一个物理页被 N 个进程映射，就在 N 份 RSS 里<strong>各算一次</strong>；② 没映射进页表的内存（未 <code>mmap</code> 的 page cache、hugetlb 大页、内核替它分配的对象）<strong>一个字节都不算</strong>。所以 RSS 既会<u>重复计数</u>也会<u>漏计</u>，两个方向的误差同时存在。</div>
+      <div class="def"><strong><code>RSS</code></strong> 的严格定义是「<u>当前映射在该进程页表里的物理页总量</u>」（Resident Set Size——常驻内存集）。这句话里埋了两个坑：① 一个物理页被 N 个进程映射，就在 N 份 RSS 里<strong>各算一次</strong>；② 没映射进页表的内存（未 <code>mmap</code> 的 page cache、hugetlb 大页、内核替它分配的对象）<strong>一个字节都不算</strong>。所以 RSS 既会<u>重复计数</u>也会<u>漏计</u>，两个方向的误差同时存在。</div>
 
       <div class="fig">
         <svg viewBox="0 0 700 296" role="img" aria-label="RSS、PSS、USS 三个指标的算法对比图。场景是两个进程各独占 3 个页、另外共享 4 个页，物理上真实只占用 10 个页。按 RSS 算，进程 A 是独占 3 加共享 4 等于 7 页，进程 B 同样是 7 页，两者相加得 14 页，比真实多算了 4 页，因为共享部分被算了两遍。按 PSS 算，共享的 4 页在两个进程之间各摊一半，A 和 B 各是 5 页，相加正好等于真实的 10 页，这是唯一可以跨进程相加的口径。按 USS 算，进程 A 只有独占的 3 页，也就是杀掉它才能立刻收回来的部分。" style="min-width:680px;height:auto">
@@ -1411,7 +1411,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
         <h2>madvise / mlock · 内存策略 advisory</h2>
       </div></div>
 
-      <p class="lead"><code>madvise(addr, len, advice)</code> = <strong>告诉内核"我打算怎么用这段内存"</strong>·内核根据 advice 优化（preread / 提前 swap / 用大页 / 不要 swap 等）。</p>
+      <p class="lead"><code>madvise(addr, len, advice)</code> = <strong>告诉内核"我打算怎么用这段内存"</strong>（advice——建议值，一个说明「访问模式」的标签）·内核根据 advice 优化（preread / 提前 swap / 用大页 / 不要 swap 等）。</p>
 
       <h3>6.1 常用 advice 选项</h3>
 
@@ -1460,7 +1460,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>6.2 mlock / mlockall · 锁定物理内存不被 swap</h3>
 
-      <p>接口只有三个：<code>mlock(addr, size)</code> 锁一段、<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code> 锁当前与未来的全部内存、<code>munlock()</code> 解锁。<strong>典型场景是实时系统 / 金融交易</strong>——不能容忍 swap 带来的延迟 spike。前置条件是 <code>RLIMIT_MEMLOCK</code> 默认极小，要 <code>ulimit -l unlimited</code> 或给二进制 <code>CAP_IPC_LOCK</code>；而且锁太多内存等于系统可分配的变少，<u>反而可能 OOM 掉别的进程</u>。</p>
+      <p>接口只有三个：<code>mlock(addr, size)</code> 锁一段、<code>mlockall(MCL_CURRENT | MCL_FUTURE)</code> 锁当前与未来的全部内存、<code>munlock()</code> 解锁（swap——把暂时不用的内存挪到磁盘腾地方，代价是挪回来时卡一下）。<strong>典型场景是实时系统 / 金融交易</strong>——不能容忍 swap 带来的延迟 spike。前置条件是 <code>RLIMIT_MEMLOCK</code> 默认极小，要 <code>ulimit -l unlimited</code> 或给二进制 <code>CAP_IPC_LOCK</code>；而且锁太多内存等于系统可分配的变少，<u>反而可能 OOM 掉别的进程</u>。</p>
 
       <h3>6.3 优先用 MCL_ONFAULT · 以及 mlock 的四层代价</h3>
 
@@ -1490,7 +1490,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>7.1 OOM killer 工作机制</h3>
 
-      <p>物理内存 + swap 都满、且回收无效时，内核遍历所有进程算 <code>oom_score</code>，选最高的 SIGKILL，并在 dmesg 留下完整现场。评分函数 <code>oom_badness()</code> 比想象的简单——<strong>基础分几乎就是「你占了多少内存」</strong>：<code>points = rss + swap_entries + pgtables_bytes/PAGE_SIZE + oom_score_adj × totalpages / 1000</code>（前三项单位都是页）。</p>
+      <p>物理内存 + swap 都满、且回收无效时，内核遍历所有进程算 <code>oom_score</code>（OOM——Out Of Memory，内存耗尽；这一步就是内核在挑「牺牲谁」），选最高的 SIGKILL，并在 dmesg 留下完整现场。评分函数 <code>oom_badness()</code> 比想象的简单——<strong>基础分几乎就是「你占了多少内存」</strong>：<code>points = rss + swap_entries + pgtables_bytes/PAGE_SIZE + oom_score_adj × totalpages / 1000</code>（前三项单位都是页）。</p>
 
       <ul>
         <li>所以 <strong><code>oom_score_adj</code> 的单位是「整机（或 cgroup）内存的千分之几」</strong>，<code>-1000</code> 被特殊处理成「必然为 0」，等价于豁免。</li>
@@ -1501,7 +1501,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>7.2 从 dmesg 读懂一次 OOM</h3>
 
-      <p>OOM 是少数<strong>内核会主动留下完整现场</strong>的事件——这份日志足以回答"谁触发的、当时内存花在哪、为什么回收不出来、最后杀了谁"。下面这段的<u>字段名与结构是真实的，数字为示例</u>；先看一次<strong>容器（cgroup）OOM</strong>：</p>
+      <p>OOM 是少数<strong>内核会主动留下完整现场</strong>的事件——这份日志足以回答"谁触发的、当时内存花在哪、为什么回收不出来、最后杀了谁"。下面这段的<u>字段名与结构是真实的，数字为示例</u>；先看一次<strong>容器（cgroup）OOM</strong>（cgroup——内核给一组进程记账并设限的机制，容器就是靠它限内存的）：</p>
 
 <pre>$ sudo dmesg -T | grep -B2 -A30 'invoked oom-killer' | tail -40
 
@@ -1591,7 +1591,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>7.4 cgroup v2 memory 控制</h3>
 
-      <p>cgroup v2（2016+ 主流）<strong>统一了 memory controller</strong>，关键文件（cgroup / namespace 的整体模型见 <a href="./cgroup_namespace_containers.html#ch3">N09 · 第 3 章</a>，这里只深挖 memory 一个子系统）：</p>
+      <p>cgroup v2（2016+ 主流）<strong>统一了 memory controller</strong>（controller——cgroup 里分管某一类资源如 CPU / 内存的子系统），关键文件（cgroup / namespace 的整体模型见 <a href="./cgroup_namespace_containers.html#ch3">N09 · 第 3 章</a>，这里只深挖 memory 一个子系统）：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1623,7 +1623,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>7.5 max / high / low / min 的行为差异</h3>
 
-      <p>上面那张表列的是文件名，<strong>真正会踩坑的是「超过之后内核具体做什么」</strong>——四个旋钮里<u>只有一个会杀进程</u>：</p>
+      <p>上面那张表列的是文件名，<strong>真正会踩坑的是「超过之后内核具体做什么」</strong>——四个旋钮里<u>只有一个会杀进程</u>（好比水库的四条水位线：保护线、提醒线、节流线、泄洪线，只有最后一条会「弃车保帅」）：</p>
 
       <div class="fig">
         <svg viewBox="0 0 700 250" role="img" aria-label="cgroup v2 内存四个旋钮的行为差异示意图。纵轴是一个 cgroup 的内存用量。memory.min 是绝对保护线，此线以下的内存永不回收，即使全局内存耗尽，代价是会把别人推向 OOM。memory.low 是尽力保护线，只有其他地方实在回收不出内存时才会动到它以下的部分。memory.high 是节流阀，越过后内核主动回收，并在任务返回用户态之前插入正比于超额量的睡眠惩罚，永远不杀进程，表现为延迟整体劣化而所有常规指标都正常。memory.max 是硬上限，越过后先只在本 cgroup 内回收，回收不出来才在本 cgroup 内选进程杀，对应 K8s 的退出码 137。" style="min-width:660px;height:auto">
@@ -1704,7 +1704,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>7.6 memory.pressure（PSI）· 唯一能量化"内存压力"的指标</h3>
 
-      <p>利用率类指标（<code>memory.current</code>、<code>MemAvailable</code>）回答的是「用了多少」，回答不了<strong>「这件事有没有在伤害我的延迟」</strong>。PSI（Pressure Stall Information）就是为这个问题设计的：它直接统计<u>任务因为等内存而停下来的时间比例</u>。读 <code>&lt;cgroup&gt;/memory.pressure</code>（全局版本是 <code>/proc/pressure/memory</code>，格式相同），拿到的是两行 <code>some</code> / <code>full</code>，各带 <code>avg10 / avg60 / avg300 / total</code>：</p>
+      <p>利用率类指标（<code>memory.current</code>、<code>MemAvailable</code>）回答的是「用了多少」，回答不了<strong>「这件事有没有在伤害我的延迟」</strong>。PSI（Pressure Stall Information，压力失速信息）就是为这个问题设计的：它直接统计<u>任务因为等内存而停下来的时间比例</u>——把「缺内存」翻译成「浪费了多少时间」。读 <code>&lt;cgroup&gt;/memory.pressure</code>（全局版本是 <code>/proc/pressure/memory</code>，格式相同），拿到的是两行 <code>some</code> / <code>full</code>，各带 <code>avg10 / avg60 / avg300 / total</code>：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1895,7 +1895,7 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
 
       <h3>9.1 误判速查 · 症状到根因</h3>
 
-      <p>这一页最值钱的不是命令，而是<strong>「看到什么现象，第一反应该怀疑什么」</strong>。下表把前面各章的陷阱按症状重排：</p>
+      <p>这一页最值钱的不是命令，而是<strong>「看到什么现象，第一反应该怀疑什么」</strong>。下表把前面各章的陷阱按症状重排——相当于一份「症状 → 分诊」的预检台：</p>
 
       <div class="cheatsheet">
         <table>
@@ -1959,14 +1959,14 @@ int main(void)                        <span style="color:var(--danger)">/* 跑�
       <h3>9.3 推荐阅读</h3>
 
       <ul>
-        <li><strong>书</strong>：Mel Gorman <em>Understanding the Linux Virtual Memory Manager</em>（老但经典）</li>
+        <li><strong>书</strong>：Mel Gorman <em>Understanding the Linux Virtual Memory Manager</em>（老但经典，讲内核内存管理的来龙去脉）</li>
         <li><strong>kernel doc</strong>：<code>Documentation/admin-guide/mm/</code> · 最权威</li>
         <li><strong>OSS code</strong>：jemalloc / tcmalloc / mimalloc 源码 · 看用户态 allocator 怎么用 madvise / mmap</li>
         <li><strong>Blog</strong>：Brendan Gregg <em>Memory Reclaim</em> series</li>
       </ul>
 
       <div class="intuition">
-        <strong>关键认知</strong>：NUMA / HugePages / cgroup memory <u>不是"高级"技巧</u>，是<u>大型 production 服务的基础设施</u>。<strong>每个 senior C++ / Linux 工程师都应该 1 周内能背下 Ch9 checklist 10 项</strong>。这是<u>跟 "junior 写得能跑" 和 "senior 写得能 sustain" 的核心差异</u>。
+        <strong>关键认知</strong>：NUMA / HugePages / cgroup memory <u>不是"高级"技巧</u>，是<u>大型 production 服务的基础设施</u>。<strong>每个 senior C++ / Linux 工程师都应该 1 周内能背下 Ch9 checklist 10 项</strong>。这是<u>跟 "junior 写得能跑" 和 "senior 写得能 sustain" 的核心差异</u>（sustain——长期稳得住，扛得住流量增长与故障）。
       </div>
     </section>
 

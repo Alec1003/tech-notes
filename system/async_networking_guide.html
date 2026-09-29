@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor</title>
-<meta name="description" content="C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor：Boost.Asio · Sender/Receiver · QUIC/HTTP3 · gRPC / brpc">
+<meta name="description" content="C++ 异步网络框架通俗指南：用白话讲清 Reactor、Proactor、Boost.Asio、协程、strand、gRPC、brpc 与 QUIC/HTTP3 的原理、坑和选型，适合面试与实战。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/async_networking_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/async_networking_guide.html">
 <meta property="og:title" content="C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor">
-<meta property="og:description" content="C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor：Boost.Asio · Sender/Receiver · QUIC/HTTP3 · gRPC / brpc">
+<meta property="og:description" content="C++ 异步网络框架通俗指南：用白话讲清 Reactor、Proactor、Boost.Asio、协程、strand、gRPC、brpc 与 QUIC/HTTP3 的原理、坑和选型，适合面试与实战。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor">
-<meta name="twitter:description" content="C++ 异步网络框架完全指南 — Asio / Sender-Receiver / gRPC / brpc / Reactor / Proactor：Boost.Asio · Sender/Receiver · QUIC/HTTP3 · gRPC / brpc">
+<meta name="twitter:description" content="C++ 异步网络框架通俗指南：用白话讲清 Reactor、Proactor、Boost.Asio、协程、strand、gRPC、brpc 与 QUIC/HTTP3 的原理、坑和选型，适合面试与实战。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -153,7 +153,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 45 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 50 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -201,7 +201,7 @@
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★★★</span>
         <span class="pill cyan">工程复杂度 高</span>
-        <span class="pill green">阅读时长 ~45 min</span>
+        <span class="pill green">阅读时长 ~50 min</span>
         <span class="pill amber">前置 网络编程基础</span>
       </div>
       <div class="meta">
@@ -258,9 +258,9 @@
 
   <h3 id="s1-2">1.2 现代异步 C++ 的 3 大支柱</h3>
   <ul>
-    <li><strong>事件驱动主循环</strong>：epoll / io_uring / IOCP</li>
-    <li><strong>调度抽象</strong>：executor / scheduler / strand</li>
-    <li><strong>异步代码组织</strong>：callback → future → coroutine → sender/receiver</li>
+    <li><strong>事件驱动主循环</strong>（程序不主动轮询，而是把「有事件就叫我」的通知循环当心脏）：epoll（Linux 的 IO 事件通知器）/ io_uring（Linux 新一代异步 IO 接口）/ IOCP（Windows 的完成端口机制）</li>
+    <li><strong>调度抽象</strong>（把「这段代码在哪个线程、按什么顺序跑」抽成可传递的对象）：executor / scheduler / strand</li>
+    <li><strong>异步代码组织</strong>（怎么把「完成后才继续」的代码写得像顺序代码）：callback → future → coroutine → sender/receiver</li>
   </ul>
 
   <h3 id="s1-3">1.3 本指南覆盖范围</h3>
@@ -285,7 +285,7 @@
   </div>
 
   <h3 id="s2-1">2.1 三种范式</h3>
-  <p>Reactor 是就绪后再读，Proactor 是完成时数据已在，S/R 把操作当成可组合的值。量化对比见下表，流程见后面两张图。</p>
+  <p>Reactor 是就绪后再读（内核只通知你「数据到了」，搬数据这件事还得你自己动手），Proactor 是完成时数据已在（你提前把 buffer 交给内核，内核填好才叫你），S/R（Sender/Receiver，把一个异步操作包装成可以像值一样传来传去、串起来的对象）把操作当成可组合的值。量化对比见下表，流程见后面两张图。</p>
 
   <h3 id="s2-2">2.2 三者核心差异表</h3>
   <table>
@@ -354,7 +354,7 @@
   </div>
 
   <h3 id="s2-5">2.5 Sender/Receiver 详细流程</h3>
-  <p>S/R 不替代前两者，它替代「回调嵌套 + 手写取消」：sender 是惰性描述，<code>start</code> 才执行；<code>then</code> / <code>when_all</code> / <code>stop_token</code> 在编译期拼进状态机。详见 <a href="../stl/concurrency_patterns_guide.html#s11c">并发模式 §11c</a>。</p>
+  <p>S/R 不替代前两者，它替代「回调嵌套 + 手写取消」：sender 是惰性描述（像一份只写好步骤、还没下发的工单），<code>start</code>（启动动作）才执行；<code>then</code> / <code>when_all</code> / <code>stop_token</code> 在编译期拼进状态机。详见 <a href="../stl/concurrency_patterns_guide.html#s11c">并发模式 §11c</a>。</p>
 </section>
 
 <section class="chapter" id="s3">
@@ -366,7 +366,7 @@
     </div>
   </div>
 
-  <p>Boost.Asio 是 C++ 异步网络的事实标准。独立版 standalone Asio 不依赖 Boost。</p>
+  <p>Boost.Asio 是 C++ 异步网络的事实标准（大家做异步网络时默认都会用它）。独立版 standalone Asio 不依赖 Boost。</p>
 
   <h3 id="s3-1">3.1 核心概念三件套</h3>
   <table>
@@ -382,7 +382,7 @@
   <p>最小闭环：<code>async_accept</code> → session → 再 accept，循环靠 <code>io.run()</code>。完整可运行代码用 §4.2 协程版。</p>
 
   <h3 id="s3-3">3.3 Completion Token 机制 —— Asio 的"插槽"</h3>
-  <p>所有 <code>async_*</code> 的<strong>最后一个参数</strong>是 completion token：它决定完成时怎么通知你，并在编译期决定整个调用的<strong>返回类型</strong>。</p>
+  <p>所有 <code>async_*</code> 的<strong>最后一个参数</strong>是 completion token（完成令牌——一个「选交付方式」的插槽，你插什么形状，完成通知就以什么方式给你）：它决定完成时怎么通知你，并在编译期决定整个调用的<strong>返回类型</strong>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 250" style="min-width:720px;height:auto" role="img" aria-label="同一个 async_read_some，四种 completion token 返回类型各不相同：回调返回 void，use_future 返回 future，use_awaitable 可 co_await，use_sender 返回可组合的 sender">
@@ -453,10 +453,10 @@
   </div>
 
   <h3 id="s3-5">3.5 work_guard / executor_work_guard</h3>
-  <p><code>io_context::run()</code> 在没有待办工作时返回。启动阶段用 <code>make_work_guard(io)</code> 撑住循环，<code>reset()</code> 后队列清空即退出。</p>
+  <p><code>io_context::run()</code> 在没有待办工作时返回。好比一个前台：手头一封待处理的信都没有，她就下班了。启动阶段用 <code>make_work_guard(io)</code>（工作保镖——一份「假装还有活干」的占位工作）撑住循环，<code>reset()</code> 后队列清空即退出。</p>
 
   <h3 id="s3-6">3.6 buffer 与生命周期</h3>
-  <p><code>buffer()</code> 只是指针+长度，不持有内存。完成前这块必须活着；io_uring 下是内核在写，UAF 更阴。</p>
+  <p><code>buffer()</code> 只是指针+长度，不持有内存（相当于只递了一张写着地址的便签，房子本身不归它管）。完成前这块必须活着；io_uring 下是内核在写，UAF（use-after-free，释放后使用——访问了已经还给系统的内存）更阴。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 200" style="min-width:720px;height:auto" role="img" aria-label="buffer 必须活到 completion：栈上 vector 出作用域后异步读仍在使用会造成释放后使用；正确做法是 shared_ptr 捕获保活">
@@ -536,7 +536,7 @@ sock.<span class="fn">async_read_some</span>(asio::<span class="fn">buffer</span
   </table>
 
   <h3 id="s4-1">4.1 Callback 风格（经典）</h3>
-  <p>handler 必须捕获 <code>shared_from_this()</code>，否则 <code>start()</code> 返回后 Session 已析构。读写拆成两个成员、错误路径写两遍，是回调的税。</p>
+  <p>handler（完成回调——异步操作结束后被调用的那个函数）必须捕获 <code>shared_from_this()</code>，否则 <code>start()</code> 返回后 Session 已析构。读写拆成两个成员、错误路径写两遍，是回调的税。</p>
 
   <h3 id="s4-2">4.2 协程风格（推荐）</h3>
 <pre>asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">echo_session</span>(tcp::socket sock) {
@@ -567,10 +567,10 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
 }</pre>
 
   <h3 id="s4-3">4.3 future 风格（少用，仅展示）</h3>
-  <p><code>use_future</code> + <code>.get()</code> 每个 session 占一条线程，只适合接到同步测试里。</p>
+  <p><code>use_future</code> + <code>.get()</code> 每个 session 占一条线程（future 是「先给你一张取货凭证，货好了凭凭证取」的对象，<code>.get()</code> 会站在原地干等），只适合接到同步测试里。</p>
 
   <h3 id="s4-4">4.4 Sender/Receiver 风格 (asio 1.30+ experimental)</h3>
-  <p><code>use_sender</code> 返回可组合 sender，是接 stdexec 的桥，不是默认写法。超时 / 取消见 §5。</p>
+  <p><code>use_sender</code> 返回可组合 sender（一个还没启动的异步操作描述对象，可以像积木一样接上别的操作），是接 stdexec 的桥，不是默认写法。超时 / 取消见 §5。</p>
 </section>
 
 <section class="chapter" id="s5">
@@ -583,7 +583,7 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s5-1">5.1 co_spawn / detached / use_awaitable / awaitable&lt;T&gt;</h3>
-  <p><code>awaitable&lt;T&gt;</code> 是 Asio 的 Task。<code>co_spawn(ex, coro, token)</code> 把 executor 钉死，之后每个恢复点都 dispatch 回去——§6.4 整段会话无并发靠的就是这个。<code>detached</code> 是 fire-and-forget。</p>
+  <p><code>awaitable&lt;T&gt;</code> 是 Asio 的 Task（协程版的「带返回值的异步任务」包装）。<code>co_spawn(ex, coro, token)</code> 把 executor（执行器——指定「代码在哪跑」的句柄）钉死，之后每个恢复点都 dispatch 回去——§6.4 整段会话无并发靠的就是这个。<code>detached</code> 是 fire-and-forget（点完火就走，不关心它结束时的结果和异常）。</p>
 
   <h3 id="s5-2">5.2 超时模式</h3>
 <pre>asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">read_with_timeout</span>(tcp::socket&amp; sock, std::chrono::milliseconds t) {
@@ -628,10 +628,10 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s5-3">5.3 并发请求 (when_all / when_any)</h3>
-  <p><code>&amp;&amp;</code> = when_all（结果 tuple），<code>||</code> = when_any（赢家取消其余）。<code>co_await (fetch(a) &amp;&amp; fetch(b))</code> 把两次 RTT 压成一次。套了超时还要让 cancellation 往下传，否则内层会跑完。</p>
+  <p><code>&amp;&amp;</code> = when_all（等全部完成，结果打包成 tuple），<code>||</code> = when_any（谁先完成谁赢，赢家取消其余）。<code>co_await (fetch(a) &amp;&amp; fetch(b))</code> 把两次 RTT（round-trip time，一个请求打个来回的耗时）压成一次。套了超时还要让 cancellation 往下传，否则内层会跑完。</p>
 
   <h3 id="s5-4">5.4 取消 (cancellation slot)</h3>
-  <p><code>cancellation_signal</code> + <code>bind_cancellation_slot</code>，<code>emit(terminal)</code> 沿 await 链向下。<strong>emit 不是同步的</strong>：未决操作以 <code>operation_aborted</code> 稍后回来，回来之前 buffer 仍被占用。手写「等两边收敛」漏了，就是超时功能上线后的偶发崩溃。</p>
+  <p><code>cancellation_signal</code>（取消信号）+ <code>bind_cancellation_slot</code>（取消插槽——把信号接到某个操作上的接口），<code>emit(terminal)</code> 沿 await 链向下。<strong>emit 不是同步的</strong>：未决操作以 <code>operation_aborted</code> 稍后回来，回来之前 buffer 仍被占用。手写「等两边收敛」漏了，就是超时功能上线后的偶发崩溃。</p>
 </section>
 
 <section class="chapter" id="s6">
@@ -644,10 +644,10 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s6-1">6.1 问题：多线程 io_context 上的 handler 可能并发</h3>
-  <p>共享 context 时同一 Session 的读写完成可能并发。加锁会卡住整个 worker。</p>
+  <p>共享 context 时同一 Session 的读写完成可能并发（两个线程同时摸这个 Session 的数据）。加锁会卡住整个 worker。</p>
 
   <h3 id="s6-2">6.2 Strand：序列化执行器</h3>
-  <p>strand = 队列 +「是否有人在跑」：空闲则当前线程接手，否则入队。FIFO，用排队代替互斥。</p>
+  <p>strand（串行执行器，好比一条只开一个窗口的排队通道）= 队列 +「是否有人在跑」：空闲则当前线程接手，否则入队。FIFO（先进先出），用排队代替互斥。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 230" style="min-width:720px;height:auto" role="img" aria-label="strand 把同一 session 的 handler 串起来：两个 IO 线程投递进来，strand 队列保证 h1、h2、h3 严格串行，永不并发">
@@ -713,7 +713,7 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s7-1">7.1 Beast 定位</h3>
-  <p><a href="https://github.com/boostorg/beast" style="color:var(--accent)">Boost.Beast</a> 是 Asio 之上的 HTTP/1.1 + WebSocket <strong>协议解析器</strong>，不是带 router 的框架。IO、超时、strand 全部复用 Asio。</p>
+  <p><a href="https://github.com/boostorg/beast" style="color:var(--accent)">Boost.Beast</a> 是 Asio 之上的 HTTP/1.1 + WebSocket <strong>协议解析器</strong>（只负责把报文拆开、拼好，不管路由和业务），不是带 router 的框架。IO、超时、strand 全部复用 Asio。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 220" style="min-width:720px;height:auto" role="img" aria-label="Beast 在 Asio 上的位置：应用与路由在最上层，Beast 负责 HTTP 与 WebSocket 解析，Asio 提供 socket 定时器和 io_context，底下是 epoll 或 io_uring">
@@ -758,7 +758,7 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s8-1">8.1 概念示例 — 用 sender 组合网络操作</h3>
-  <p><a href="https://github.com/NVIDIA/stdexec" style="color:var(--accent)">stdexec</a> / <a href="https://github.com/facebook/mvfst" style="color:var(--accent)">mvfst</a> 把请求写成 <code>just(url) | dns | connect | tls | send | read | upon_error</code>。超时、重试是 <code>stop_when</code> / <code>retry_when</code>，<code>stop_token</code> 沿链走。</p>
+  <p><a href="https://github.com/NVIDIA/stdexec" style="color:var(--accent)">stdexec</a> / <a href="https://github.com/facebook/mvfst" style="color:var(--accent)">mvfst</a> 把请求写成 <code>just(url) | dns | connect | tls | send | read | upon_error</code>（一条竖线接一条的流水线，每一段都是一个 sender）。超时、重试是 <code>stop_when</code> / <code>retry_when</code>，<code>stop_token</code>（取消令牌，沿链传递的「停工通知」）沿链走。</p>
 
   <h3 id="s8-2">8.2 Asio 1.30+ 的 sender 适配</h3>
   <p><code>use_sender</code> 返回 sender，可丢进 stdexec 管线。C++26 标准化的是执行框架，网络还没进标准。</p>
@@ -784,10 +784,10 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
     </div>
   </div>
 
-  <p>gRPC 是 Google 开源的<strong>跨语言 RPC 框架</strong>。基于 HTTP/2 + Protobuf，C++ 实现性能/功能最完整。</p>
+  <p>gRPC 是 Google 开源的<strong>跨语言 RPC 框架</strong>（RPC 即远程过程调用——像调本地函数一样调另一台机器上的服务）。基于 HTTP/2 + Protobuf（谷歌的二进制序列化格式，把结构化数据压成紧凑字节流），C++ 实现性能/功能最完整。</p>
 
   <h3 id="s9-1">9.1 gRPC 核心架构</h3>
-  <p>HTTP/2 上每 RPC 一条 stream；四种调用模型只是 stub 形状，协议都是 HEADERS + DATA + trailer。</p>
+  <p>HTTP/2 上每 RPC 一条 stream（同一条 TCP 连接里并行的独立子通道，你丢包不耽误我）；四种调用模型只是 stub（由 proto 定义生成的客户端/服务端骨架代码）形状，协议都是 HEADERS + DATA + trailer。</p>
 
   <div class="fig">
     <svg viewBox="0 0 960 220" style="min-width:720px;height:auto" role="img" aria-label="gRPC 四种 RPC：Unary 一问一答，客户端流多请求一响应，服务端流一请求多响应，双向流两边都可连续发">
@@ -820,13 +820,13 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s9-2">9.2 第一个 gRPC 服务</h3>
-  <p>proto 生成同步 <code>Service</code> 与 <code>CallbackService</code>。同步覆盖 <code>Echo(ctx, req, res)</code> 再 <code>Wait()</code>——简单，但每在途 RPC 占一条线程。</p>
+  <p>proto 生成同步 <code>Service</code> 与 <code>CallbackService</code>。同步覆盖 <code>Echo(ctx, req, res)</code> 再 <code>Wait()</code>——简单，但每在途 RPC 占一条线程（一个请求从进来到出去，线程全程被它独占）。</p>
 
   <h3 id="s9-3">9.3 gRPC 性能数据</h3>
   <p>同机房 Unary P50 约 50–100 μs。同步 10–30k QPS（每 RPC 占线程）；异步 + 多核 100–500k。差距在「等」占不占线程，不是单次 RPC 更快。</p>
 
   <h3 id="s9-4">9.4 同步 vs 异步 API</h3>
-  <p>同步适合低并发原型；老 CQ+tag 难写对；<strong>Callback API</strong> 是现代推荐；协程走第三方（asio-grpc）。</p>
+  <p>同步适合低并发原型；老 CQ+tag（Completion Queue 加自定义标签——自己到完成队列里领事件、按 tag 分发的老式写法）难写对；<strong>Callback API</strong> 是现代推荐；协程走第三方（asio-grpc）。</p>
 </section>
 
 <section class="chapter" id="s10">
@@ -839,13 +839,13 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s10-1">10.1 Callback API (现代推荐)</h3>
-  <p>继承 <code>CallbackService</code>，填 <code>res</code> 后 <code>DefaultReactor()-&gt;Finish(OK)</code>。handler 可先返回、稍后 Finish。reactor 活到 <code>OnDone</code>；callback 线程里禁止阻塞，否则卡住整个 EventEngine。</p>
+  <p>继承 <code>CallbackService</code>，填 <code>res</code> 后 <code>DefaultReactor()-&gt;Finish(OK)</code>（reactor 是 gRPC 给每个 RPC 生成的小状态机对象，Finish 表示这单完结）。handler 可先返回、稍后 Finish。reactor 活到 <code>OnDone</code>；callback 线程里禁止阻塞，否则卡住整个 EventEngine（gRPC 内部驱动事件循环的线程池）。</p>
 
   <h3 id="s10-2">10.2 客户端流（client → server 流式发送）</h3>
-  <p><code>ClientWriteReactor</code>：<code>StartWrite</code> → <code>OnWriteDone</code> 再写下一块；结束 <code>StartWritesDone</code>。pending 必须有上限，否则慢消费者顶爆内存。</p>
+  <p><code>ClientWriteReactor</code>：<code>StartWrite</code> → <code>OnWriteDone</code> 再写下一块；结束 <code>StartWritesDone</code>。pending（还在路上没被确认的消息）必须有上限，否则慢消费者顶爆内存。</p>
 
   <h3 id="s10-3">10.3 服务端流（一请求多响应）</h3>
-  <p><code>ServerWriteReactor</code> 在 <code>OnWriteDone</code> 里决定下一则还是 Finish。长命 stream 会被 idle timeout 掐断，keepalive 并把重连当正常路径。</p>
+  <p><code>ServerWriteReactor</code> 在 <code>OnWriteDone</code> 里决定下一则还是 Finish。长命 stream 会被 idle timeout（负载均衡器、NAT 等中间设备对「一段时间没流量」的连接的静默掐断）掐断，keepalive 并把重连当正常路径。</p>
 
   <h3 id="s10-4">10.4 与协程整合（社区）</h3>
   <p><a href="https://github.com/Tradias/asio-grpc" style="color:var(--accent)">asio-grpc</a> 把 Async 调用变成 <code>co_await agrpc::request(...)</code>，生命周期回到作用域。</p>
@@ -862,15 +862,15 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
 
   <h3 id="s11-1">11.1 brpc (Apache 2017，百度出品)</h3>
   <ul>
-    <li>bthread：代码像同步、跑起来是异步</li>
+    <li>bthread（brpc 的用户态线程：代码写起来像同步阻塞，底层实际是 M:N 调度的协程）：代码像同步、跑起来是异步</li>
     <li>一端口嗅探 HTTP / gRPC / Redis / Thrift，联调可 curl</li>
-    <li>bvar、<code>/rpcz</code>、backup request 开箱即用</li>
+    <li>bvar（内置的暴露运行时指标的工具）、<code>/rpcz</code>、backup request（对冲请求——超时前再向另一个副本发一份，谁先回用谁）开箱即用</li>
     <li>弱项：跨语言与 Istio / xDS 仍围着 gRPC</li>
   </ul>
   <p>选型见 §11.4：跨语言 gRPC，C++ 内部要长尾与可观测性用 brpc；边界上 brpc 能对外提供 gRPC 协议。</p>
 
   <h3 id="s11-2">11.2 Apache Thrift</h3>
-  <p>比 gRPC 早、多语言更广，性能略差。Pinterest / Uber 等仍在用；遗留生态才选它。</p>
+  <p>比 gRPC 早、多语言更广，性能略差。Pinterest / Uber 等仍在用；遗留生态才选它。Thrift 也是 RPC 框架，Facebook 出品，同样定义接口描述语言再生成各语言代码。</p>
 
   <h3 id="s11-3">11.3 Cap'n Proto / FlatBuffers</h3>
   <table>
@@ -913,13 +913,13 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </table>
 
   <h3 id="s12-2">12.2 msquic 最小客户端</h3>
-  <p><code>MsQuicOpen2</code> → <code>ConnectionStart</code> → 每条逻辑流 <code>StreamOpen</code> / <code>StreamSend</code>。流互不阻塞。msquic 自带 Asio adapter。</p>
+  <p><code>MsQuicOpen2</code> → <code>ConnectionStart</code> → 每条逻辑流 <code>StreamOpen</code> / <code>StreamSend</code>。流互不阻塞（一条流丢包重传，别的流照常收发）。msquic 自带 Asio adapter。</p>
 
   <h3 id="s12-3">12.3 QUIC 的关键优势复习</h3>
-  <p>队头阻塞下沉到 stream；建连 1-RTT / 恢复 0-RTT；Connection ID 支持迁移；拥塞控制在用户态。代价是 UDP 被限、CPU 更高、0-RTT 可重放。</p>
+  <p>队头阻塞（前一个包丢了，后面的数据即使已到达也只能排队等着）下沉到 stream；建连 1-RTT（一次往返就完成握手）/ 恢复 0-RTT（老客户重逢，第一个包就能带数据）；Connection ID 支持迁移（连接靠编号识别而不是靠 IP，换网也不断）；拥塞控制在用户态。代价是 UDP 被限、CPU 更高、0-RTT 可重放。</p>
 
   <h3 id="s12-4">12.4 HTTP/3 部署</h3>
-  <p>先用 HTTP/1.1 或 2 建连，带 <code>Alt-Svc: h3=":443"</code> 让浏览器下次试 QUIC。UDP 常被限速，回落不是可选项。0-RTT 只放幂等请求。</p>
+  <p>先用 HTTP/1.1 或 2 建连，带 <code>Alt-Svc: h3=":443"</code>（一个 HTTP 响应头，意思是「这个服务还支持 HTTP/3，端口 443，下次可以试试」）让浏览器下次试 QUIC。UDP 常被限速，回落不是可选项。0-RTT 只放幂等请求（重复执行也不会造成二次扣款这类副作用的请求）。</p>
 
   <h3 id="s12-5">12.5 真实生产数据</h3>
   <p>Cloudflare：H3 占 25%+，移动延迟降 30%。YouTube：QUIC 占 70%+，buffering 降 9–20%。收益几乎全在高丢包 / 移动网；机房内部东西向通常不划算。</p>
@@ -935,7 +935,7 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s13-1">13.1 单机百万连接的关键</h3>
-  <p>SO_REUSEPORT 内核分流；每 worker 一 <code>io_context</code> 并 pin CPU；每连接内存压到 10–30 KB；边缘触发 epoll；timing wheel；协议解析留在用户态。</p>
+  <p>SO_REUSEPORT（一个 socket 选项，允许多个进程绑同一个端口，由内核把新连接分给它们）内核分流；每 worker 一 <code>io_context</code> 并 pin CPU（把线程绑定在固定核上跑，避免来回漂移）；每连接内存压到 10–30 KB；边缘触发 epoll（只在状态发生变化时通知一次、不清零的 epoll 模式）；timing wheel（时间轮——用轮盘格子管理海量定时器，代替每个连接一个定时器）；协议解析留在用户态。</p>
 
   <div class="box tip">
     本章给的是<strong>技术手段清单</strong>。想看这些手段怎么由需求推导出来——每连接内存为什么是 10 KB 而不是 124 KB、时间轮换掉定时器省了多少、shared-nothing 之后跨核下发怎么写、以及 30 万连接怎么在不打爆握手 CPU 的前提下滚动升级——看
@@ -1012,17 +1012,17 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
     </div>
   </div>
 
-  <p><a href="https://github.com/envoyproxy/envoy" style="color:var(--accent)">Envoy</a> 是 Service Mesh 事实数据平面（Istio / Consul / AWS App Mesh），C++14。</p>
+  <p><a href="https://github.com/envoyproxy/envoy" style="color:var(--accent)">Envoy</a> 是 Service Mesh（服务网格——在业务进程旁边塞一个代理进程，统一接管服务间流量的那套架构）事实数据平面（真正转发流量的那个组件，Istio / Consul / AWS App Mesh），C++14。</p>
 
   <h3 id="s14-1">14.1 Envoy 架构亮点</h3>
-  <p>每线程一个事件循环；Listener / Filter chain 可插拔；xDS（gRPC streaming）热更新；HTTP/1.1/2/3；WASM filter 避免给每个扩展编 C++。</p>
+  <p>每线程一个事件循环；Listener / Filter chain（监听器/过滤器链——流量进来依次穿过的一串可插拔处理环节）可插拔；xDS（一套用 gRPC 流式下发的配置协议，改配置不用重启）热更新；HTTP/1.1/2/3；WASM filter 避免给每个扩展编 C++。</p>
 
   <h3 id="s14-2">14.2 Envoy 的"为什么 C++"</h3>
-  <p>选 C++：ms 级 P99、内存可预测、跟 BoringSSL / gRPC 同语言。门槛靠 WASM / Lua filter 对外放开。</p>
+  <p>选 C++：ms 级 P99（99 分位延迟——把所有请求按耗时排序后第 99% 那个位置的成绩，代表最差用户体验的底线）、内存可预测、跟 BoringSSL / gRPC 同语言。门槛靠 WASM / Lua filter 对外放开。</p>
 
   <h3 id="s14-3">14.3 Envoy 与你自家 C++ 服务的关系</h3>
   <ul>
-    <li>Envoy 作为 sidecar 反向代理 → 你的 C++ 服务只需关心业务逻辑</li>
+    <li>Envoy 作为 sidecar（跟业务进程同机部署的伴生代理，流量进出都先过它）反向代理 → 你的 C++ 服务只需关心业务逻辑</li>
     <li>Envoy 处理 mTLS / 限流 / 熔断 / 重试 / 灰度 → 减少自家代码</li>
     <li>但增加一层 latency（~0.5-2 ms / hop）</li>
   </ul>
@@ -1038,19 +1038,19 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </div>
 
   <h3 id="s15-1">15.1 案例 1：行情广播服务（金融）</h3>
-  <p>百万订阅、5 ms 内送达。Disruptor + 每核 Asio + SO_REUSEPORT + 用户态 SSL；P99 推送 2.3 ms。</p>
+  <p>百万订阅、5 ms 内送达。Disruptor（无锁环形队列，靠单写者原则做到极低延迟的消息传递框架）+ 每核 Asio + SO_REUSEPORT + 用户态 SSL；P99 推送 2.3 ms。</p>
 
   <h3 id="s15-2">15.2 案例 2：实时游戏服务器</h3>
-  <p>10 万玩家、30 Hz。QUIC stream per player（丢包不影响他人）+ 边缘 PoP + 房间分片。</p>
+  <p>10 万玩家、30 Hz。QUIC stream per player（每个玩家一条独立流，他的丢包不影响别人）+ 边缘 PoP（离用户最近的接入机房）+ 房间分片。</p>
 
   <h3 id="s15-3">15.3 案例 3：微服务后端</h3>
-  <p>gRPC + Envoy sidecar + OpenTelemetry。业务用 Callback API / asio-grpc；mTLS / 重试 / 熔断下沉到 sidecar。</p>
+  <p>gRPC + Envoy sidecar + OpenTelemetry（统一的指标/日志/链路追踪采集标准）。业务用 Callback API / asio-grpc；mTLS / 重试 / 熔断下沉到 sidecar。</p>
 
   <h3 id="s15-4">15.4 案例 4：CDN 边缘节点</h3>
-  <p>百万 QPS、HTTP/3 优先。用户态协议栈 + XDP/eBPF 打 DDoS。</p>
+  <p>百万 QPS、HTTP/3 优先。用户态协议栈（把 TCP/IP 整套搬进应用进程里自己处理，绕开内核路径）+ XDP/eBPF 打 DDoS（在网卡驱动层就丢弃攻击包的内核可编程技术）。</p>
 
   <h3 id="s15-5">15.5 案例 5：物联网网关</h3>
-  <p>MQTT 长连接、断线频繁。Asio broker + 每连接 strand；单机 50 万连接约 10 GB。断线 5 min 内复连保留会话。</p>
+  <p>MQTT（物联网领域最常用的轻量发布/订阅协议）长连接、断线频繁。Asio broker（消息中转站，设备发来的消息经它分发给订阅者）+ 每连接 strand；单机 50 万连接约 10 GB。断线 5 min 内复连保留会话。</p>
 </section>
 
 <section class="chapter" id="s16">
@@ -1101,10 +1101,10 @@ asio::awaitable&lt;<span class="kw">void</span>&gt; <span class="fn">listener</s
   </table>
 
   <h3 id="s16-2">16.2 异步代码风格选型</h3>
-  <p>对照 §4：遗留用回调，生产用协程，C++26 / GPU 异步再布局 Sender。</p>
+  <p>对照 §4：遗留用回调（callback，把「完成后要做的事」作为函数传进去），生产用协程（coroutine，能在等待时自动挂起、完成后从断点继续执行的函数），C++26 / GPU 异步再布局 Sender。</p>
 
   <h3 id="s16-3">16.3 io_context 多线程模型选型</h3>
-  <p>对照 §3.4：QPS 低用单线程；共享 context 必须 strand；&gt;100k 且要亲和则每核一个 <code>io_context</code> + SO_REUSEPORT。</p>
+  <p>对照 §3.4：QPS（每秒查询数，衡量吞吐的基本单位）低用单线程；共享 context 必须 strand；&gt;100k 且要亲和（CPU affinity，让线程固定在某个核上吃缓存）则每核一个 <code>io_context</code> + SO_REUSEPORT。</p>
 </section>
 
 <section class="chapter" id="s17">

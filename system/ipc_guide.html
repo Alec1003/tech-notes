@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>多进程与进程间通信完全指南 · fork/exec / 管道 / 共享内存 / 信号量 / UDS 传 fd / 信号处理</title>
-<meta name="description" content="多进程与进程间通信完全指南：线程共享一切所以廉价，进程隔离一切所以可靠。这篇讲清 什么时候值得付出隔离的代价、 fork 到底复制了什么、六种 IPC 机制的真实取舍、 为什么信号处理函数里连 printf 都不能调，以及多进程服务模型里的惊群问题">
+<meta name="description" content="用大白话讲多进程与进程间通信 IPC：什么时候值得拆进程、fork 写时复制到底复制了什么、管道/共享内存/信号量/Unix 域套接字怎么选、为什么信号处理函数里连 printf 都不能调，以及 prefork、SO_REUSEPORT 与惊群问题">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/ipc_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/ipc_guide.html">
 <meta property="og:title" content="多进程与进程间通信完全指南 · fork/exec / 管道 / 共享内存 / 信号量 / UDS 传 fd / 信号处理">
-<meta property="og:description" content="多进程与进程间通信完全指南：线程共享一切所以廉价，进程隔离一切所以可靠。这篇讲清 什么时候值得付出隔离的代价、 fork 到底复制了什么、六种 IPC 机制的真实取舍、 为什么信号处理函数里连 printf 都不能调，以及多进程服务模型里的惊群问题">
+<meta property="og:description" content="用大白话讲多进程与进程间通信 IPC：什么时候值得拆进程、fork 写时复制到底复制了什么、管道/共享内存/信号量/Unix 域套接字怎么选、为什么信号处理函数里连 printf 都不能调，以及 prefork、SO_REUSEPORT 与惊群问题">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="多进程与进程间通信完全指南 · fork/exec / 管道 / 共享内存 / 信号量 / UDS 传 fd / 信号处理">
-<meta name="twitter:description" content="多进程与进程间通信完全指南：线程共享一切所以廉价，进程隔离一切所以可靠。这篇讲清 什么时候值得付出隔离的代价、 fork 到底复制了什么、六种 IPC 机制的真实取舍、 为什么信号处理函数里连 printf 都不能调，以及多进程服务模型里的惊群问题">
+<meta name="twitter:description" content="用大白话讲多进程与进程间通信 IPC：什么时候值得拆进程、fork 写时复制到底复制了什么、管道/共享内存/信号量/Unix 域套接字怎么选、为什么信号处理函数里连 printf 都不能调，以及 prefork、SO_REUSEPORT 与惊群问题">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -101,7 +101,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 60 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 65 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -142,7 +142,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">面试高频</span>
-      <span class="pill green">阅读时长 ~60 min</span>
+      <span class="pill green">阅读时长 ~65 min</span>
       <span class="pill amber">前置 进程调度 · 文件描述符</span>
     </div>
     <div class="meta">
@@ -180,7 +180,7 @@
 
   <h3>内核眼里没有「进程」和「线程」，只有 task_struct</h3>
 
-  <p>调度器调度的单位统一叫 <em>task</em>，每个 task 一个 <code>task_struct</code>。<code>fork</code>、<code>pthread_create</code>、容器运行时建沙箱，走的都是<strong>同一个 <code>clone</code></strong>，区别只在于传了哪些 <code>CLONE_*</code>——也就是<strong>哪些资源共享而不是复制</strong>。</p>
+  <p>调度器调度的单位统一叫 <em>task</em>（任务，内核眼里的一等公民，不分「进程」还是「线程」），每个 task 一个 <code>task_struct</code>（内核给每个任务建的档案，记录它打开的文件、地址空间、信号处理等一切）。<code>fork</code>、<code>pthread_create</code>、容器运行时建沙箱，走的都是<strong>同一个 <code>clone</code></strong>，区别只在于传了哪些 <code>CLONE_*</code> 标志——也就是告诉内核<strong>哪些资源要共享而不是复制</strong>。好比同一台复印机，按不同的预设按钮，复印出来的东西共享程度不同。</p>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -250,7 +250,7 @@
 
   <h3>隔离的代价：一组可比较的量级</h3>
 
-  <p>要谈开销就谈数量级。下表是一台普通 x86-64 服务器（内核 6.x、进程常驻约 50 MB、不跨 NUMA）上的<strong>量级观察</strong>：换硬件绝对值能差 2–3 倍，相对关系稳定。</p>
+  <p>要谈开销就谈数量级。下表是一台普通 x86-64 服务器（内核 6.x、进程常驻约 50 MB、不跨 NUMA——即内存访问代价均等，不涉及远端节点）上的<strong>量级观察</strong>：换硬件绝对值能差 2–3 倍，但相对关系是稳定的。</p>
 
   <table>
     <thead><tr><th>操作</th><th>量级</th><th>主要成本在哪</th><th>随什么增长</th></tr></thead>
@@ -277,7 +277,7 @@
     <div class="t"><h2>fork / exec / wait 全流程</h2><p class="sub">一次调用，两次返回</p></div>
   </div>
 
-  <div class="def"><strong><code>fork()</code></strong>：复制当前进程，产生一个几乎一模一样的子进程。它<strong>调用一次，返回两次</strong>——父进程里返回子进程 pid，子进程里返回 0，出错返回 -1。这是 Unix 里最反直觉也最优雅的设计之一。</div>
+  <div class="def"><strong><code>fork()</code></strong>：复制当前进程，产生一个几乎一模一样的子进程。它<strong>调用一次，返回两次</strong>——好比一条岔路口：父进程走左边那条，拿到的是子进程的 pid；子进程走右边那条，拿到的是 0；出错的话两边都没走成，返回 -1。这是 Unix 里最反直觉也最优雅的设计之一。</div>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -361,7 +361,7 @@ pid_t pid = fork();
 
   <div class="analogy">COW 像<strong>合同的复印件</strong>：双方共用锁在柜子里的同一份原件，谁都不许改；哪天甲方真要批注某一页，才把<strong>那一页</strong>复印出来改自己的副本。但<strong>柜子的索引目录（页表）是一开始就要抄一份的</strong>。</div>
 
-  <p>内核只复制<strong>页表</strong>，把双方私有可写页的 PTE 改成只读、物理页引用计数加一；任一方写入时触发缺页，才真正分配新页。<strong>页表不是 COW 的，它是实打实复制的</strong>——10 GB 匿名内存有约 262 万个 PTE，光最末级页表就 20 MB，再加各级目录、每个 VMA 的结构复制、对每张物理页的原子加一，<strong>几十毫秒跑不掉</strong>，而这段时间父进程<strong>完全停住</strong>。</p>
+  <p>内核只复制<strong>页表</strong>（记录「虚拟地址对应哪张物理页」的目录），把双方私有可写页的 PTE（页表条目，一条记录对应一页）改成只读、物理页引用计数加一；等任何一方真的写入时触发缺页，内核这才分配新页、把内容抄过去。<strong>页表本身不是 COW 的，它是实打实复制的</strong>——10 GB 匿名内存有约 262 万个 PTE，光最末级页表就 20 MB，再加各级目录、每个 VMA（内核记录一段连续虚拟内存的账本条目）的结构复制、对每张物理页的原子加一，<strong>几十毫秒跑不掉</strong>，而这段时间父进程是<strong>完全停住</strong>的。</p>
 
   <div class="box star"><strong>Redis 的 <code>BGSAVE</code> 是这套机制最著名的现场。</strong><strong>①</strong> fork 那一刻父进程卡住几十到几百毫秒，成为 P99 的一根尖刺（Redis 把它暴露成 <code>latest_fork_usec</code>，判读方式是「它应当和数据集大小大致成正比」）；<strong>②</strong> 之后父进程每改一个 key 就多占一张物理页，写入密集时<strong>最坏情况内存翻倍</strong>——所以「数据集 8 GB、机器 16 GB」不是宽裕，是<strong>刚好够</strong>。</div>
 
@@ -396,7 +396,7 @@ pid_t pid = fork();
 
   <h3>fork 的三种替代品：vfork / posix_spawn / 提前 fork</h3>
 
-  <p><code>fork</code> 之后马上 <code>exec</code>，刚复制的整套页表会在 <code>execve</code> 里被<strong>整个丢掉</strong>。<code>vfork</code> 当年就是为这个场景发明的，今天它的正确用法是<strong>不要自己用</strong>。</p>
+  <p><code>fork</code> 之后马上 <code>exec</code>（把当前进程的程序整个换成另一个可执行文件），刚复制的那整套页表会在 <code>execve</code> 里被<strong>整个丢掉</strong>——等于白抄了一遍目录。<code>vfork</code> 当年就是为省掉这遍白抄而发明的，今天它的正确用法是<strong>不要自己用</strong>。</p>
 
   <table>
     <thead><tr><th>方式</th><th>复制页表</th><th>子进程能做什么</th><th>危险性</th><th>什么时候用</th></tr></thead>
@@ -477,7 +477,7 @@ pid_t pid = fork();
 
   <h3>一次 SIGCHLD 可能对应 N 个已退出的子进程</h3>
 
-  <p>根因几乎总是<strong>信号不排队</strong>：内核对每个未决的标准信号只维护<strong>一个挂起位</strong>，五个子进程同一瞬间退出，五次置位合并成一次递送。处理函数只 <code>waitpid</code> 一次，剩下四个就永远没人管，而且<strong>不会再有第二次 SIGCHLD 提醒你</strong>。</p>
+  <p>根因几乎总是<strong>信号不排队</strong>：内核对每个未决的标准信号只维护<strong>一个挂起位</strong>（一个「有事件」的标记位，不带数量信息），所以五个子进程同一瞬间退出时，五次置位会合并成一次递送。如果处理函数只 <code>waitpid</code> 一次，就只回收了一个，剩下四个永远没人管——而且内核<strong>不会再发第二次 SIGCHLD 提醒你</strong>，因为挂起位已经被清掉了。</p>
 
 <pre><span class="kw">static</span> <span class="kw">void</span> on_sigchld(<span class="kw">int</span> <span class="cm">/*sig*/</span>) {
     <span class="kw">int</span> saved = errno;                 <span class="cm">// ★ ① waitpid 会改 errno，必须存起来——</span>
@@ -541,7 +541,7 @@ pid_t pid = fork();
 
   <h3>多线程程序里 fork：最危险的组合</h3>
 
-  <div class="danger"><strong><code>fork</code> 只复制调用它的那个线程。</strong>其他线程在子进程里<strong>凭空消失</strong>——但它们持有的锁不会。锁的状态就是内存里的一个值，被原样复制过去，而能解开它的线程已经不存在。所以 POSIX 规定 <code>fork</code> 之后、<code>exec</code> 之前<strong>只能调用 async-signal-safe 的函数</strong>。</div>
+  <div class="danger"><strong><code>fork</code> 只复制调用它的那个线程。</strong>其他线程在子进程里<strong>凭空消失</strong>——但它们持有的锁不会跟着消失。原因在于：锁的状态就是内存里的一个值，fork 会把这个值原样复制过去，可本来能解开它的那个线程在子进程里已经不存在了，于是这把锁永远等不到主人。所以 POSIX 规定 <code>fork</code> 之后、<code>exec</code> 之前<strong>只能调用 async-signal-safe 的函数</strong>（在异步信号场景下也保证安全的函数白名单，见 §8）。</div>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -640,7 +640,7 @@ pid_t pid = fork();
 
   <h3>拷贝次数：选型的核心判据</h3>
 
-  <p>时延数字容易记混，但<strong>「这条路上数据被 memcpy 了几次」是可以数出来的</strong>，而且它直接决定了数据量大时的差距——这比背延迟表可靠得多。</p>
+  <p>时延数字容易记混，但<strong>「这条路上数据被 memcpy 了几次」是可以数出来的</strong>：数据每被搬运一次就要花一份时间，所以拷贝次数直接决定了数据量大时的差距——这比背延迟表可靠得多。</p>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -737,7 +737,7 @@ pid_t pid = fork();
 
   <div class="note"><strong>上面的时延口径</strong>都是<strong>一字节 ping-pong 往返除以二</strong>：同机、两个进程绑在<strong>同一 NUMA 节点的不同物理核</strong>、CPU 调频锁 performance。挤在同一个核上会因为每次往返都要等对方被调度而慢一倍以上，所以不绑核直接测的结果会在两个数之间随机跳，容易误判成「UDS 抖动很大」。也别拿它推算吞吐：<strong>时延要小包立即发、吞吐要攒批</strong>。</div>
 
-  <div class="box star"><strong>选型口诀</strong>：<strong>控制信令走 UDS</strong>（双向、有连接语义、能传 fd、能拿对端 uid，还能无缝换成 TCP 走远程），<strong>大块数据走共享内存</strong>，<strong>两者配合</strong>——共享内存放数据，socket 传「第几号缓冲区就绪了」这条几十字节的消息。Chrome、PostgreSQL、各类行情系统都是这个套路。</div>
+  <div class="box star"><strong>选型口诀</strong>：<strong>控制信令走 UDS</strong>（双向、有连接语义、能传 fd、能拿对端 uid，将来还能无缝换成 TCP 走远程），<strong>大块数据走共享内存</strong>，<strong>两者配合</strong>——好比餐厅里传菜口和电话的分工：共享内存是那个大传菜口，专门走「菜」；socket 是电话，只传「3 号桌的菜好了」这条几十字的消息。Chrome、PostgreSQL、各类行情系统都是这个套路。</div>
 
   <div class="warn"><strong>System V IPC（<code>shmget</code>/<code>semget</code>/<code>msgget</code>）不要在新代码里用了。</strong>标识符是全局整数 key 而不是文件路径，权限管理弱、命名容易冲突、<strong>进程崩溃后资源不自动回收</strong>（要靠 <code>ipcrm</code> 手动清）。POSIX 版本用文件路径命名、走 <code>/dev/shm</code>、支持 fd 语义、能配合 <code>epoll</code>，全面更优。</div>
 </section>
@@ -749,7 +749,7 @@ pid_t pid = fork();
     <div class="t"><h2>管道家族</h2><p class="sub">最简单，也最容易挂死</p></div>
   </div>
 
-  <p>管道的用法在 §2 那段编排里已经写全了。真正需要理解的不是 API，而是<strong>「什么时候会读到 EOF」这条规则</strong>——它是绝大多数管道事故的源头。</p>
+  <p>管道的用法在 §2 那段编排里已经写全了。真正需要理解的不是 API，而是<strong>「什么时候会读到 EOF」这条规则</strong>——EOF（End Of File，读到了「后面没有数据了」的标记）是绝大多数管道事故的源头。</p>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -789,7 +789,7 @@ pid_t pid = fork();
 
   <h3>管道容量与死锁</h3>
 
-  <p>管道容量固定（Linux 默认 <strong>16 个页 = 64 KB</strong>）。写满则 <code>write</code> 阻塞，读空则 <code>read</code> 阻塞。于是「用管道调用外部程序」这个最常见的场景里埋着一个经典死锁：</p>
+  <p>管道容量固定（Linux 默认 <strong>16 个页 = 64 KB</strong>）。容量写满则 <code>write</code> 阻塞，数据读空则 <code>read</code> 阻塞。于是「用管道调用外部程序」这个最常见的场景里埋着一个经典死锁——好比两根单向水管同时对灌，两边的水龙头都被堵住，谁也流不动：</p>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -837,7 +837,7 @@ pid_t pid = fork();
 
   <h3>PIPE_BUF：多个进程写同一个管道会不会交错</h3>
 
-  <div class="def"><strong><code>PIPE_BUF</code></strong>（Linux 上是 <strong>4096</strong>，POSIX 只保证至少 512）：<strong>不超过这个字节数的一次 <code>write</code> 是原子的</strong>——要么整块进入管道，要么一个字节都不进，<strong>绝不会和另一个写者的数据交织</strong>。超过之后内核可能写一部分、让别人插进来、再写剩下的。</div>
+  <div class="def"><strong><code>PIPE_BUF</code></strong>（Linux 上是 <strong>4096</strong>，POSIX 只保证至少 512）：<strong>不超过这个字节数的一次 <code>write</code> 是原子的</strong>——所谓原子，就是「要么整块进入管道，要么一个字节都不进」，<strong>绝不会和另一个写者的数据交织</strong>。超过之后内核可能写一部分、让别人插进来、再写剩下的。</div>
 
   <p>这条规则支撑了一个很实用的模式：<strong>多个进程往同一个管道写日志，只要每条一次 <code>write</code> 且不超过 4 KB，就不需要任何锁</strong>。判据只有「单次 <code>write</code> 有没有超过 <code>PIPE_BUF</code>」：<strong>「我测了几次没交错」不能证明写法安全</strong>。</p>
 
@@ -853,7 +853,7 @@ pid_t pid = fork();
 
   <h3>FIFO：给没有亲缘关系的进程用的管道</h3>
 
-  <p>FIFO（<code>mkfifo</code>）就是给管道起个文件系统里的名字，谁都能 <code>open</code>；行为和匿名管道完全一样（同一份内核实现），<strong>唯一需要额外理解的是 <code>open</code> 的阻塞语义</strong>。它是文件系统里的真实节点，<strong>谁创建谁负责 <code>unlink</code></strong>。</p>
+  <p>FIFO（<code>mkfifo</code>，也叫命名管道）就是给管道在文件系统里起个名字，谁都能 <code>open</code>；行为和匿名管道完全一样（同一份内核实现），<strong>唯一需要额外理解的是 <code>open</code> 的阻塞语义</strong>。它是文件系统里的真实节点，<strong>谁创建谁负责 <code>unlink</code></strong>（删掉这个文件名，否则它会一直留在目录里）。</p>
 
   <table>
     <thead><tr><th>打开方式</th><th>没有对端时的行为</th><th>用途</th></tr></thead>
@@ -1023,7 +1023,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>进程崩溃之后：卡死排查与三条兜底</h3>
 
-  <p>共享内存最大的运维难题不是性能，是<strong>「有个进程死在临界区里了」</strong>。网络通信里对端挂掉会断连、<code>read</code> 返回 0，你至少<strong>知道</strong>出事了；共享内存里对端挂掉<strong>什么都不会发生</strong>，锁一直锁着，剩下的进程安静地卡死。</p>
+  <p>共享内存最大的运维难题不是性能，而是<strong>「有个进程死在临界区（访问共享数据的那段受保护代码）里了」</strong>。网络通信里对端挂掉会断连、<code>read</code> 返回 0，你至少<strong>知道</strong>出事了；共享内存里对端挂掉却<strong>什么都不会发生</strong>——没有任何事件通知你，锁一直锁着，剩下的进程安静地卡死。</p>
 
   <div class="point"><div class="label">卡住时的三板斧</div><div><strong>①</strong> <code>cat /proc/&lt;pid&gt;/syscall</code>，首个数字是 202（<code>futex</code>）就说明卡在锁或信号量上；<strong>②</strong> <code>grep -l /dev/shm/frames /proc/*/maps</code> 列出所有映射了这块内存的进程（比 <code>lsof</code> 快，也不要 root）——比预期的多，八成是<strong>上一代进程没退干净</strong>，这正是 magic + version 要防的；<strong>③</strong> System V 侧看 <code>ipcs -m</code> 里 <code>nattch=0</code> 的泄漏段。</div></div>
 
@@ -1041,7 +1041,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
     <div class="t"><h2>Unix 域套接字与传 fd</h2><p class="sub">本机 IPC 的通用答案</p></div>
   </div>
 
-  <p>UDS 用的是 socket API，但数据不经过网络协议栈——内核直接在两个 socket 的缓冲区之间搬运。服务端的写法就是普通四步：<code>socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)</code> → 填 <code>sockaddr_un.sun_path</code> → <strong><code>unlink</code> 掉上次残留的 socket 文件</strong>（否则 <code>bind</code> 直接 <code>EADDRINUSE</code>）→ <code>bind</code> + <code>chmod 0660</code>（<strong>权限靠文件系统控制</strong>）→ <code>listen</code>。真正独有的能力有两个：传 fd 和拿对端凭证。</p>
+  <p>UDS（Unix 域套接字，Unix Domain Socket——本机专用的套接字）用的是 socket API，但数据不经过网络协议栈——内核直接在两个 socket 的缓冲区之间搬运。服务端的写法就是普通四步：<code>socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)</code> → 填 <code>sockaddr_un.sun_path</code> → <strong><code>unlink</code> 掉上次残留的 socket 文件</strong>（否则 <code>bind</code> 直接 <code>EADDRINUSE</code>）→ <code>bind</code> + <code>chmod 0660</code>（<strong>权限靠文件系统控制</strong>）→ <code>listen</code>。真正独有的能力有两个：传 fd 和拿对端凭证。</p>
 
   <div class="def"><strong>SCM_RIGHTS</strong>：通过 <code>sendmsg</code> 的辅助数据把一个<strong>打开的文件描述符</strong>传给另一个进程。注意传的不是那个整数，而是内核里的<strong>文件表项引用</strong>。</div>
 
@@ -1145,7 +1145,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>为什么 UDS 比 TCP over loopback 快</h3>
 
-  <p>「都是本机，不都是内存拷贝吗」——差别在于 TCP 那条路上还挂着一整套<strong>为不可靠网络设计的机制</strong>，即使在 loopback 上它们也照跑不误：</p>
+  <p>「都是本机，不都是内存拷贝吗」——差别在于 TCP 那条路上还挂着一整套<strong>为不可靠网络设计的机制</strong>（重传、拥塞控制、握手……），目的是防丢包防乱序；本机通信根本不存在这些问题，但即使在 loopback（127.0.0.1 回环地址）上这些机制也照跑不误，于是全是白干的活：</p>
 
   <table>
     <thead><tr><th>环节</th><th>TCP over loopback</th><th>Unix 域套接字</th></tr></thead>
@@ -1180,7 +1180,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>抽象命名空间：Linux 特有，进程退出自动清理</h3>
 
-  <p>路径式 UDS 有两个烦人处：要挑目录并保证权限正确，以及进程崩溃后留下死 socket 文件让下次 <code>bind</code> 报 <code>EADDRINUSE</code>。Linux 的办法是把 <code>sun_path[0]</code> 设成 <code>'\0'</code>、名字写在它后面，这个名字活在纯内核里，最后一个引用关闭时自动消失。名字<strong>不以 <code>'\0'</code> 结尾</strong>，长度完全由 <code>addrlen</code> 决定：<code>offsetof(sockaddr_un, sun_path) + 1 + strlen(name)</code>。</p>
+  <p>路径式 UDS 有两个烦人处：要挑目录并保证权限正确，以及进程崩溃后留下死 socket 文件让下次 <code>bind</code> 报 <code>EADDRINUSE</code>。Linux 的办法是「抽象命名空间」——把 <code>sun_path[0]</code> 设成 <code>'\0'</code>、名字写在它后面，这个名字活在纯内核里（文件系统里看不见它），最后一个引用关闭时自动消失。注意名字<strong>不以 <code>'\0'</code> 结尾</strong>，长度完全由 <code>addrlen</code> 决定：<code>offsetof(sockaddr_un, sun_path) + 1 + strlen(name)</code>。</p>
 
   <div class="point warn"><div class="label">最容易写错的一处：用 <code>sizeof(a)</code> 当 <code>addrlen</code></div><div>那样名字后面会跟上 107 个 <code>'\0'</code>，变成一个<strong>完全不同</strong>的抽象名。客户端按正确长度连过来就是 <code>ECONNREFUSED</code>，而<strong>两边打印出来一模一样</strong>。确认方式是 <code>ss -xl</code>：抽象名显示成 <code>@myapp-ctl</code>，路径式的则能在文件系统里看到类型为 <code>s</code> 的节点。</div></div>
 
@@ -1218,7 +1218,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>async-signal-safe：白名单有多短</h3>
 
-  <div class="danger">信号处理函数可能在<strong>任意一条指令之间</strong>被插入执行——包括 <code>malloc</code> 正在改动堆链表的中途。此时再调 <code>malloc</code>，它会看到一个<strong>不一致的堆</strong>，轻则数据损坏，重则死锁。POSIX 的安全白名单只有约一百个系统调用级函数（<code>write</code>、<code>read</code>、<code>_exit</code>、<code>kill</code>、<code>waitpid</code>、<code>sem_post</code> 等），<strong>名单外</strong>包括 <code>printf</code> 全家、<code>malloc</code>/<code>new</code>、<code>std::string</code>、几乎所有 C++ 标准库和日志库。</div>
+  <div class="danger">信号处理函数可能在<strong>任意一条指令之间</strong>被插入执行——包括 <code>malloc</code> 正在改动堆链表的中途。此时处理函数里再调 <code>malloc</code>，它会看到一个<strong>不一致的堆</strong>（链表改到一半的状态），轻则数据损坏，重则死锁。POSIX 的安全白名单只有约一百个系统调用级函数（<code>write</code>、<code>read</code>、<code>_exit</code>、<code>kill</code>、<code>waitpid</code>、<code>sem_post</code> 等），<strong>名单外</strong>包括 <code>printf</code> 全家、<code>malloc</code>/<code>new</code>、<code>std::string</code>、几乎所有 C++ 标准库和日志库。</div>
 
   <table>
     <thead><tr><th>陷阱</th><th>说明</th><th>对策</th></tr></thead>
@@ -1254,7 +1254,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>sigaction：把语义写死</h3>
 
-  <p>注册一律用 <code>sigaction</code>，因为 <code>signal()</code> 在「是否自动重装 handler」「执行期间是否屏蔽同种信号」上各平台行为不同。有一个字段容易被忽略：<code>sa_mask</code> 是<strong>「执行本 handler 期间额外屏蔽哪些信号」</strong>——当前处理的那个会被<strong>自动</strong>屏蔽（除非加 <code>SA_NODEFER</code>），别的不会，所以共用同一 handler 的信号要一起放进去，否则 handler 嵌套、共享状态就乱了。</p>
+  <p>注册一律用 <code>sigaction</code>，因为 <code>signal()</code> 在「是否自动重装 handler」「执行期间是否屏蔽同种信号」上各平台行为不同。有一个字段容易被忽略：<code>sa_mask</code> 是<strong>「执行本 handler 期间额外屏蔽哪些信号」</strong>——当前处理的那个信号会被<strong>自动</strong>屏蔽（除非加 <code>SA_NODEFER</code>），别的信号不会，所以共用同一 handler 的信号要一起放进去，否则 handler 会嵌套执行、共享状态就乱了。</p>
 
   <table>
     <thead><tr><th><code>sa_flags</code></th><th>作用</th><th>什么时候用</th></tr></thead>
@@ -1271,7 +1271,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>EINTR：SA_RESTART 救不了所有人</h3>
 
-  <p><code>SA_RESTART</code> 给了很多人一种错觉：加上它就不用管 <code>EINTR</code> 了。<strong>不是的</strong>——有一批调用<strong>无论如何都会返回 <code>EINTR</code></strong>，恰恰是事件循环里最核心的那几个：</p>
+  <p><code>SA_RESTART</code> 给了很多人一种错觉：加上它就不用管 <code>EINTR</code>（系统调用被信号打断的错误码）了。<strong>不是的</strong>——有一批调用<strong>无论如何都会返回 <code>EINTR</code></strong>，恰恰是事件循环里最核心的那几个：</p>
 
   <table>
     <thead><tr><th>类别</th><th>典型调用</th><th>加了 <code>SA_RESTART</code> 会怎样</th></tr></thead>
@@ -1287,7 +1287,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>把信号纳入事件循环：self-pipe 与 signalfd</h3>
 
-  <p>只置标志的方案有一个<strong>无法用标志本身解决</strong>的竞态，根治思路只有一个：<strong>让信号变成一个 fd 上的可读事件</strong>，和其它 IO 事件走同一条路，竞态自然消失。</p>
+  <p>只置标志的方案有一个<strong>无法用标志本身解决</strong>的竞态：主循环刚检查完标志、还没进入等待的空档里信号到了，之后进程就睡死在等待里。根治思路只有一个：<strong>让信号变成一个 fd 上的可读事件</strong>，和其它 IO 事件走同一条路，竞态自然消失。</p>
 
   <div class="fig">
   <div style="overflow-x:auto">
@@ -1484,7 +1484,7 @@ sem_post(&amp;r-&gt;items);                       <span class="cm">// 通知消�
 
   <h3>SO_REUSEPORT 的写法与三个约束</h3>
 
-  <p>每个 worker <strong>各自</strong>创建 socket：<code>socket</code> → <strong><code>setsockopt(SO_REUSEPORT)</code>（必须在 <code>bind</code> 之前）</strong> → <code>bind</code> → <code>listen</code>，之后主循环里就是最普通的 <code>accept4(s, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC)</code>。错误分支里有一个要单独处理：<strong><code>EMFILE</code> 时不能简单 <code>continue</code></strong>，否则「连接还排在队列里、每次 accept 都失败」会变成 100% CPU 忙循环；经典做法是预留一个 fd，<code>EMFILE</code> 时关掉它、<code>accept</code> 一个、立刻 <code>close</code>、再重开。</p>
+  <p>每个 worker <strong>各自</strong>创建 socket：<code>socket</code> → <strong><code>setsockopt(SO_REUSEPORT)</code>（必须在 <code>bind</code> 之前）</strong> → <code>bind</code> → <code>listen</code>，之后主循环里就是最普通的 <code>accept4(s, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC)</code>。错误分支里有一个要单独处理：<strong><code>EMFILE</code>（进程的 fd 用完了）时不能简单 <code>continue</code></strong>——否则「连接还排在队列里、每次 accept 都失败」会变成 100% CPU 忙循环；经典做法是预留一个 fd，<code>EMFILE</code> 时关掉它、腾出名额 <code>accept</code> 一个、立刻 <code>close</code>、再重开。</p>
 
   <table>
     <thead><tr><th>约束</th><th>说明</th><th>写错的表现</th></tr></thead>

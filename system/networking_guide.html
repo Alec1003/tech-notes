@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>C++ 网络编程 — 可视化深度指南</title>
-<meta name="description" content="C++ 网络编程 — 可视化深度指南：覆盖 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3）的工程化全景指南">
+<meta name="description" content="C++ 网络编程 — 可视化深度指南：用白话讲透 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3），顺着读就能懂">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/networking_guide.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/networking_guide.html">
 <meta property="og:title" content="C++ 网络编程 — 可视化深度指南">
-<meta property="og:description" content="C++ 网络编程 — 可视化深度指南：覆盖 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3）的工程化全景指南">
+<meta property="og:description" content="C++ 网络编程 — 可视化深度指南：用白话讲透 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3），顺着读就能懂">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="C++ 网络编程 — 可视化深度指南">
-<meta name="twitter:description" content="C++ 网络编程 — 可视化深度指南：覆盖 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3）的工程化全景指南">
+<meta name="twitter:description" content="C++ 网络编程 — 可视化深度指南：用白话讲透 TCP/IP、Socket、粘包拆包、Protobuf、高并发、零拷贝与现代协议（QUIC/HTTP3/TLS1.3），顺着读就能懂">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -191,7 +191,9 @@
     </div>
   </div>
 
-  <div class="note"><strong>本文站在用户态。</strong>socket API、协议语义与服务端模型——「你的代码怎么用网络」。包在<strong>内核里</strong>走的那一段（网卡 ring buffer → NAPI → GRO → netfilter → socket 队列）以及 conntrack / tc / XDP / 丢包分层，见 <a href="kernel_network_stack.html">内核网络栈与流量治理</a>。代码没问题但包就是丢，往那边看。</div>
+  <div class="note"><strong>本文站在用户态。</strong>只讲 socket API、协议语义与服务端模型——也就是「你的代码怎么用网络」。数据包在<strong>内核里</strong>走的那一段（网卡 ring buffer → NAPI → GRO → netfilter → socket 队列）以及 conntrack / tc / XDP / 丢包分层，见 <a href="kernel_network_stack.html">内核网络栈与流量治理</a>。如果代码没问题但包就是丢，往那边看。</div>
+
+<p>两种传输协议先用一句话建立直觉：<strong>TCP</strong>（Transmission Control Protocol，可靠传输——数据不丢、不乱序、不重复，代价是握手和重传的开销）像挂号信，丢了有人负责补寄；<strong>UDP</strong>（User Datagram Protocol，不发不管的轻量投递——发出去就不管了）像普通明信片，快但没有承诺。</p>
 
 <h3 id="s1-1">1.1 TCP/IP 四层模型 vs OSI 七层模型</h3>
 <div class="fig">
@@ -361,7 +363,7 @@
   </div>
 
 <div class="card">
-<p>Socket 是应用层与传输层的 POSIX API。流程见图，下面只记每一步会踩的坑。</p>
+<p>Socket（套接字，操作系统提供的一组网络编程接口，用一个 fd 代表一条通信通道）是应用层与传输层之间的 POSIX API。通信流程见图，下面只记每一步会踩的坑。</p>
 </div>
 
 <h3 id="s2-1">2.1 TCP Socket 通信流程</h3>
@@ -491,7 +493,7 @@
   <text x="350" y="165" text-anchor="middle" fill="var(--text-dim)" font-size="10">总大小: 16 字节 = sizeof(sockaddr_in)</text>
 </svg>
 </div>
-<p><strong>字节序</strong>：x86 / 主流 ARM 是小端，TCP/IP 规定<strong>网络字节序 = 大端</strong>。所以 <code>sin_port</code>、<code>sin_addr</code> 以及自定义协议的长度字段，发送前 <code>htons</code> / <code>htonl</code>，接收后 <code>ntohs</code> / <code>ntohl</code>。单机内存读写不必关心；跨主机或落盘二进制时必须统一。</p>
+<p><strong>字节序</strong>（byte order，多字节数据在内存里的排列顺序）：x86 / 主流 ARM 是小端（低位字节放低地址），TCP/IP 规定<strong>网络字节序 = 大端</strong>（高位字节在前）。所以 <code>sin_port</code>、<code>sin_addr</code> 以及自定义协议的长度字段，发送前要用 <code>htons</code> / <code>htonl</code> 转成网络序，接收后用 <code>ntohs</code> / <code>ntohl</code> 转回来。单机内存读写不必关心；一旦字节要跨主机传输或落盘成二进制，就必须统一。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -511,7 +513,7 @@
   </div>
 
 <div class="card">
-<p>TCP 是<strong>字节流</strong>，没有消息边界。多条消息可能被合并（粘包），一条也可能被拆开（拆包）。这是 TCP 编程最常见的坑——下面图已经画清，工程上几乎总是走长度前缀。</p>
+<p>TCP 是<strong>字节流</strong>（一串没有分隔符的连续字节，好比一卷不断头的纸带），没有消息边界。于是多条消息可能被合并在一起送达（粘包），一条消息也可能被拆成几段到达（拆包）。这是 TCP 编程最常见的坑——下面图已经画清，工程上几乎总是用长度前缀（在每条消息前面加一个「这条消息有多长」的字段）解决。</p>
 </div>
 
 <h3 id="s3-1">3.1 问题图示</h3>
@@ -667,7 +669,7 @@ std::string <span class="fn">recvMessage</span>(<span class="kw">int</span> fd) 
     </div>
   </div>
 
-<p>Protobuf 比 JSON/XML 更小更快，带 Schema。线上走长度前缀包一层二进制即可——编码原理见图 4.4，不必再贴 .proto 样板。</p>
+<p>Protobuf（Protocol Buffers，Google 的二进制序列化方案——把结构化对象压成紧凑的字节串以便网络传输，传输后再还原）比 JSON/XML 更小更快，且带 Schema（.proto 文件描述的消息格式定义，相当于一份双方共同遵守的「数据合同」）。线上传输时走长度前缀包一层二进制即可——编码原理见图 4.4，不必再贴 .proto 样板。</p>
 
 <h3 id="s4-1">4.1 序列化协议对比</h3>
 <div class="fig">
@@ -799,7 +801,7 @@ std::string <span class="fn">recvMessage</span>(<span class="kw">int</span> fd) 
     </div>
   </div>
 
-<p>单机同时扛数万 TCP 连接，卡的是「一连接一线程」而不是 socket API。演进见图，对比见表，API 只留 epoll 那一段。</p>
+<p>单机同时扛数万 TCP 连接，卡住的不是 socket API，而是「一连接一线程」这个模型本身——线程数跟着连接数涨，先爆内存。演进路线见图，对比见表，API 只留 epoll（Linux 的高效 I/O 事件通知机制，见 5.2 详解）那一段。</p>
 
 <div class="note">本章给的是<strong>服务端模型的手段</strong>：epoll、Reactor、并发数与线程数怎么解耦。同一批技术被真实需求反推一遍是另一回事——每连接内存为什么必须压到 10 KB 量级、worker 怎么分片才不跨核抢连接表、握手 CPU 够不够，见 <a href="../architect/high_concurrency_gateway.html#s4">IoT 接入网关架构设计 · 线程模型</a> 与 <a href="../architect/high_concurrency_gateway.html#s5">每连接预算</a>。<strong>判据</strong>：要写一个能扛几万连接的服务，看本章；要回答「这样一台机器到底放得下多少连接、扩容按什么指标扩」，看那一篇。</div>
 
@@ -940,7 +942,7 @@ ev.data.fd = listenfd;
 </div>
 
 <div class="highlight-box">
-<strong>ET vs LT：</strong>LT 只要缓冲区有数据就反复通知，不容易写漏；ET 只在状态变化时通知一次，必须非阻塞循环读到 EAGAIN，否则连接会「假死」。nginx 用 ET，libevent 默认 LT——正确性先于那点唤醒次数。
+<strong>ET vs LT：</strong>LT（水平触发，Level-Triggered——只要缓冲区里还有数据没读完，epoll 就反复提醒你）不容易写漏；ET（边缘触发，Edge-Triggered——只在状态「发生变化」那一刻通知一次）必须配非阻塞 fd 循环读到 EAGAIN（表示「暂时没数据了」的错误码），否则剩下的数据不会再触发通知，连接会「假死」。nginx 用 ET，libevent 默认 LT——正确性先于那点唤醒次数。
 </div>
 </section>
 
@@ -960,7 +962,7 @@ ev.data.fd = listenfd;
     </div>
   </div>
 
-<p><strong>零拷贝</strong>砍掉文件传输里 CPU 参与的那两次拷贝。左边 4 次拷贝、右边 2 次 DMA，见图。</p>
+<p><strong>零拷贝</strong>（zero-copy，让数据不经过用户空间、由内核直接搬运，省掉 CPU 参与的拷贝）砍掉文件传输里 CPU 参与的那两次拷贝。传统方式要 4 次拷贝，sendfile 只要 2 次 DMA（Direct Memory Access，网卡/磁盘等设备自己搬数据、不劳烦 CPU 的硬件能力），见图。</p>
 
 <h3 id="s6-1">6.1 传统文件传输 vs sendfile</h3>
 <div class="fig">
@@ -1101,7 +1103,7 @@ fstat(filefd, &amp;st);
     </div>
   </div>
 
-<p>netconf_agent 是 RPC 代理：BBU 走 SSH/TCP，内部再分发给 Radio Unit。架构见图。</p>
+<p>netconf_agent 是一个 RPC 代理（RPC，Remote Procedure Call，远程过程调用——像调本地函数一样调远端服务）：一侧用 SSH/TCP 接 BBU（基带单元，基站的控制设备），另一侧把请求分发给各 Radio Unit（射频单元）。架构见图。</p>
 
 <h3 id="s7-1">7.1 项目中的网络架构</h3>
 <div class="fig">
@@ -1163,7 +1165,7 @@ fstat(filefd, &amp;st);
 </table>
 
 <h3 id="s7-3">7.3 RPC 协议本身就是一个网络编程样板</h3>
-<p>RPC 本身就是网络课：SSH 下的 TCP、XML 用 <code>]]&gt;]]&gt;</code> 做分隔符、一会话一连接、多节点多 Session 并行。和 §3 的长度前缀、§4 的 Schema 是同一套问题的不同外壳。</p>
+<p>RPC 本身就是一堂网络课：SSH 之下的 TCP、XML 用 <code>]]&gt;]]&gt;</code> 做分隔符、一会话一连接、多节点多 Session 并行。它和 §3 的长度前缀、§4 的 Schema 是同一套问题的不同外壳。</p>
 </section>
 
 <!-- ================================================================ -->
@@ -1182,7 +1184,7 @@ fstat(filefd, &amp;st);
     </div>
   </div>
 
-<p>下一代要解决的是三件事：<strong>队头阻塞</strong>、<strong>握手 RTT</strong>、<strong>切网卡断连</strong>。TLS 1.3 砍握手，QUIC 把可靠传输搬到 UDP 用户态，HTTP/3 是跑在 QUIC 上的 HTTP 语义。</p>
+<p>下一代协议要解决的是三件事：<strong>队头阻塞</strong>（HoL blocking，前面一个包丢了，后面已到达的数据也得排队等着，像高速上一辆事故车堵住整条车道）、<strong>握手 RTT</strong>（RTT，Round-Trip Time，一个来回的时延；握手来回越多，首字节越晚）、<strong>切网卡断连</strong>（Wi-Fi 切 4G 时 IP 变了，连接跟着断）。TLS 1.3 砍握手次数，QUIC 把可靠传输搬到 UDP 之上的用户态实现，HTTP/3 是跑在 QUIC 上的 HTTP 语义。</p>
 
 <h3 id="s8-1">7b.1 TLS 1.3 —— 握手砍半的密钥协商</h3>
 <table>
@@ -1192,15 +1194,15 @@ fstat(filefd, &amp;st);
 <tr><td>套件</td><td>20+ ，含 CBC+MAC</td><td>5 个 AEAD（AES-GCM / ChaCha20）</td></tr>
 <tr><td>加密起点</td><td>Finished 之后</td><td><strong>ServerHello 后立即加密</strong></td></tr>
 </table>
-<p>0-RTT 把应用数据塞进恢复握手。API 本身就是课：</p>
+<p>0-RTT（零往返，复用上次会话的凭据、在握手的第 0 个来回就把应用数据带上）把应用数据塞进恢复握手。API 本身就是一堂课：</p>
 <pre><code><span class="cm">// 客户端缓存了 session ticket + 早期数据</span>
 ssl_set_session(ssl, cached_session);
 SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 个 RTT 就发应用数据!</span>
 <span class="cm">// 服务端拒绝则降级为普通 1-RTT</span></code></pre>
-<p><strong>0-RTT 可被重放</strong>，只允许幂等 GET。写路径不要开。</p>
+<p><strong>0-RTT 的数据可被重放</strong>（攻击者原样重发一遍同样的请求，服务端会再执行一次），所以只允许幂等 GET（重复执行也无副作用的请求）。写路径不要开。</p>
 
 <h3 id="s8-2">7b.2 QUIC —— TCP 的"用户态 + UDP"替代</h3>
-<p>QUIC（RFC 9000）跑在 UDP 上，可靠传输 + 拥塞 + 加密都在用户态。企业网可能限 UDP，部署要留 TCP 回退。</p>
+<p>QUIC（RFC 9000）跑在 UDP 上，把可靠传输、拥塞控制、加密这些原来内核 TCP 干的活全部搬到了应用程序里（用户态）实现。好处是升级不用等操作系统；代价是企业网可能限制 UDP，部署要留 TCP 回退路径。</p>
 <table>
 <tr><th>TCP/TLS 痛点</th><th>QUIC 解法</th></tr>
 <tr><td>1 RTT TCP + 1–2 RTT TLS</td><td><strong>1 RTT 建连含加密</strong>，恢复 0-RTT</td></tr>
@@ -1265,7 +1267,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
     </div>
   </div>
 
-<p>生产旋钮。机制见图（拥塞窗口、Nagle），这里只记判据。</p>
+<p>生产环境的性能旋钮。机制见图（拥塞窗口、Nagle），这里只记「什么时候拧哪个」的判据。</p>
 
 <h3 id="s9-1">7c.1 TCP 拥塞控制 —— CUBIC vs BBR</h3>
 <table>
@@ -1273,10 +1275,10 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 <tr><td>CUBIC</td><td>丢包 → 三次函数增窗</td><td>Linux 默认</td></tr>
 <tr><td>BBR / v2 / v3</td><td>测 RTT × 带宽，<strong>不靠丢包</strong></td><td>长肥管、CDN、高丢包路径</td></tr>
 </table>
-<p>启用：<code>tcp_congestion_control=bbr</code> 且 <code>default_qdisc=fq</code>（BBR 依赖 fq）。<strong>BBR 与 CUBIC 共存不公平</strong>——BBR 会多抢带宽，同机房要统一。</p>
+<p>启用方法：<code>tcp_congestion_control=bbr</code> 且 <code>default_qdisc=fq</code>（BBR 依赖 fq 队列调度）。注意 <strong>BBR 与 CUBIC 共存会不公平</strong>——BBR 会多抢带宽，同一机房要统一用同一种。</p>
 
 <h3 id="s9-2">7c.2 SO_REUSEPORT —— 多进程/多线程监听同一端口</h3>
-<p>多 socket bind 同一 IP:port，内核按四元组哈希分流。和「一个 listenfd 抢 accept」的差别：</p>
+<p>多个 socket bind 同一个 IP:port，内核按四元组（源 IP、源端口、目的 IP、目的端口——一条 TCP 连接的唯一身份证）哈希分流。和「一个 listenfd 抢 accept」的差别：</p>
 <table>
 <tr><th></th><th>单 listen + 抢 accept</th><th>SO_REUSEPORT 多 listener</th></tr>
 <tr><td>队列</td><td>一把锁一条队列</td><td>每 listener 独立队列</td></tr>
@@ -1286,7 +1288,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 <p>nginx <code>reuseport</code>、Envoy / HAProxy 默认开。worker 退出时未 accept 的已握手连接会被 RST。</p>
 
 <h3 id="s9-3">7c.3 TCP FastOpen — 把数据塞进握手包</h3>
-<p>服务端 <code>TCP_FASTOPEN</code> 队列长度，客户端 <code>sendto(..., MSG_FASTOPEN)</code>。省 1 RTT，但要双端都支持。长连接（HTTP/2、gRPC）收益小，短连接才值得开。</p>
+<p>服务端设 <code>TCP_FASTOPEN</code> 队列长度，客户端用 <code>sendto(..., MSG_FASTOPEN)</code>。省 1 个 RTT，但要双端都支持才生效。长连接（HTTP/2、gRPC）收益小，短连接才值得开。</p>
 
 <h3 id="s9-4">7c.4 TCP_NODELAY / TCP_CORK / TCP_QUICKACK 三件套</h3>
 <table>
@@ -1433,11 +1435,11 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
     </div>
   </div>
 
-<p>机制、排障、io_uring。12 道题在 §9.8，前面 §10.3 四道偏概念。</p>
+<p>机制、排障、io_uring 三个主题。12 道题在 §9.8，前面 §10.3 的四道偏概念。</p>
 
 <h3 id="s11-1">9.1 TCP 拥塞控制 — 网络流量的平衡艺术</h3>
 <div class="card">
-<p>发送量 = min(cwnd, rwnd)。阶段见图，CUBIC vs BBR 的旋钮在 §7c.1。</p>
+<p>拥塞控制（congestion control，发送方主动「摸着石头过河」的减速机制——先慢启动试探网络容量，发现丢包就退避，避免压垮整条网络路径）的实际发送量 = min(cwnd, rwnd)（拥塞窗口与接收窗口，两者谁小听谁的）。阶段变化见图，CUBIC vs BBR 的旋钮在 §7c.1。</p>
 <div class="fig">
 <svg viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg" style="font-family:sans-serif;min-width:640px;height:auto" role="img" aria-label="TCP 拥塞窗口：慢启动指数翻倍直到 ssthresh，随后线性加一；3 个重复 ACK 触发快重传并把窗口减半，超时则窗口回到 1">
   <line x1="60" y1="240" x2="740" y2="240" stroke="var(--text-dim)" stroke-width="1.5"/>
@@ -1466,7 +1468,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 </div>
 
 <h3 id="s11-2">9.2 Nagle + 延迟 ACK 的交互陷阱</h3>
-<p>Nagle 攒小包，延迟 ACK 等捎带。请求-响应双方都在等对方，就会卡 ~40ms。</p>
+<p>Nagle（攒小包算法——小数据先扣着，攒够或收到确认才发）与延迟 ACK（收到数据不马上确认，等一等看能不能捎带）互相等待：请求-响应双方都在等对方先动，就会卡 ~40ms。</p>
 <div class="fig">
 <svg viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg" style="min-width:680px;height:auto" role="img" aria-label="Nagle 与延迟 ACK 互相等待：客户端小请求被 Nagle 扣住，服务端等 40 毫秒才 ACK，整段交互卡住；TCP_NODELAY 或 writev 一次发完可打破">
   <rect class="box-p" x="20" y="16" width="100" height="36" rx="6"/>
@@ -1505,7 +1507,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 <p>生产以应用层心跳（15–30s）为主，keepalive 只做兜底。</p>
 
 <h3 id="s11-5">9.5 TIME_WAIT 过多怎么办？</h3>
-<p>主动关闭方要等 2MSL。四元组在这 60s 内占用<strong>本机那个源端口</strong>——短连接的客户端先耗尽的是端口，不是 fd。</p>
+<p>主动关闭方要等 2MSL（Maximum Segment Lifetime，一个报文在网络里的最长存活时间）。四元组在这 60 秒内占用着<strong>本机那个源端口</strong>——所以短连接受害的先是客户端端口，不是 fd 数。</p>
 <div class="fig">
 <svg viewBox="0 0 860 230" xmlns="http://www.w3.org/2000/svg" style="min-width:680px;height:auto" role="img" aria-label="TIME_WAIT 占用四元组中的本地端口：短连接客户端把端口范围占满后，新的 connect 返回 EADDRNOTAVAIL；治本是改长连接，tcp_tw_reuse 只帮发起侧">
   <rect class="box" x="20" y="20" width="520" height="90" rx="8"/>
@@ -1542,7 +1544,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 
 <h3 id="s11-6">9.6 io_uring — Linux 5.1+ 异步 I/O 革命</h3>
 <div class="card">
-<p>epoll 是「就绪通知 + 再 syscall」；io_uring 把提交队列和完成队列放进共享内存，批量提交几乎零切换。循环是 <code>get_sqe → prep_read → submit → wait_cqe</code>，不必再贴 liburing 样板。</p>
+<p>epoll 的模式是「就绪通知 + 再发 syscall」；io_uring（Linux 5.1+ 的异步 I/O 框架）把提交队列和完成队列放进用户-内核共享内存，批量提交几乎零系统调用切换。使用循环是 <code>get_sqe → prep_read → submit → wait_cqe</code>，不必再贴 liburing 样板。</p>
 <div class="fig">
 <svg viewBox="0 0 780 230" xmlns="http://www.w3.org/2000/svg" style="font-family:sans-serif;min-width:640px;height:auto" role="img" aria-label="epoll 每次就绪还要再 read 或 write 系统调用；io_uring 用提交队列和完成队列两块共享内存，批量提交几乎零切换">
   <rect x="40" y="30" width="320" height="170" rx="10" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.5"/>
@@ -1579,7 +1581,7 @@ SSL_write_early_data(ssl, request_data, len);   <span class="cm">// ★ 第 0 �
 </div>
 
 <h3 id="s11-8">9.8 高频面试题 Q&amp;A</h3>
-<p>§10.3 偏概念；这里偏机制与排障。先自答再展开。</p>
+<p>§10.3 偏概念；这里偏机制与排障。建议先自己作答再展开对照。</p>
 
 <h3 id="s11-8-1">9.8.1 基础（必答）</h3>
 <p class="qa-hint">点击每道题展开参考答案（先自测，再对照）。</p>

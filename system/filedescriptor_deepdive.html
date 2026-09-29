@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>File Descriptor 与三级表模型 · 深度解析</title>
-<meta name="description" content="File Descriptor 与三级表模型：从 int fd = 3 到内核对象映射：拆解 per-process fd table、system-wide open file table 与 inode table 的关联，以及 fork/dup/exec 对行为的影响">
+<meta name="description" content="File Descriptor 通俗拆解：fd 就像取件码，一个 int 背后连着 per-process fd table、system-wide open file table 与 inode table 三张表；讲清 fork/dup/exec 后 fd 怎么变、泄漏怎么排查。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/filedescriptor_deepdive.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/filedescriptor_deepdive.html">
 <meta property="og:title" content="File Descriptor 与三级表模型 · 深度解析">
-<meta property="og:description" content="File Descriptor 与三级表模型：从 int fd = 3 到内核对象映射：拆解 per-process fd table、system-wide open file table 与 inode table 的关联，以及 fork/dup/exec 对行为的影响">
+<meta property="og:description" content="File Descriptor 通俗拆解：fd 就像取件码，一个 int 背后连着 per-process fd table、system-wide open file table 与 inode table 三张表；讲清 fork/dup/exec 后 fd 怎么变、泄漏怎么排查。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="File Descriptor 与三级表模型 · 深度解析">
-<meta name="twitter:description" content="File Descriptor 与三级表模型：从 int fd = 3 到内核对象映射：拆解 per-process fd table、system-wide open file table 与 inode table 的关联，以及 fork/dup/exec 对行为的影响">
+<meta name="twitter:description" content="File Descriptor 通俗拆解：fd 就像取件码，一个 int 背后连着 per-process fd table、system-wide open file table 与 inode table 三张表；讲清 fork/dup/exec 后 fd 怎么变、泄漏怎么排查。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -435,7 +435,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 45 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 55 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -478,7 +478,7 @@
   <div class="meta-row">
     <span class="pill red">核心难度 ★★★★☆</span>
     <span class="pill cyan">内核机制 高相关</span>
-    <span class="pill green">阅读时长 ~45 min</span>
+    <span class="pill green">阅读时长 ~55 min</span>
     <span class="pill amber">前置 Linux 文件 I/O</span>
   </div>
   <div class="meta">
@@ -509,7 +509,7 @@
   </div>
 
   <h3 id="s2-1">1.1 从用户视角看 fd</h3>
-  <p>用户空间里 <code>fd</code> 是<strong>非负小整数</strong>，三条铁律：0/1/2 预留给 stdin/stdout/stderr；<code>open</code>/<code>socket</code>/<code>pipe</code> 返回当前进程<strong>最小可用</strong>号；<strong>进程私有</strong>——A 的 fd=5 与 B 的 fd=5 无关。</p>
+  <p>在用户空间（你自己写的程序代码运行的那一侧）里，<code>fd</code>（file descriptor，文件描述符——可以把它当成「取件码」：内核是柜台，真正打开的文件是柜台后面的包裹，你手里只拿一个编号）是一个<strong>非负小整数</strong>。它有三条铁律。第一条：0/1/2 这三个号永远预留给 stdin/stdout/stderr（标准输入、标准输出、标准错误——程序一出生就自带的三个默认口，所以新打开的文件从 3 号开始）。第二条：<code>open</code>/<code>socket</code>/<code>pipe</code>（打开文件、建网络连接、建管道这三个动作）每次都返回当前进程<strong>最小可用</strong>的那个号。第三条：fd 是<strong>进程私有</strong>的——进程 A 的 fd=5 与进程 B 的 fd=5 完全是两回事，就像两家店的 5 号取件码互不相干。</p>
 
   <pre data-lang="C"><code><span class="kw">int</span> fd1 = <span class="fn">open</span>(<span class="str">"/etc/hosts"</span>, O_RDONLY);   <span class="com">// 3（最小可用）</span>
 <span class="kw">int</span> fd2 = <span class="fn">open</span>(<span class="str">"/etc/passwd"</span>, O_RDONLY);  <span class="com">// 4</span>
@@ -522,33 +522,33 @@
   <div class="grid-2">
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(16,185,129,0.2);color:var(--accent-emerald);">✓</span>安全隔离</div>
-      <p>内核指针进用户态等于拆掉 KASLR。int 是进程局部句柄，无法凭它越权。</p>
+      <p>安全隔离：如果把内核地址直接给用户态，等于拆掉 KASLR（内核地址空间布局随机化——内核刻意把自己的地址打乱，让攻击者猜不到的一层防护）。int 只是一个进程局部的编号，拿它没法越权访问别人的东西。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(59,130,246,0.2);color:var(--accent-blue);">✓</span>引用计数</div>
-      <p><code>dup</code> / <code>fork</code> 让多个 fd 指向同一内核对象；句柄让生命周期可数。</p>
+      <p><code>dup</code>（复制一个 fd，让两个号指向同一个东西）/ <code>fork</code>（复制出一个子进程）都会让多个 fd 指向同一内核对象；正因为手里拿的只是「号」，内核才能在背后数还有几个人在用这个对象，生命周期因此可数、可管理。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(245,158,11,0.2);color:var(--accent-amber);">✓</span>ABI 稳定</div>
-      <p>结构体布局可以演化，<code>open()</code> 返回 int 这个契约不变。</p>
+      <p>ABI 稳定（ABI——程序与内核之间的调用约定。约定不变，老程序不用重编译就能跑在新内核上）：内核内部结构体怎么改布局都行，但 <code>open()</code> 返回 int 这个对外承诺永远不变。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(139,92,246,0.2);color:var(--accent-violet);">✓</span>表索引即句柄</div>
-      <p>fd 就是 <code>fd_array[]</code> 下标，查找 O(1)。</p>
+      <p>表索引即句柄：fd 其实就是 <code>fd_array[]</code> 这张数组的下标，内核拿号查表一步到位，查找是 O(1)（数据量再大，耗时也不涨）。</p>
     </div>
   </div>
-  <p>「查表」本身还是一道检查点：吃 fd 的系统调用先 <code>fdget()</code>/<code>fget()</code>，一步做三件事——查号是否越 <code>max_fds</code>、查位图这一位是否置位（否则 <code>-EBADF</code>）、取指针的同时递增引用计数。</p>
+  <p>「查表」这一步本身还是一道安检：吃 fd 的系统调用会先走 <code>fdget()</code>/<code>fget()</code>（内核里根据编号取出真对象的函数），一步做三件事——先查这个号有没有超出 <code>max_fds</code>（本进程 fd 表的总长）；再查位图里这一位是否置位（置位才代表这个号当前有效，否则直接返回 <code>-EBADF</code>，也就是「号不存在」的报错）；最后在取指针的同时把引用计数加一，防止刚取出来对象就被别人释放。</p>
 
   <h3 id="s2-3">1.3 「最小可用」这条规定的代价</h3>
-  <p>POSIX 强制返回<strong>当前最小空闲号</strong>，shell 才能在 <code>dup2</code> 出现前预测 stdout。代价有二：</p>
-  <p>一是<strong>分配不能简单自增</strong>：<code>next_fd</code> 记住上次分配到哪，<code>close</code> 更小的号时要回拨，位图之上还有 <code>full_fds_bits</code> 避免 50 万 fd 时扫 50 万位。二是<strong>号被立即复用</strong>。</p>
+  <p>POSIX 强制 <code>open</code> 返回<strong>当前最小空闲号</strong>，这是有历史原因的：shell 要在 <code>dup2</code>（把一个号复制到指定编号上的调用）出现之前就能预测 stdout 会被复制到几号，靠的正是这条规定。但规定有两条代价：</p>
+  <p>一是<strong>分配不能简单自增</strong>：内核得用 <code>next_fd</code> 记住上次分配到哪，一旦 <code>close</code> 了更小的号还要把指针回拨；位图之上再叠一层 <code>full_fds_bits</code>（「这一整段号都满了」的汇总标记），避免进程持有 50 万个 fd 时找空位要扫 50 万位。二是<strong>号会被立即复用</strong>——刚 close 掉的 3 号，下一次 open 马上又发出去。</p>
   <div class="callout danger">
     <div class="callout-title">✗ 提前 close 是最难查的一类 bug</div>
-    <p>号还空着 → <code>EBADF</code>，好查；已被 <code>open</code>/<code>accept</code> 抢走 → 读写打到无关对象、返回值一切正常，只表现为「偶尔有用户收到别人的响应」。只能靠<strong>所有权</strong>解决：先扣着号不放，现象消失即确诊。</p>
+    <p>号还空着时你去用它 → <code>EBADF</code>（「号无效」报错），一眼能查；号已被别的 <code>open</code>/<code>accept</code> 抢走时 → 读写会打到完全无关的对象上，返回值一切正常，唯一的表现是「偶尔有用户收到别人的响应」。这类问题只能靠<strong>所有权</strong>排查：怀疑谁就把那个号扣着不放，如果怪现象随之消失，就确诊是它。</p>
   </div>
 
   <h3 id="s2-4">1.4 fd 号不是「资源量」的好指标</h3>
-  <p><code>ls /proc/&lt;pid&gt;/fd | wc -l</code> 数的是<strong>表项</strong>，不是打开了多少文件，也不是内核内存。</p>
+  <p><code>ls /proc/&lt;pid&gt;/fd | wc -l</code> 数出来的只是<strong>表项</strong>（进程 fd 表里登记了多少个号），它既不等于真正打开了多少文件，也不等于占了多少内核内存。</p>
   <table>
     <thead><tr><th>你想知道的</th><th>该看的数字</th><th>为什么不能互相替代</th></tr></thead>
     <tbody>
@@ -558,7 +558,7 @@
       <tr><td>为此付了多少内核内存</td><td><code>slabtop</code> 的 <code>filp</code> / <code>dentry</code> / <code>inode_cache</code></td><td><code>struct file</code> 本身二三百字节，大头往往是 socket 缓冲</td></tr>
     </tbody>
   </table>
-  <p>四个数字的结论<strong>方向完全不同</strong>：「fd 三万但 <code>file-nr</code> 只涨三千」＝多数来自 <code>dup</code>/<code>fork</code>，泄漏在句柄管理；「fd 正常但内存持续涨」＝每连接缓冲太大，与 fd 无关。</p>
+  <p>这四个数字给出的结论<strong>方向完全不同</strong>：「fd 三万但 <code>file-nr</code> 只涨三千」＝多数号来自 <code>dup</code>/<code>fork</code>，说明泄漏出在句柄管理上；「fd 正常但内存持续涨」＝每个连接的缓冲太大，和 fd 数量无关。</p>
 </section>
 
 <section class="chapter" id="s3">
@@ -571,7 +571,7 @@
   </div>
 
   <h3 id="s3-1">2.1 三层映射全景</h3>
-  <p>这张图是整篇的地基：<code>dup</code>、<code>fork</code>、<code>O_APPEND</code>、「文件删了空间没释放」，答案都落在某一条箭头上。<strong>共享只可能发生在第 ② 层</strong>——① 进程私有、③ 全系统唯一，而偏移量恰好放在 ②。</p>
+  <p>这张图是整篇的地基：<code>dup</code>、<code>fork</code>、<code>O_APPEND</code>（每次写都自动跳到文件末尾再写的打开标志）、「文件删了空间没释放」这些问题，答案都落在图中某一条箭头上。<strong>共享只可能发生在第 ② 层</strong>——第 ① 层是进程私有的取件码本，第 ③ 层在全系统只有一个，而偏移量（f_pos，记录「这份文件读到哪儿/写到哪儿」的游标）恰好放在第 ② 层。</p>
 
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 880 466" style="min-width:760px;height:auto" role="img" aria-label="三级表结构图：进程 A 与 fork 出来的进程 B 各有私有的 files_struct 与 fd 数组；A 的 fd3、fd4 与 B 的 fd3 三个表项指向同一个 struct file X，该结构持有 f_pos、f_flags 与引用计数 f_count 等于 3；B 的 fd5 指向另一个独立 open 出来的 struct file Y，f_pos 与 X 无关；两个 struct file 再指向全系统唯一的 struct inode 与 dentry，inode 上有 i_nlink 与 i_count 两个计数">
@@ -670,12 +670,12 @@
   <h3 id="s3-3">2.3 为什么是三层而不是两层？</h3>
   <div class="callout info">
     <div class="callout-title">▶ 设计动机</div>
-    <p>① 保证进程隔离，③ 必须系统唯一（否则硬链接无法共享元数据）。② 存在是因为两件相反的事要同时成立：每次 <code>open()</code> 各自 pos，而 <code>dup</code>/<code>fork</code> 共享偏移。</p>
+    <p>第 ① 层保证进程隔离（每个进程有自己的码本）；第 ③ 层必须全系统唯一，否则硬链接（两个文件名指向磁盘上同一份文件实体）就没法共享同一份元数据。第 ② 层之所以存在，是因为两件方向相反的事要同时成立：每次 <code>open()</code> 都该有各自的读写位置，而 <code>dup</code>/<code>fork</code> 出来的 fd 却要共享同一个读写位置——把「读写位置」单独放在一层，两个需求就都能满足。</p>
   </div>
-  <p>砍掉 ② 会怎样：<code>f_pos</code> 挪进 ①，<code>2&gt;&amp;1</code> 会让 stdout/stderr 互相覆盖；挪进 ③，两个进程分别 <code>open</code> 就共享偏移，两个 <code>cat</code> 各读一半。<strong>两种极端都不可用。</strong>它的正式名字是 open file description，和 file descriptor 只差一个词。</p>
+  <p>如果砍掉第 ② 层会怎样？把 <code>f_pos</code> 挪进第 ① 层（每个进程自己记位置），那么 <code>2&gt;&amp;1</code>（把错误输出并入标准输出的 shell 写法）会让 stdout 和 stderr 各拿各的位置、互相覆盖对方的输出；挪进第 ③ 层（文件自己记位置），两个进程分别 <code>open</code> 同一个文件就会共享位置，同时跑两个 <code>cat</code> 会一个读上半段、一个读下半段。<strong>两种极端都不可用。</strong>这一层的正式名字是 open file description（打开文件描述），与 file descriptor（文件描述符）只差一个词，却是两个东西。</p>
 
   <h3 id="s3-4">2.4 引用计数的两个层次：f_count 与 i_count</h3>
-  <p>两个独立计数管两件事，分清了「删了空间没释放」就不是玄学。</p>
+  <p>系统里有两个互相独立的计数，各管一件事：<code>f_count</code> 管「还有几个 fd 指向这份打开状态」，<code>i_count</code> 管「内存里还有几个引用指着这个文件实体」。把这两个计数分清了，「文件删了但空间没释放」就不再是玄学，只是计数还没归零。</p>
   <table>
     <thead><tr><th></th><th><code>file-&gt;f_count</code></th><th><code>inode-&gt;i_count</code></th><th><code>inode-&gt;i_nlink</code></th></tr></thead>
     <tbody>
@@ -712,7 +712,7 @@
 
   <h3 id="s3-5">2.5 两个经典现象，用两个计数就能解释</h3>
   <h4>现象一：close 了，但文件还在（也可能反过来）</h4>
-  <p><code>close</code> 减 <code>f_count</code>、<code>unlink</code> 减 <code>i_nlink</code>，两件事无关。所以 <code>rm</code> 只摘掉目录项，已打开的 <code>struct file</code> 直指 inode，照样读写到底——这被大量利用：</p>
+  <p><code>close</code> 减的是 <code>f_count</code>（还有几个人拿着这张卡），<code>unlink</code>（把文件名从目录里摘掉，即 rm 做的事）减的是 <code>i_nlink</code>（磁盘上还有几个名字指向这个文件），这两件事互不相干。所以 <code>rm</code> 只是摘掉了目录项，已经打开的 <code>struct file</code> 依然直指 inode（文件实体本身），照样能读写到底——这个特性被大量利用：</p>
   <table>
     <thead><tr><th>用法</th><th>怎么做</th><th>为什么可行</th></tr></thead>
     <tbody>
@@ -724,7 +724,7 @@
   </table>
 
   <h4>现象二：磁盘满了，但 du 找不到大文件</h4>
-  <p>生产上最高频的 fd 排障：<code>df</code> 100%、<code>du -sh /*</code> 只有一半。文件已被 <code>rm</code>（<code>i_nlink=0</code>，走目录树数不到），但进程还持有 fd（<code>i_count&gt;0</code>），数据块一个没释放。典型是运维 <code>rm</code> 了 nginx access.log 却没发 <code>SIGUSR1</code>。</p>
+  <p>这是生产上最高频的 fd 排障场景：<code>df</code> 显示 100%，但 <code>du -sh /*</code> 从上往下加只加出一半。原因是：文件已经被 <code>rm</code>（<code>i_nlink=0</code>，顺着目录树数数已经数不到它了），但进程还持有它的 fd（<code>i_count&gt;0</code>），数据块一个都没释放。典型案例是运维 <code>rm</code> 了 nginx access.log，却忘了给 nginx 发 <code>SIGUSR1</code>（让日志进程重开文件的信号）。</p>
   <table>
     <thead><tr><th>顺序</th><th>动作</th><th>命令 / 判据</th></tr></thead>
     <tbody>
@@ -738,7 +738,7 @@
   </table>
   <div class="callout warn">
     <div class="callout-title">⚠ 逐列判读 + 「df 比 du 大」不只有这一个原因</div>
-    <p><code>+L1</code> = 链接数 &lt; 1，<code>SIZE/OFF</code> 是 <code>i_size</code>，各行相加应对上差额（<code>txt</code>/<code>mem</code>/<code>DEL</code> 行是映像与被删的 .so，通常只有几 MB）。仍对不上就换方向：挂载点被盖住、ext4 给 root 留的 5%、稀疏文件、inode 耗尽（<code>df -i</code> 100%，报错同样是 <code>ENOSPC</code>）。见 <a href="filesystem_storage_stack.html#s7">filesystem_storage_stack.html §7</a>。</p>
+    <p><code>+L1</code> 的意思是只列链接数 &lt; 1 的文件；<code>SIZE/OFF</code> 这一列就是 <code>i_size</code>（文件实际大小），把各行加起来应该能对上 df 与 du 的差额（<code>txt</code>/<code>mem</code>/<code>DEL</code> 行是程序映像和被删的 .so，通常只占几 MB）。如果仍对不上，就换个方向查：挂载点被上层目录盖住、ext4 给 root 预留的 5%、稀疏文件（看起来很大、实际没占多少块的文件）、inode 耗尽（<code>df -i</code> 显示 100%，报错同样是 <code>ENOSPC</code>，即「磁盘满」错误）。见 <a href="filesystem_storage_stack.html#s7">filesystem_storage_stack.html §7</a>。</p>
   </div>
 </section>
 
@@ -752,7 +752,7 @@
   </div>
 
   <h3 id="s4-1">3.1 task_struct → files_struct</h3>
-  <p><code>task_struct</code> 用 <code>files</code> 指针挂上整张 fd 世界。线程共享同一张表（<code>files_struct.count++</code>），<code>fork</code> 则复制表、共享下面的 <code>struct file</code>。</p>
+  <p><code>task_struct</code>（内核给每个进程建的总档案，进程控制块）用一个 <code>files</code> 指针挂上整张 fd 世界。同一个进程里的线程共享同一张表（做法是 <code>files_struct.count++</code>，引用计数加一）；<code>fork</code> 则是把整张表复制一份给子进程，但表里指向的 <code>struct file</code> 还是同一批——复制的是登记项，不是实体。</p>
 
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 980 348" style="min-width:840px;height:auto" role="img" aria-label="内核指针链：task_struct 的 files 指向 files_struct；files_struct 内嵌 64 槽的 fdtab，fdt 指针平时指向它；fdtable 的 fd 数组指向 struct file，file 再指向 inode。CLOEXEC 位图在 fdtable 这一层">
@@ -823,13 +823,13 @@
   </div>
 
   <h3 id="s4-2">3.2 files_struct 与 fdtable</h3>
-  <p>同时有 <code>fdtable* fdt</code> 和内嵌的 <code>fdtable fdtab</code> 不是冗余：绝大多数进程一辈子 &lt; 64 个 fd，数组和位图直接躺在 <code>files_struct</code> 里，超 <code>NR_OPEN_DEFAULT</code> 才扩容。</p>
+  <p>结构里同时有 <code>fdtable* fdt</code>（指针，指向当前生效的那张表）和内嵌的 <code>fdtable fdtab</code>（直接长在结构体里的一份备用小表），这不是冗余：绝大多数进程一辈子用不到 64 个 fd，数组和位图就直接躺在 <code>files_struct</code> 里，一个字节都不用额外申请；只有超过 <code>NR_OPEN_DEFAULT</code>（默认 64）这个门槛才向外扩容。</p>
 
   <h3 id="s4-3">3.3 struct file —— 第二层的核心</h3>
-  <p>偏移、打开标志、引用计数都在这里。<code>O_APPEND</code>/<code>O_NONBLOCK</code> 改这一层，所以 <code>dup</code> 出的另一个 fd 一起变；<code>FD_CLOEXEC</code> 在上一层，不继承。<code>f_op</code> 是多态核心：ext4、socket、pipe、eventfd 各给一张函数表。</p>
+  <p>偏移、打开标志、引用计数都放在这里（第二层，即「打开状态」那一层）。<code>O_APPEND</code>/<code>O_NONBLOCK</code>（追加写/非阻塞这两个打开标志）改的是这一层，所以 <code>dup</code> 出来的另一个 fd 会跟着一起变；而 <code>FD_CLOEXEC</code>（exec 时自动关闭的开关）登记在上一层（fd 表项上），复制时不继承。<code>f_op</code> 是多态的核心：ext4 文件、socket、管道、eventfd 各自带一张函数表——内核读一个 fd 时不知道也不需要知道它背后是什么，调这张表里的函数就对了。</p>
 
   <h3 id="s4-4">3.4 struct inode —— 第三层</h3>
-  <p><code>i_nlink</code> 对目录项，<code>i_count</code> 对内存引用。<code>i_size</code> 是逻辑长度（<code>ls -l</code>），<code>i_blocks</code> 是实际占用的 512 字节块数（<code>du</code>）——<code>truncate -s 10G x</code> 前者 10 GB、后者 0，这就是稀疏文件的判据，拷贝时不加 <code>cp --sparse=always</code> 会写满目标盘。</p>
+  <p>这一层有两个计数：<code>i_nlink</code> 数的是磁盘上有几个目录项（文件名）指向它，<code>i_count</code> 数的是内存里有几个引用指着它。<code>i_size</code> 是逻辑长度（<code>ls -l</code> 看到的），<code>i_blocks</code> 是实际占用的 512 字节块数（<code>du</code> 算的）——<code>truncate -s 10G x</code> 造出的文件前者显示 10 GB、后者是 0，这正是稀疏文件的判据；拷贝时不加 <code>cp --sparse=always</code>（保留稀疏属性的拷贝选项），就会把这 10 GB 真实写满目标盘。</p>
 
   <h3 id="s4-5">3.5 fd 表的扩容：为什么前 64 个 fd 特别便宜</h3>
   <table>
@@ -841,10 +841,10 @@
       <tr><td><code>fork</code> 的 <code>dup_fd()</code></td><td>为子进程分配新表 + 逐项 <code>get_file()</code></td><td>持父进程 <code>file_lock</code></td><td><strong>与 fd 数成正比</strong></td></tr>
     </tbody>
   </table>
-  <p>读路径无锁，所以扩容不能立刻 <code>kfree</code> 旧表——别的 CPU 可能正从旧 <code>fd[]</code> 取值，必须 <code>call_rcu</code> 延迟释放。这就是「前 64 个 fd 特别便宜」的另一半：读路径几乎只是一次数组取值。</p>
+  <p>因为读路径完全不加锁，扩容后不能立刻 <code>kfree</code>（释放内存）旧表——别的 CPU 可能正从旧 <code>fd[]</code> 里取值，必须用 <code>call_rcu</code>（「等所有在读的人都用完了再释放」的内核延迟回收机制）推迟释放。这也是「前 64 个 fd 特别便宜」的另一半原因：读路径几乎只是一次数组取值。</p>
   <div class="callout danger">
     <div class="callout-title">✗ 连接数越多，起子进程越慢</div>
-    <p>某网关持有约 12 万长连接，每分钟 <code>system()</code> 采一次指标，p999 规律蹦到 200 ms+。热点在 <code>dup_fd</code>：复制 12 万指针并逐个原子递增，期间所有 <code>open</code>/<code>accept</code>/<code>close</code> 排队等 <code>file_lock</code>。改用 <code>posix_spawn()</code>。<strong>持有大量 fd 的进程不应该 fork。</strong></p>
+    <p>某网关持有约 12 万条长连接，每分钟用 <code>system()</code>（内部就是 fork + exec 起子进程）采一次指标，结果 p999（千分之九十九九的延迟上限，即最慢的那千分之一请求）规律性地蹦到 200 ms 以上。热点就在 <code>dup_fd</code>：fork 要复制 12 万个指针并逐个原子递增计数，期间该进程所有的 <code>open</code>/<code>accept</code>/<code>close</code> 都在排队等 <code>file_lock</code> 这把锁。改用 <code>posix_spawn()</code> 后缓解。<strong>持有大量 fd 的进程不应该 fork。</strong></p>
   </div>
 </section>
 
@@ -871,12 +871,12 @@
   <div class="callout warn">
     <div class="callout-title">⚠ 三条容易记反的规则</div>
     <ul>
-      <li><strong><code>dup2</code> 是原子的，「先 close 再 dup」不是。</strong>内核持 <code>file_lock</code> 完成「关掉 new 上的旧 file + 装上 old 的 file」。手写两步会被抢走 <code>new</code> 号。</li>
+      <li><strong><code>dup2</code> 是原子的，「先 close 再 dup」不是。</strong>内核持 <code>file_lock</code> 一口气完成「关掉 new 上的旧 file + 装上 old 的 file」，中间没人能插手。手写两步的话，中间那个空闲的 <code>new</code> 号可能被别的线程抢走。</li>
       <li><strong><code>dup2(fd, fd)</code> 空操作返回 fd；<code>dup3(fd, fd, …)</code> 返回 <code>-EINVAL</code>。</strong>dup3 的唯一用途是设标志，「什么都不做却要设标志」自相矛盾。</li>
-      <li><strong>新 fd 不继承 <code>FD_CLOEXEC</code></strong>（① 层表项属性）。<code>O_APPEND</code> / <code>O_NONBLOCK</code> 在 ② 层，所以共享。「哪个标志在哪一层」是整章判据。</li>
+      <li><strong>新 fd 不继承 <code>FD_CLOEXEC</code></strong>（它是 fd 表项上的属性，属于第 ① 层）。而 <code>O_APPEND</code> / <code>O_NONBLOCK</code> 挂在 struct file 上（第 ② 层），所以 dup 出来的 fd 会共享。「哪个标志在哪一层」是整章的判据。</li>
     </ul>
   </div>
-  <p>库代码复制 fd 用 <code>fcntl(old, F_DUPFD_CLOEXEC, 0)</code>，别 <code>dup</code> 再补 <code>fcntl</code>——后者有和 §6.4 同构的竞态窗口。要把 fd 挪出 0/1/2，用 <code>F_DUPFD</code> 指定下限。</p>
+  <p>库代码里要复制 fd，用 <code>fcntl(old, F_DUPFD_CLOEXEC, 0)</code>（复制的同时带上「exec 时自动关闭」标志），别先 <code>dup</code> 再补 <code>fcntl</code>——后者两步之间存在竞态窗口，和 §6.4 讲的是同构的问题。要把 fd 挪出 0/1/2 这三个敏感号段，用 <code>F_DUPFD</code> 指定下限。</p>
 
   <h3 id="s5-2">4.2 dup 的三级表变化</h3>
   <div class="fig" style="overflow-x:auto">
@@ -948,10 +948,10 @@
       <text x="632" y="116" font-size="10" fill="var(--text-mute)">f_count = 1，exec 后 ls 写到文件</text>
     </svg>
   </div>
-  <p>第三步 <code>close(3)</code> 只把 <code>f_count</code> 从 2 减到 1，stdout 仍握着那份打开状态，所以 <code>exec</code> 后 <code>ls</code> 的输出进文件。漏掉它则多占一个同指向的 fd，没打 CLOEXEC 时会泄漏给下一层 exec。</p>
+  <p>第三步 <code>close(3)</code> 只是把那份打开状态的 <code>f_count</code> 从 2 减到 1，1 号（stdout）仍然握着它，所以 <code>exec</code> 换成 <code>ls</code> 之后，输出照样进文件。如果漏掉这个 close，进程就多占一个指向同一文件的 fd，而且没打 CLOEXEC 标志的话，它会一路泄漏给之后每一层 exec 出来的程序。</p>
 
   <h3 id="s5-4">4.4 编排顺序：一个几乎人人写错过的循环</h3>
-  <p>同时搬好几个 fd 时（实现 shell、写 spawn 库、做进程沙箱），<strong>目标号可能恰好就是另一个源号</strong>。单独看 <code>dup2</code> 很简单，循环一写就翻车。</p>
+  <p>同时搬好几个 fd 的时候（实现 shell、写 spawn 库、做进程沙箱），<strong>目标号可能恰好就是另一个还没搬的源号</strong>。单独看 <code>dup2</code> 很简单，可一旦写进循环里，就几乎人人翻过车。</p>
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 860 200" style="min-width:740px;height:auto" role="img" aria-label="dup2 编排对错对照：错的是边 dup 边 close，若管道端恰好分到 0 或 1 会把刚装好的 stdin 关掉；对的是先用 F_DUPFD 挪到大于等于 10 的高号，再统一 dup2 落位并清理">
       <rect x="8" y="28" width="412" height="160" rx="10" fill="var(--bg-card-2)" stroke="var(--red)"/>
@@ -973,7 +973,7 @@
   </div>
   <div class="callout tip">
     <div class="callout-title">▶ 不要自己写这段编排</div>
-    <p>正确版本还要处理 exec 失败如何回报（<code>O_CLOEXEC</code> pipe 传 <code>errno</code>）、信号掩码重置、<code>vfork</code> 下哪些函数不能调。<strong>优先 <code>posix_spawn()</code></strong>；自己写只有一个理由：需要 <code>setns</code> 这类它表达不了的动作。</p>
+    <p>正确版本还要处理一堆边角：exec 失败了怎么把错误传回来（用带 <code>O_CLOEXEC</code> 的管道传 <code>errno</code>）、信号掩码要不要重置、<code>vfork</code>（父子共用地址空间的 fork 变体）下哪些函数不能调。<strong>优先用 <code>posix_spawn()</code></strong>；自己写只有一个理由：需要 <code>setns</code>（切换进程的命名空间）这类它表达不了的动作。</p>
   </div>
 </section>
 
@@ -1025,20 +1025,20 @@
 
   <h3 id="s6-2">5.2 关键规则</h3>
   <ul>
-    <li><code>fork()</code> 复制 FD Table（子进程独立的 <code>files_struct</code>）</li>
-    <li>每个指针指向的 struct file <strong>不复制</strong>，只 <code>f_count++</code> → <strong>共享 pos</strong></li>
-    <li>子进程 <code>close</code> 只减自己的表项；归零才真正释放</li>
+    <li><code>fork()</code> 复制的是 FD Table（给子进程一份独立的 <code>files_struct</code>，即自己的码本）</li>
+    <li>每个指针指向的 struct file <strong>不复制</strong>，只是 <code>f_count++</code>（引用计数加一）→ 父子<strong>共享同一个读写位置</strong></li>
+    <li>子进程 <code>close</code> 只减掉自己那份引用；计数归零才真正释放</li>
   </ul>
 
   <h3 id="s6-3">5.3 验证实验</h3>
-  <p><code>pos</code> 推进是原子的，但<strong>大块 write 可能被拆分</strong>（管道 <code>PIPE_BUF=4096</code> 以内原子，普通文件取决于文件系统）。生产用 <code>O_APPEND</code>。</p>
+  <p>读写位置的推进本身是原子的，但<strong>一次大块 write 可能被拆成几段</strong>（往管道写时不超过 <code>PIPE_BUF=4096</code> 就保证原子；写普通文件取决于文件系统）。生产环境统一用 <code>O_APPEND</code>。</p>
   <div class="callout danger">
     <div class="callout-title">✗ 竞争条件：并发 write 到共享 fd</div>
-    <p><code>pos</code> 推进是原子的，但<strong>大块 write 可能被拆分</strong>（管道 <code>PIPE_BUF=4096</code> 以内原子，普通文件取决于文件系统）。生产用 <code>O_APPEND</code>——内核保证「定位到末尾 + 写入」是一步。</p>
+    <p><code>pos</code>（读写位置）推进是原子的，但<strong>大块 write 可能被拆分</strong>（管道 <code>PIPE_BUF=4096</code> 以内原子，普通文件取决于文件系统）。生产用 <code>O_APPEND</code>——内核保证「定位到末尾 + 写入」是连在一起的一步，别人插不进来。</p>
   </div>
 
   <h3 id="s6-4">5.4 三种「共享程度」：fork / 线程 / vfork</h3>
-  <p>共享的是哪一层，决定会出哪一类 bug。</p>
+  <p>父子双方共享的是哪一层，决定了会出哪一类 bug。</p>
   <table>
     <thead><tr><th></th><th><code>fork()</code></th><th>线程（<code>CLONE_FILES</code>）</th><th><code>vfork()</code> / <code>posix_spawn</code></th><th><code>SCM_RIGHTS</code></th></tr></thead>
     <tbody>
@@ -1052,23 +1052,23 @@
   </table>
 
   <h3 id="s6-5">5.5 经典事故：父子写同一个日志文件</h3>
-  <p>两种写法只差一个 <code>O_APPEND</code>。因为共享 <code>f_pos</code> 且单次 write 受 <code>f_pos_lock</code> 保护，<strong>测试一万次都对</strong>——它在下面三种生产里立刻崩：</p>
+  <p>两种写法只差一个 <code>O_APPEND</code> 标志。因为父子共享 <code>f_pos</code>，且单次 write 受 <code>f_pos_lock</code> 保护，<strong>测试一万次都对</strong>——但在下面三种真实生产场景里立刻崩：</p>
   <ul>
-    <li><strong>有任何一方是独立 <code>open</code> 的</strong>（日志滚动后 worker 重开、旁路脚本也在写）→ 两个 <code>struct file</code> 各有 <code>f_pos</code>，互相覆盖，出现半行和一大段 <code>\0</code>。</li>
-    <li><strong>有人调了 <code>lseek</code></strong>（含 <code>fseek</code>，或手写「先 <code>SEEK_END</code> 再 write」）→ 共享偏移被拽回去，覆盖已有内容。</li>
-    <li><strong>文件被 <code>truncate</code></strong>（<code>logrotate</code> 的 copytruncate）→ <code>f_pos</code> 不回 0，下次写落在原偏移，凭空一个几十 GB 的<strong>稀疏文件</strong>（<code>ls -l</code> 40 GB，<code>du</code> 200 KB）。</li>
+    <li><strong>有任何一方是独立 <code>open</code> 的</strong>（日志滚动后 worker 重开了文件、旁路脚本也在写同一个文件）→ 两个 <code>struct file</code> 各有各的 <code>f_pos</code>，谁也不知道对方写到哪，互相覆盖，出现半行内容和一大段 <code>\0</code>。</li>
+    <li><strong>有人调了 <code>lseek</code></strong>（含 <code>fseek</code>，或手写「先 <code>SEEK_END</code> 再 write」这种先定位再写的逻辑）→ 共享的偏移被拽回去，把已有内容覆盖掉。</li>
+    <li><strong>文件被 <code>truncate</code></strong>（截断为 0，典型是 <code>logrotate</code> 的 copytruncate 模式）→ <code>f_pos</code> 不会跟着回到 0，下次写还落在原来的偏移上，凭空造出一个几十 GB 的<strong>稀疏文件</strong>（<code>ls -l</code> 显示 40 GB，<code>du</code> 一算只占 200 KB）。</li>
   </ul>
-  <p><code>O_APPEND</code> 让这三种全部消失：每次 <code>write</code> 内部原子地「取当前 <code>i_size</code> + 写入」，<strong>不看 <code>f_pos</code> 历史值</strong>。边界（NFS、不能替代文件锁）在 §8.5。</p>
+  <p>加上 <code>O_APPEND</code>，这三种事故全部消失：每次 <code>write</code> 内部原子地完成「取当前 <code>i_size</code> + 写入」，<strong>完全不看 <code>f_pos</code> 的历史值</strong>。边界情况（NFS 上不完全成立、不能替代文件锁）在 §8.5。</p>
 
   <h3 id="s6-6">5.6 另一半事故：用户态缓冲被复制</h3>
-  <p>内核层之外：<strong><code>fork</code> 会把用户态 stdio 缓冲一起复制走。</strong></p>
+  <p>内核层之外还有另一半事故：<strong><code>fork</code> 会把用户态 stdio 缓冲（printf 那一套在程序自己内存里攒输出的缓冲区）原样复制给子进程。</strong></p>
   <pre data-lang="C"><code><span class="fn">printf</span>(<span class="str">"start\n"</span>);  <span class="com">// 管道/文件是全缓冲，这 6 字节还在用户态</span>
 <span class="fn">fork</span>();             <span class="com">// 缓冲区连同那 6 字节被复制</span>
 <span class="com">// 父子退出各自 flush → 文件里两遍 "start"</span>
 <span class="com">// tty 是行缓冲，遇 \n 已刷出，所以「直接跑没事，加个 &gt; log 就重复」</span>
 <span class="fn">fflush</span>(<span class="kw">NULL</span>);       <span class="com">// 修法：fork 前刷所有流</span>
 <span class="fn">fork</span>();</code></pre>
-  <p>更稳的做法是多进程干脆不用 stdio 写日志，直接 <code>write()</code> 到 <code>O_APPEND</code> 的 fd。代价是每条一次系统调用，要省就在应用层自己攒批。三层缓冲见 <a href="io_linux_kernel_guide.html#s4">io_linux_kernel_guide.html §4</a>。</p>
+  <p>更稳的做法是：多进程程序干脆不用 stdio 写日志，直接 <code>write()</code> 到带 <code>O_APPEND</code> 标志的 fd。代价是每写一条就要做一次系统调用（用户态到内核态的一次往返），想省这个开销就在应用层自己攒一批再写。三层缓冲见 <a href="io_linux_kernel_guide.html#s4">io_linux_kernel_guide.html §4</a>。</p>
 </section>
 
 <section class="chapter" id="s7">
@@ -1081,16 +1081,16 @@
   </div>
 
   <h3 id="s7-1">6.1 exec 默认行为：fd 保留</h3>
-  <p>与直觉相反，<code>execve()</code> 默认<strong>不关</strong> fd——这是 Shell 重定向能工作的前提。当年单线程、fd 个位数、没有安全边界，「全部继承」是合理取舍；今天三个前提都不成立，<strong>正确默认值应该反过来</strong>，但它自己改不了：改一个字节全世界的 shell 停摆。</p>
+  <p>与直觉相反，<code>execve()</code>（把当前进程的程序整个换成另一个程序，但进程号不变）默认<strong>不关</strong>任何 fd——这正是 Shell 重定向能工作的前提。当年单线程、fd 个位数、没有安全边界，「全部继承」是合理取舍；今天这三个前提全都不成立了，<strong>正确默认值应该反过来</strong>，但它自己改不了：这一改，全世界的 shell 立刻停摆。</p>
 
   <h3 id="s7-2">6.2 FD_CLOEXEC 标志</h3>
-  <p>密钥、日志不该被子进程继承。标志在<strong>第 ① 层</strong>：<code>dup</code> 出的新 fd 不带，<code>fork</code> 复制整张位图后各自独立。<strong>只要还有一个没设 CLOEXEC 的 fd 指向同一个 <code>struct file</code>，它就会跟着 exec 走</strong>——所以要用 <code>accept4(…, SOCK_CLOEXEC)</code>。</p>
+  <p>密钥文件、日志这类东西不该被子进程看到。FD_CLOEXEC（「exec 时自动关闭这个 fd」的开关）标志放在<strong>第 ① 层</strong>的表项上：<code>dup</code> 出来的新 fd 不带这个标志，<code>fork</code> 复制整张位图后父子各自独立修改。<strong>只要还有一个没设 CLOEXEC 的 fd 指向同一个 <code>struct file</code>，它就会跟着 exec 一起被继承</strong>——所以要用 <code>accept4(…, SOCK_CLOEXEC)</code> 这种创建时就带上标志的接口。</p>
 
   <h3 id="s7-3">6.3 close_on_exec 位图在内核的位置</h3>
-  <p>每个 <code>fdtable</code> 一张位图，<code>execve</code> 末段 <code>do_close_on_exec()</code> 按位关闭——这就是「CLOEXEC 是表项属性而非 file 属性」的内核位置。</p>
+  <p>每个 <code>fdtable</code> 配一张 close_on_exec 位图（每个 fd 用一个比特记录「exec 时要不要关」），<code>execve</code> 的收尾阶段由 <code>do_close_on_exec()</code> 按位逐个关闭——这就是「CLOEXEC 是表项属性而非 file 属性」在内核里的落点。</p>
 
   <h3 id="s7-4">6.4 一步到位的接口为什么全都存在</h3>
-  <p>答案只有一个词：<strong>竞态窗口</strong>。这个窗口<strong>无法用锁消除</strong>——<code>fork</code> 可能发生在日志库的 <code>gzip</code>、监控 SDK 的 <code>popen</code>、DNS helper 里。</p>
+  <p>这些一步到位的接口之所以全部存在，答案只有一个词：<strong>竞态窗口</strong>（两步操作之间被别的线程插队的空档）。这个窗口<strong>没法用锁消除</strong>——因为 <code>fork</code> 可能发生在日志库内部的 <code>gzip</code> 调用、监控 SDK 的 <code>popen</code>、DNS helper 里，那些代码你管不到。</p>
   <pre data-lang="C"><code><span class="com">// 线程 A                                    线程 B（可能在任何第三方库里）</span>
 <span class="kw">int</span> fd = <span class="fn">open</span>(<span class="str">"/etc/secret.key"</span>, O_RDONLY);
 <span class="com">//                                           fork(); execve("/usr/bin/helper", ...);</span>
@@ -1114,16 +1114,16 @@
   <div class="grid-2">
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(244,63,94,0.2);color:var(--accent-rose);">1</span>监听 socket：端口「重启后仍被占用」</div>
-      <p>服务 A 监听 8080，起过长驻 helper。<code>kill</code> A 再启动，<code>bind</code> 返回 <code>EADDRINUSE</code>——helper 还握着 listen fd。难查在于直觉会去找「A 的残留进程」，而 A 确实已经不在。判据：<code>ss -tlnp</code> 里占 8080 的是个不相干的进程名。更糟的是它还能 <code>accept()</code> 抢走真实流量。</p>
+      <p>服务 A 监听 8080 端口，期间起过一个长驻 helper。<code>kill</code> 掉 A 再重启，<code>bind</code> 却返回 <code>EADDRINUSE</code>（「端口已被占用」报错）——因为 helper 还握着那个 listen fd。难查的地方在于：直觉会去找「A 的残留进程」，而 A 确实已经不在了。判据是：<code>ss -tlnp</code> 里占着 8080 的是一个不相干的进程名。更糟的是，它还能 <code>accept()</code> 接走真实流量。</p>
     </div>
     <div class="card">
       <div class="card-title"><span class="card-icon" style="background:rgba(245,158,11,0.2);color:var(--accent-amber);">2</span>敏感 fd：权限模型被绕过</div>
-      <p>root 打开私钥再降权 exec，子进程对路径无权限却能 <code>cat /proc/self/fd/7</code>。<strong>权限检查只发生在 <code>open</code> 那一刻</strong>，之后 fd 就是一张已通过检查的通行证——「降权 + exec」不配合 CLOEXEC 等于没做。</p>
+      <p>root 打开私钥文件再降权后 exec，子进程对私钥路径本无访问权限，却仍能 <code>cat /proc/self/fd/7</code> 读到内容。原因是<strong>权限检查只发生在 <code>open</code> 那一刻</strong>，之后 fd 就是一张已通过检查的通行证——「降权 + exec」若不配合 CLOEXEC，等于没做。</p>
     </div>
   </div>
 
   <h3 id="s7-6">6.6 兜底与验收</h3>
-  <p><code>O_CLOEXEC</code> 只能管住<strong>你自己打开的</strong> fd。第三方库管不了，exec 前需要兜底。</p>
+  <p><code>O_CLOEXEC</code> 只能管住<strong>你自己打开的</strong> fd。第三方库打开的 fd 它管不到，所以 exec 之前还需要兜底手段。</p>
   <table>
     <thead><tr><th></th><th>做法</th><th>问题</th></tr></thead>
     <tbody>
@@ -1146,10 +1146,10 @@
       <p class="sub">7.1 创建匿名管道 · 7.2 fork + dup2 编排 · 7.3 最小实现 · 7.4 EOF、SIGPIPE 与背压都是引用计数</p>
     </div>
   </div>
-  <p><code>ls | grep foo</code> 是 fd 操作的教科书：内核为管道分配读、写两个 <code>struct file</code>（缓冲默认 64 KB），<code>pfd[0]</code> 读、<code>pfd[1]</code> 写。</p>
+  <p><code>ls | grep foo</code> 是 fd 操作的教科书案例：内核为管道分配读、写两个 <code>struct file</code>（内核缓冲默认 64 KB），<code>pfd[0]</code> 是读端、<code>pfd[1]</code> 是写端。</p>
 
   <h3 id="s8-1">7.1 创建匿名管道</h3>
-  <p><code>pipe(pfd)</code> 之后父进程同时握着两端。EOF 的条件不是「子进程退出」，而是<strong>写端那一侧的引用归零</strong>，所以父进程自己也必须关写端。内核给管道分配的是读、写两个 <code>struct file</code>——和 dup 的「一个 file、两个 fd」正好相反。</p>
+  <p><code>pipe(pfd)</code> 之后，父进程自己同时握着读、写两端。注意 EOF（读到「对方写完了」的信号，read 返回 0）的触发条件不是「子进程退出」，而是<strong>写端那一侧的引用计数归零</strong>——所以父进程自己也必须关掉写端，否则孩子永远等不到 EOF。内核给管道分配的是读、写两个 <code>struct file</code>——和 dup 的「一个 file、两个 fd」正好相反。</p>
 
   <h3 id="s8-2">7.2 fork + dup2 编排</h3>
   <div class="fig" style="overflow-x:auto">
@@ -1182,7 +1182,7 @@
     </svg>
     <figcaption>谁关哪一端决定 EOF。父进程两端都关，是这条流水线能结束的关键。</figcaption>
   </div>
-  <p>写端全关、读端在读：<code>read</code> 返回 0。读端已关、写端还在写：内核发 <code>SIGPIPE</code>，忽略该信号则 <code>write</code> 返回 <code>EPIPE</code>。管道满时 <code>write</code> 阻塞（或 <code>EAGAIN</code>），这就是背压。</p>
+  <p>写端全部关闭、读端还在读：<code>read</code> 返回 0（即 EOF）。读端已关、写端还在写：内核给写方发 <code>SIGPIPE</code> 信号（默认直接杀死进程），忽略该信号则 <code>write</code> 返回 <code>EPIPE</code> 报错。管道写满时 <code>write</code> 会阻塞（非阻塞模式下返回 <code>EAGAIN</code>），写方被迫等读方消费——这就是背压（让生产者慢下来的天然刹车）。</p>
 
   <h3 id="s8-3">7.3 最小实现</h3>
   <pre data-lang="C"><code><span class="com">// 实现: ls | grep foo</span>
@@ -1217,7 +1217,7 @@
       <tr><td>写一个<strong>没人读</strong>的管道会阻塞而不是报错</td><td>读端 count &gt; 0（哪怕对方没在 <code>read</code>），填满 64 KB 后阻塞 = 天然<strong>背压</strong></td></tr>
     </tbody>
   </table>
-  <p>缓冲可用 <code>F_SETPIPE_SZ</code> 调（上限 <code>fs.pipe-max-size</code>）。<strong>这是个常被误用的旋钮</strong>：它只能吸收更长的突发，提不了稳态吞吐。真正该调大的场景是下游有周期性长停顿，让缓冲刚好盖住那个窗口。管道家族其余部分见 <a href="ipc_guide.html#s5">ipc_guide.html §5</a>。</p>
+  <p>缓冲大小可以用 <code>F_SETPIPE_SZ</code> 调整（上限是 <code>fs.pipe-max-size</code>）。<strong>这是个常被误用的旋钮</strong>：它只能帮管道吸收更长的突发写入，提升不了稳态吞吐。真正值得调大的场景是：下游会有周期性的长停顿（比如批量刷盘的间隙），让缓冲刚好盖住那个停顿窗口。管道家族其余部分见 <a href="ipc_guide.html#s5">ipc_guide.html §5</a>。</p>
 </section>
 <section class="chapter" id="s9">
   <div class="ch-head">
@@ -1229,7 +1229,7 @@
   </div>
 
   <h3 id="s9-1">8.1 三种"同一文件"的打开方式对比</h3>
-  <p>文件内容 30 字节：<code>AAAAAAAAAA BBBBBBBBBB CCCCCCCCCC</code>。各自读 10 字节后，<code>f_pos</code> 把三种方式一次讲清。</p>
+  <p>设文件内容 30 字节：<code>AAAAAAAAAA BBBBBBBBBB CCCCCCCCCC</code>。让两种读法各自先读 10 字节，再对比 <code>f_pos</code> 的走向，三种打开方式的差别就一次讲清了。</p>
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 900 300" style="min-width:780px;height:auto" role="img" aria-label="三种打开方式的 f_pos：两次 open 各有偏移，a1 读 10 后 a2 仍为 0 读到 A；dup 共享偏移，a1 读 10 后 a2 也是 10 读到 B；fork 与 dup 一样共享同一个 struct file">
       <rect x="8" y="28" width="288" height="230" rx="10" fill="var(--bg-card-2)" stroke="var(--accent)"/>
@@ -1286,10 +1286,10 @@
   </div>
 
   <h3 id="s9-3">8.3 用 f_pos 验证：看起来像同一个文件 ≠ 共享偏移</h3>
-  <p>上图的数字就是跑出来的：dup 路径 <code>a1</code> 读 10 后 <code>lseek(a2, 0, SEEK_CUR)</code> 报 10、接着读到 B；两次 open 路径 <code>b2</code> 纹丝不动仍读到 A。<strong>「看起来像同一个文件」不等于「共享偏移」</strong>。</p>
+  <p>上图的数字就是真实跑出来的：dup 路径里 <code>a1</code> 读 10 字节后，<code>lseek(a2, 0, SEEK_CUR)</code>（查询当前位置）报 10、接着读到 B；两次 open 路径里 <code>b2</code> 的位置纹丝不动，仍从 0 读到 A。结论：<strong>「打开的是同一个文件」不等于「共享读写位置」</strong>。</p>
   <div class="callout info">
     <div class="callout-title">▶ 想彻底避开共享偏移：用 pread / pwrite</div>
-    <p>偏移作为<strong>参数</strong>传入，不碰 <code>f_pos</code>，多线程用同一个 fd 并发读写不同区域不必加锁。注意 <code>pwrite</code> 在 <code>O_APPEND</code> 的 fd 上会<strong>忽略给定 offset 直接追加</strong>，两者不要混用。</p>
+    <p>把读写的位置直接当<strong>参数</strong>传进去（pread/pwrite，即「在指定位置读/写」的调用），完全不碰 <code>f_pos</code>，多线程共用同一个 fd 并发读写不同区域也不必加锁。注意 <code>pwrite</code> 在带 <code>O_APPEND</code> 的 fd 上会<strong>忽略你给的 offset、直接追加到末尾</strong>，两种用法不要混。</p>
   </div>
 
   <h3 id="s9-4">8.4 shell 里的 &gt; 与 &gt;&gt;：在内核层面差一个标志</h3>
@@ -1305,7 +1305,7 @@
   </table>
   <div class="callout danger">
     <div class="callout-title">✗ 只差两个字符，结果天差地别</div>
-    <p>输出量小时看不出来：stderr 20 字节盖掉 stdout 开头 20 字节，文件长度还是 200，只是开头「有点怪」。另外 <code>2&gt;&amp;1</code> 必须写在 <code>&gt; f</code> <strong>之后</strong>——顺序反了 stderr 仍留在终端。</p>
+    <p>输出量小时看不出来：stderr 的 20 字节盖掉 stdout 开头 20 字节，文件总长还是 200，只是开头「有点怪」。另外 <code>2&gt;&amp;1</code> 必须写在 <code>&gt; f</code> <strong>之后</strong>——顺序写反的话，stderr 仍然留在终端上。</p>
   </div>
 
   <h3 id="s9-5">8.5 O_APPEND 的原子性到底保证了什么</h3>
@@ -1331,8 +1331,8 @@
   </div>
   <div class="callout warn">
     <div class="callout-title">⚠ 多进程写同一个日志到底能不能用 O_APPEND</div>
-    <p><strong>能，这就是标准答案</strong>——三条同时满足：本地文件系统、每条一次 <code>write</code>（不经 stdio 多次刷新）、单条几 KB 内。不适用的场景：读—改—写（用锁）、跨 NFS、单条很大、需要严格全局顺序。</p>
-    <p>还要分清：<code>O_APPEND</code> 的原子性是<strong>内存里的</strong>，与「掉电后还在不在」正交。写入先进页缓存，掉电会丢最后几秒。真的不能丢就 <code>fsync</code>，代价是吞吐掉到几百条每秒。</p>
+    <p><strong>能，这就是标准答案</strong>——前提是三条同时满足：本地文件系统、每条日志一次 <code>write</code> 写完（不经 stdio 分多次刷新）、单条控制在几 KB 内。不适用的场景：读—改—写（要用锁）、跨 NFS、单条很大、需要严格全局顺序。</p>
+    <p>还要分清一件事：<code>O_APPEND</code> 的原子性是<strong>内存里的</strong>，与「掉电后数据还在不在」是两个独立问题。写入先进页缓存（内核内存里的缓存层），掉电会丢最后几秒。真的不能丢就 <code>fsync</code>（强制刷盘），代价是吞吐掉到几百条每秒。</p>
   </div>
 </section>
 
@@ -1344,7 +1344,7 @@
       <p class="sub">9.1 fd 家族全图 · 9.2 eventfd + epoll · 9.3 timerfd · 9.4 signalfd · 9.5 pidfd · 9.6 memfd_create · 9.7 inotify / fanotify / userfaultfd · 9.8 选型决策表</p>
     </div>
   </div>
-  <p>这些对象各有自己的 <code>file_operations</code>，挂在第 ② 层。<code>sys_read</code> 只调函数指针，不知道背后是 ext4、socket 还是一个 8 字节计数器。很多连真实 inode 都没有，用共用的 <code>anon_inode</code>——所以会看到 <code>anon_inode:[eventfd]</code>。</p>
+  <p>这些对象各有自己的一套 <code>file_operations</code>（函数表），都挂在第 ② 层。<code>sys_read</code> 只管调函数指针，根本不知道背后是 ext4 文件、socket 还是一个 8 字节计数器。它们很多连真实的 inode 都没有，共用一个 <code>anon_inode</code>（匿名 inode，给「没有实体文件」的对象用的公共占位）——所以你会看到 <code>anon_inode:[eventfd]</code> 这样的名字。</p>
 
   <h3 id="s10-1">9.1 fd 家族全图</h3>
   <div class="fig" style="overflow-x:auto">
@@ -1394,22 +1394,22 @@
   </table>
 
   <h3 id="s10-2">9.2 经典组合：eventfd + epoll 实现唤醒</h3>
-  <p><strong>为什么是 fd：</strong>8 字节计数器，<code>write</code> 累加、<code>read</code> 取走清零，于是能挂上 epoll，跨线程唤醒不必再开 self-pipe。<strong>两个坑：</strong>ET 下必须读完计数否则丢唤醒；<code>EFD_SEMAPHORE</code> 每次只减 1，与默认语义混用会让事件像被吞掉。</p>
+  <p><strong>为什么做成 fd：</strong>eventfd 本质是个 8 字节计数器，<code>write</code> 往上累加、<code>read</code> 取走并清零；正因为它是 fd，就能挂上 epoll（I/O 多路复用：一个线程同时监听一大批 fd 的就绪事件），跨线程唤醒不必再开 self-pipe（早期「自己给自己写信」的唤醒土办法）。<strong>两个坑：</strong>ET 模式（边缘触发，只在状态变化时报一次）下必须把计数读完否则丢唤醒；<code>EFD_SEMAPHORE</code>（信号量模式）每次只减 1，与默认语义混用会让事件看起来像被吞掉了。</p>
 
   <h3 id="s10-3">9.3 经典组合：timerfd 取代 setitimer</h3>
-  <p><strong>为什么是 fd：</strong>到期变可读，<code>read</code> 得到错过的次数，和 socket 走同一条环。<strong>一个坑：</strong>用 <code>CLOCK_MONOTONIC</code> 而不是 <code>REALTIME</code>（NTP 调时会误触发）。</p>
+  <p><strong>为什么做成 fd：</strong>timerfd 到期时会变成「可读」，<code>read</code> 一下还能得到错过的到期次数，于是定时器和 socket 走同一条事件环。<strong>一个坑：</strong>时钟要用 <code>CLOCK_MONOTONIC</code>（单调递增的时钟）而不是 <code>REALTIME</code>（真实墙钟，NTP 校时会回拨或跳变，导致误触发）。</p>
 
   <h3 id="s10-4">9.4 signalfd —— 让信号「排队」并进入 epoll</h3>
-  <p><strong>为什么是 fd：</strong>把信号变成可读事件，主循环里可以 <code>malloc</code>、打日志。<strong>三个坑：</strong>必须先 <code>SIG_BLOCK</code>；多线程用 <code>pthread_sigmask</code> 且在起线程之前；<code>SIGKILL</code>/<code>SIGSTOP</code> 救不了。</p>
+  <p><strong>为什么做成 fd：</strong>signalfd 把信号变成「可读事件」，主循环里就可以放心 <code>malloc</code>、打日志（传统信号处理函数里这些都不能调）。<strong>三个坑：</strong>必须先 <code>SIG_BLOCK</code>（屏蔽默认投递）；多线程要用 <code>pthread_sigmask</code> 且在起线程之前设好；<code>SIGKILL</code>/<code>SIGSTOP</code> 它救不了。</p>
 
   <h3 id="s10-5">9.5 pidfd —— 进程的「稳定句柄」，告别 PID 重用 race</h3>
-  <p><code>kill(pid)</code> 时目标可能已死、PID 被别人占用；<code>pidfd</code>（5.3+）锁住 <code>task_struct</code>。三件能力：poll/epoll 等它退出而不必 <code>waitpid</code> 阻塞；<code>pidfd_send_signal</code> 替代 kill；5.6+ 的 <code>pidfd_getfd</code> 从另一进程取 fd。systemd v245 起用它管 unit。</p>
+  <p><code>kill(pid)</code> 的问题在于：目标可能已死、PID 已被系统回收又分给了别人，这一瞬间你的信号会发错对象（这就是 PID 重用 race，竞争窗口）；<code>pidfd</code>（5.3+）直接锁住 <code>task_struct</code>（那个进程的本体），号码复不复用都无关了。它带来三件能力：用 poll/epoll 等它退出而不必 <code>waitpid</code> 阻塞等待；<code>pidfd_send_signal</code> 替代 kill；5.6+ 的 <code>pidfd_getfd</code> 还能从另一个进程取 fd。systemd v245 起就用它管 unit。</p>
   <pre data-lang="C"><code><span class="fn">kill</span>(pid, SIGTERM);                         <span class="com">// pid 可能已被回收并复用</span>
 <span class="kw">int</span> pfd = <span class="fn">pidfd_open</span>(pid, <span class="num">0</span>);
 <span class="fn">pidfd_send_signal</span>(pfd, SIGTERM, <span class="kw">nullptr</span>, <span class="num">0</span>); <span class="com">// 只送给原来那个 task</span></code></pre>
 
   <h3 id="s10-6">9.6 memfd_create —— 匿名共享内存的现代姿势</h3>
-  <p><strong>为什么是 fd：</strong>无路径、可经 SCM_RIGHTS 传递、可 <code>F_ADD_SEALS</code> 封印大小与写入（此后拿到 fd 的恶意进程也改不了）。对比：<code>shm_open</code> 有名字不能封印，SysV <code>shmget</code> 新代码勿用，<code>MAP_ANON|SHARED</code> 只能 fork 共享。Chrome、Wayland、dbus-broker 都走它。</p>
+  <p><strong>为什么做成 fd：</strong>memfd 没有路径、可通过 SCM_RIGHTS 传给别人、还能用 <code>F_ADD_SEALS</code>「封印」住大小与写入权限（封了之后，就算恶意进程拿到 fd 也改不了内容）。对比几个老方案：<code>shm_open</code> 有名字但不能封印；SysV <code>shmget</code> 新代码别再用；<code>MAP_ANON|SHARED</code> 只能在 fork 出的进程间共享。Chrome、Wayland、dbus-broker 都走 memfd。</p>
 
   <h3 id="s10-7">9.7 inotify / fanotify / userfaultfd —— 三种「事件 fd」</h3>
   <div class="grid-3">
@@ -1454,12 +1454,12 @@
   </div>
 
   <h3 id="s11-1">10.1 传的是「对 struct file 的新引用」，不是那个整数</h3>
-  <p>fd 号是每进程命名空间，把 3 这个整数发过去毫无意义。真正发生的是：</p>
+  <p>fd 号是每个进程自己的命名空间（你的 3 号和别人的 3 号不是一回事），所以把 3 这个整数本身发过去毫无意义。真正发生的是：</p>
   <ol>
-    <li>发送端 <code>sendmsg</code> 时内核在<strong>发送进程</strong>的 ① 层查出 <code>struct file*</code> 并立刻 <code>get_file()</code>——引用在这一刻建立，之后发送方 close 甚至退出，那个打开状态仍「在管道里飞着」。</li>
-    <li>接收端 <code>recvmsg</code> 时在<strong>接收进程</strong>表里分配一个<strong>可能完全不同</strong>的号，装上同一个 <code>struct file*</code>。</li>
+    <li>发送端 <code>sendmsg</code> 时，内核在<strong>发送进程</strong>的第 ① 层查出 <code>struct file*</code> 并立刻 <code>get_file()</code>（引用计数加一）——引用在这一刻就建立好了，之后发送方 close 甚至退出，那个打开状态仍稳稳地「在管道里飞着」。</li>
+    <li>接收端 <code>recvmsg</code> 时，在<strong>接收进程</strong>自己的 fd 表里分配一个<strong>可能完全不同</strong>的号，把同一个 <code>struct file*</code> 装进去。</li>
   </ol>
-  <p>效果是<strong>跨进程的 dup</strong>：号可以不同，但<strong>共享 <code>f_pos</code> 与 <code>f_flags</code></strong>，所以下面的示例用 <code>pread</code>。<strong>只在同一台机器、同一内核实例内有效</strong>。</p>
+  <p>净效果相当于<strong>跨进程的 dup</strong>：两边的号可以不同，但<strong>共享同一个 <code>f_pos</code> 与 <code>f_flags</code></strong>，所以下面的示例用 <code>pread</code>（免得双方互相拖动读写位置）。<strong>这套机制只在同一台机器、同一个内核实例内有效</strong>。</p>
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 860 200" style="min-width:740px;height:auto" role="img" aria-label="SCM_RIGHTS：进程 A 的 fd3 经 Unix 域套接字把对 struct file X 的引用传给进程 B，B 得到新的 fd7，两端共享同一个打开状态，f_count 变为 2">
       <defs>
@@ -1599,8 +1599,8 @@
     <span class="fn">wait</span>(<span class="kw">NULL</span>);
     <span class="kw">return</span> <span class="num">0</span>;
 }</code></pre>
-  <p>父进程打印发送的 fd 号，子进程打印收到的号（相同与否纯属巧合）并能 <code>pread</code> 到内容；父进程 <code>close(fd)</code> 之后子进程照样读得到——引用在 <code>sendmsg</code> 那一刻就已经建立。</p>
-  <p>读这段代码盯四个宏：发送侧 <code>msg_controllen</code> 用 <code>CMSG_SPACE</code>（含对齐填充）、<code>cmsg_len</code> 用 <code>CMSG_LEN</code>；接收侧必查 <code>MSG_CTRUNC</code>，并用 <code>CMSG_NXTHDR</code> 遍历。</p>
+  <p>父进程会打印发送的 fd 号，子进程打印收到的号（两边号相同与否纯属巧合），并且能 <code>pread</code> 到内容；父进程 <code>close(fd)</code> 之后子进程照样读得到——因为引用在 <code>sendmsg</code> 那一刻就已经建立了。</p>
+  <p>读这段代码盯住四个宏：发送侧 <code>msg_controllen</code> 用 <code>CMSG_SPACE</code>（含对齐填充的缓冲总长）、<code>cmsg_len</code> 用 <code>CMSG_LEN</code>（纯数据长度）；接收侧必查 <code>MSG_CTRUNC</code>（控制消息被截断的标志），并用 <code>CMSG_NXTHDR</code> 遍历所有控制消息。</p>
 
   <h3 id="s11-3">10.3 cmsghdr 的四个坑，全都不会给你明确报错</h3>
   <table>
@@ -1623,11 +1623,11 @@
   <div class="grid-3">
     <div class="card">
       <div class="card-title">1 特权分离</div>
-      <p>高权限小进程负责 open，低权限大进程负责处理——权限检查只在 open 时发生（§6.5 那条规律反过来当特性用）。Chrome 渲染进程、OpenSSH privsep 都是这个形状。</p>
+      <p>高权限的小进程只负责 open，低权限的大进程负责后续处理——权限检查只在 open 时发生一次（§6.5 那条规律反过来当特性用）。Chrome 渲染进程、OpenSSH privsep 都是这个形状。</p>
     </div>
     <div class="card">
       <div class="card-title">2 热升级：移交监听 socket</div>
-      <p>新进程不能自己 bind 同一端口（<code>EADDRINUSE</code>；<code>SO_REUSEPORT</code> 也救不了 accept 队列里已有的连接）。必须接过那个 <code>struct file</code>。nginx USR2、systemd socket activation、Envoy hot restart。</p>
+      <p>新进程不能自己 bind 同一端口（会 <code>EADDRINUSE</code>；<code>SO_REUSEPORT</code> 也救不了 accept 队列里已有的连接）。正确做法是接过那个 <code>struct file</code>。nginx USR2、systemd socket activation、Envoy hot restart 都是这么做的。</p>
     </div>
     <div class="card">
       <div class="card-title">3 容器 runtime 与设备代理</div>
@@ -1636,7 +1636,7 @@
   </div>
   <div class="callout tip">
     <div class="callout-title">▶ 什么时候不该用它</div>
-    <p>三种误用：跨机器不可能；当成通用 IPC——对方有权限时告诉它路径更简单；跨命名空间要想清楚——fd 能穿过 PID/网络 NS，但 socket 仍活在<em>发送方</em>那个网络 NS 里。</p>
+    <p>三种误用要避开：想跨机器传，不可能（只在本机有效）；当通用 IPC 用——对方本来就有权限时，直接告诉它路径更简单；跨命名空间传要想清楚——fd 能穿过 PID/网络 NS（namespace，命名空间），但 socket 本身仍活在<em>发送方</em>那个网络 NS 里。</p>
   </div>
 </section>
 
@@ -1660,7 +1660,7 @@
     </tbody>
   </table>
   <h4>三个数字的关系：nr_open ≥ 硬限制 ≥ 软限制，file-max 在旁边</h4>
-  <p><code>RLIMIT_NOFILE</code>、<code>fs.nr_open</code>、<code>fs.file-max</code> 是最容易混淆的三个：前两个管「一个进程」，第三个管「整台机器」；而 <code>nr_open</code> 是硬限制的天花板，不是限制本身。容器里还要看 systemd 的 <code>LimitNOFILE=</code>——<code>limits.conf</code> 对它无效。</p>
+  <p><code>RLIMIT_NOFILE</code>（单个进程能持有多少 fd 的限额）、<code>fs.nr_open</code>、<code>fs.file-max</code> 是最容易混淆的三个数字：前两个管「一个进程」，第三个管「整台机器」；而 <code>nr_open</code> 是硬限制的天花板，它本身不是限制。容器环境里还要看 systemd 的 <code>LimitNOFILE=</code>——<code>limits.conf</code> 对 systemd 服务不起作用。</p>
   <div class="fig" style="overflow-x:auto">
     <svg viewBox="0 0 840 246" style="min-width:700px;height:auto" role="img" aria-label="fd 限制的三层关系图：fs.nr_open 是 RLIMIT_NOFILE 硬限制的天花板，硬限制又是软限制的天花板，进程实际受软限制约束；fs.file-max 是一条独立的全系统 struct file 总数上限，超出时返回 ENFILE 而不是 EMFILE">
       <text x="16" y="20" font-size="12.5" font-weight="700" fill="var(--text)">① 单进程维度：三层套娃，超出返回 EMFILE</text>
@@ -1708,7 +1708,7 @@
   </table>
   <div class="callout warn">
     <div class="callout-title">⚠ 软限制至今留在 1024——select 这个真实的坑</div>
-    <p>这是刻意保留的兼容性保护：<code>select()</code> 的 <code>fd_set</code> 是固定 1024 位的位图，而 <code>FD_SET</code> <strong>不做任何范围检查</strong>——软限制提到 65536 后 <code>accept</code> 拿到 3000，这个宏就越界写栈，漏洞级别，重新编译也解决不了。新代码别用 <code>select</code>：<code>poll</code> 没有号上限，<code>epoll</code> 还顺带解决 O(n) 扫描。</p>
+    <p>这是刻意保留的兼容性保护：<code>select()</code>（老式 I/O 多路复用调用）的 <code>fd_set</code> 是固定 1024 位的位图，而 <code>FD_SET</code> 这个宏<strong>不做任何范围检查</strong>——软限制一旦提到 65536，<code>accept</code> 拿到 3000 号 fd，这个宏就越界写栈，属于漏洞级别的后果，重新编译也解决不了。新代码别用 <code>select</code>：<code>poll</code> 没有 fd 号上限，<code>epoll</code> 还顺带解决了每次 O(n) 全量扫描的问题。</p>
   </div>
   <div class="callout info">
     <div class="callout-title">▶ 限额怎么定</div>
@@ -1727,11 +1727,11 @@
   </div>
 
   <h3 id="s12-2">11.2 fd 泄漏检测</h3>
-  <p>所有权用 RAII / <code>defer</code>，禁止裸 <code>int</code> 到处传。泄漏来源按频率：异常路径忘关、未设 CLOEXEC 被 exec 继承、<code>popen</code>/<code>fopen</code> 没配对、<code>accept</code> 的 fd 没纳入管理、连接池、timerfd/eventfd 用完不关。</p>
-  <p>先区分<strong>泄漏</strong>与<strong>高水位</strong>：前者单调上涨、不随负载回落，该找忘了 close 的路径；后者随负载起落且稳态有上界（5 万长连接的网关就该是 5 万），该把限额调够。判据是「负载周期波动，fd 曲线却是一条不回头的斜线」。</p>
+  <p>所有权管理用 RAII（资源随对象生命周期自动释放的手法）或 <code>defer</code>，禁止裸 <code>int</code> 到处传。泄漏来源按出现频率排：异常路径忘关、未设 CLOEXEC 被 exec 继承、<code>popen</code>/<code>fopen</code> 没配对关闭、<code>accept</code> 的 fd 没纳入管理、连接池只增不减、timerfd/eventfd 用完不关。</p>
+  <p>先区分<strong>泄漏</strong>与<strong>高水位</strong>：前者的曲线单调上涨、不随负载回落，该去找忘了 close 的路径；后者随负载起落、稳态有上界（5 万长连接的网关本来就该有 5 万个 fd），该做的是把限额调够。判据是：「负载在周期性波动，fd 曲线却是一条不回头的斜线」。</p>
 
   <h3 id="s12-3">11.3 检测工具</h3>
-  <p>命令见下一章。常驻监控读 <code>/proc</code>，别用 <code>lsof</code> 采集——它默认遍历所有进程并做反查，fd 多的机器上单次几秒、吃满一核。</p>
+  <p>具体命令见下一章。常驻监控要直接读 <code>/proc</code>（内核暴露的进程信息目录），别用 <code>lsof</code> 来采集——它默认遍历所有进程并做反向域名解析，fd 多的机器上单次跑几秒、吃满一核。</p>
 
   <h3 id="s12-4">11.4 泄漏的根因清单：按出现频率排</h3>
   <table>
@@ -1756,7 +1756,7 @@
       <p class="sub">12.1 排查 "Too many open files" · 12.2 逐字段读懂 fd 与 fdinfo · 12.3 从趋势到具体那一行代码</p>
     </div>
   </div>
-  <p><code>/proc/&lt;pid&gt;/fd/</code> 的每个条目都是内核合成的符号链接——对某些类型，「路径」只是描述性字符串。</p>
+  <p><code>/proc/&lt;pid&gt;/fd/</code> 目录下的每个条目都是内核现场合成的符号链接——对某些类型来说，那个「路径」其实只是描述性字符串，不是真实的磁盘路径。</p>
 
   <h3 id="s13-1">12.1 实战：排查"Too many open files"</h3>
   <table>
@@ -1784,7 +1784,7 @@
       <tr><td><code>/memfd:name (deleted)</code></td><td>匿名内存</td><td><code>(deleted)</code> 正常，它本来没路径</td></tr>
     </tbody>
   </table>
-  <p><code>fdinfo</code> 三种典型内容。<strong>普通文件</strong>：<code>pos</code> 就是 <code>f_pos</code>；日志 fd 的 <code>pos</code> 远小于 <code>ls -l</code> 且不是 append，说明正在制造稀疏空洞。<strong>epoll</strong>：<code>tfd</code> 条数远大于活跃连接，说明有 fd 被 close 却没摘掉（它被 <code>dup</code> 过）。<strong>timerfd</strong>：<code>it_interval</code> 排「定时器越跑越多」。</p>
+  <p><code>fdinfo</code> 有三种典型内容要会读。<strong>普通文件</strong>：<code>pos</code> 就是当前的 <code>f_pos</code>；日志 fd 的 <code>pos</code> 远小于 <code>ls -l</code> 显示的大小且不是 append 模式，说明正在制造稀疏空洞。<strong>epoll</strong>：<code>tfd</code> 条数远大于活跃连接数，说明有 fd 被 close 却没从 epoll 摘掉（因为它被 <code>dup</code> 过）。<strong>timerfd</strong>：<code>it_interval</code> 的条目可以排查「定时器越跑越多」。</p>
 
   <h3 id="s13-3">12.3 泄漏排查：从趋势到具体那一行代码</h3>
   <ol>
@@ -1797,8 +1797,8 @@
   <div class="callout danger">
     <div class="callout-title">✗ 每天凌晨 4 点 EMFILE，重启就好</div>
     <p>订单同步服务每天 4:30 报 <code>Too many open files</code>，重启即恢复，运维加了「每天 4 点定时重启」跑了两个月。按顺序走：凌晨 2 点陡增；全是 <code>socket:[]</code>；97% <code>CLOSE_WAIT</code>；远端全指向内部对账接口。</p>
-    <p>根因：对账任务每批次新建一个 HTTP 客户端（各带连接池），只关了「本次请求」没关客户端。服务端断连发来 FIN，本地永久停在 <code>CLOSE_WAIT</code>——对象已无人引用，但 GC 不会替你关 socket。</p>
-    <p>修复：客户端改全局单例，并加 <code>fd_used / fd_limit</code> 比例告警。最值得记住的是：<strong><code>CLOSE_WAIT</code> 堆积永远是应用层的锅</strong>——它常被误判成网络问题，于是去调 TCP 参数、换负载均衡，全都无效。</p>
+    <p>根因是：对账任务每批次都新建一个 HTTP 客户端（各带一个连接池），用完只关了「本次请求」却没关客户端。服务端断连发来 FIN，本地这些连接就永久停在 <code>CLOSE_WAIT</code>——客户端对象已无人引用，但 GC（垃圾回收）不会替你关 socket。</p>
+    <p>修复：把客户端改成全局单例，并加 <code>fd_used / fd_limit</code> 比例告警。最值得记住的是：<strong><code>CLOSE_WAIT</code> 堆积永远是应用层的锅</strong>——它常被误判成网络问题，于是去调 TCP 参数、换负载均衡，全都无效。</p>
   </div>
   <div class="callout tip">
     <div class="callout-title">▶ 三条应该常驻的监控</div>

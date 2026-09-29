@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>系统观测 / eBPF / perf 实战 · Senior C++ Production Toolkit — Tech Notes</title>
-<meta name="description" content="系统观测 / eBPF / perf 实战：13 工具 cheatsheet · bpftrace 12 个 one-liner · BCC 12 个必备工具 · 5 个真实诊断 case · 推荐 workflow">
+<meta name="description" content="系统观测 eBPF perf 实战白话指南：13 个工具怎么选、bpftrace 一行脚本、BCC 必备工具、Verifier 与 BPF map 原理、5 个真实诊断 case 与推荐 workflow">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/observability_ebpf.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/observability_ebpf.html">
 <meta property="og:title" content="系统观测 / eBPF / perf 实战 · Senior C++ Production Toolkit">
-<meta property="og:description" content="系统观测 / eBPF / perf 实战：13 工具 cheatsheet · bpftrace 12 个 one-liner · BCC 12 个必备工具 · 5 个真实诊断 case · 推荐 workflow">
+<meta property="og:description" content="系统观测 eBPF perf 实战白话指南：13 个工具怎么选、bpftrace 一行脚本、BCC 必备工具、Verifier 与 BPF map 原理、5 个真实诊断 case 与推荐 workflow">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="系统观测 / eBPF / perf 实战 · Senior C++ Production Toolkit">
-<meta name="twitter:description" content="系统观测 / eBPF / perf 实战：13 工具 cheatsheet · bpftrace 12 个 one-liner · BCC 12 个必备工具 · 5 个真实诊断 case · 推荐 workflow">
+<meta name="twitter:description" content="系统观测 eBPF perf 实战白话指南：13 个工具怎么选、bpftrace 一行脚本、BCC 必备工具、Verifier 与 BPF map 原理、5 个真实诊断 case 与推荐 workflow">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -129,7 +129,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 75 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 80 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -180,12 +180,12 @@
       <div class="meta-row">
         <span class="pill red">核心难度 ★★★★☆</span>
         <span class="pill cyan">生产排障 高相关</span>
-        <span class="pill green">阅读时长 ~75 min</span>
+        <span class="pill green">阅读时长 ~80 min</span>
         <span class="pill amber">前置 Linux 基础</span>
       </div>
       <div class="meta">
         <span>10 章节</span>
-        <span>~75 min 阅读</span>
+        <span>~80 min 阅读</span>
         <span>13 工具 + 12 one-liner</span>
         <span>5 真实 case</span>
         <span>单文件离线可读</span>
@@ -198,7 +198,7 @@
         <h2>读前定位 · 为什么 Observability 是第三支柱</h2>
       </div></div>
 
-      <p class="lead">log + metric + trace 之后还缺一层：<strong>内核级 observability</strong>，也就是 <strong>eBPF / perf / bpftrace</strong> 这条链路。它专门回答那类「应用日志和指标全都正常，但请求就是慢」的问题。</p>
+      <p class="lead">log + metric + trace 之后还缺一层：<strong>内核级 observability</strong>（可观测性——不用改代码就能看清系统内部在干什么），也就是 <strong>eBPF / perf / bpftrace</strong> 这条链路。它专门回答那类「应用日志和指标全都正常，但请求就是慢」的问题。</p>
 
       <h3>0.1 这一篇的定位边界（很重要，先读这一段）</h3>
 
@@ -234,7 +234,7 @@
 
       <h3>0.2 四种观测手段各答什么问题</h3>
 
-      <p>「装了一堆工具还是查不出来」，根源多半是<strong>拿一种手段去回答它答不了的问题</strong>——用指标去归因、用日志去看分布、用链路去找热点函数。</p>
+      <p>「装了一堆工具还是查不出来」，根源多半是<strong>拿一种手段去回答它答不了的问题</strong>——用指标（metric——提前算好的数字，如每秒请求数，只知道「有多少」不知道「是谁」）去归因、用日志去看分布、用链路去找热点函数。</p>
 
       <div class="fig">
         <svg viewBox="0 0 900 268" role="img" aria-label="四种观测手段的分工图：日志回答「那一次具体发生了什么」，成本随事件量线性增长；指标回答「有没有异常、趋势如何」，成本几乎为零可常驻；追踪回答「一次请求在哪一段耗时」，需要埋点与采样；剖析回答「时间和资源具体花在哪一行代码上」，靠采样。图中标注日志与追踪属于事件流形态、指标属于计数形态、剖析属于分布形态，并指出本文覆盖的是剖析与内核侧的事件流" style="min-width:820px;height:auto">
@@ -280,7 +280,7 @@
         <figcaption>四种手段回答的是四个不同的问题，成本量级也差几个数量级。</figcaption>
       </div>
 
-      <p>落到内核观测里，能拿到的数据形态只有三种，<strong>工具选型全由它决定</strong>：</p>
+      <p>落到内核观测里，能拿到的数据形态只有三种，<strong>工具选型全由它决定</strong>。好比体检：第一种像体重秤，第二种像「身高分布曲线」，第三种像 24 小时随身录像——各有各的用途和成本：</p>
 
       <table>
         <thead><tr><th>形态</th><th>它能回答</th><th>它答不了</th><th>成本量级</th><th>代表</th></tr></thead>
@@ -316,9 +316,9 @@
       <h3>0.3 什么场景必须用本文这套</h3>
 
       <ul>
-        <li><strong>「哪个 syscall 慢」「内核锁卡住了」</strong>——应用日志只记业务耗时；内核自旋锁与 <code>rwsem</code> 的竞争在用户态 profiler 眼里只是一段「不知道在干嘛的时间」（机制见 <a href="./kernel_synchronization.html">内核同步与 RCU</a>）。</li>
+        <li><strong>「哪个 syscall 慢」「内核锁卡住了」</strong>——syscall（系统调用——程序请内核帮忙做事的入口，如读文件、收网络包）慢不慢，应用日志只记业务耗时；内核自旋锁与 <code>rwsem</code>（内核里的两种锁，拿到之前会原地打转或睡觉等待）的竞争在用户态 profiler 眼里只是一段「不知道在干嘛的时间」（机制见 <a href="./kernel_synchronization.html">内核同步与 RCU</a>）。</li>
         <li><strong>「哪些进程在抢同一块磁盘」</strong>——<code>biolatency -F</code> / <code>biosnoop</code> 能按进程、设备、IO 类型切；<code>iostat</code> 只给一个聚合数字。</li>
-        <li><strong>「生产不能装 valgrind」</strong>——valgrind 慢 10–100 倍且要重启进程；eBPF 挂上去就能观测<strong>已经在跑的进程</strong>。</li>
+        <li><strong>「生产不能装 valgrind」</strong>——valgrind（一个把程序每条指令都拦下来检查的工具，慢 10–100 倍且要重启进程）；eBPF 挂上去就能观测<strong>已经在跑的进程</strong>。</li>
         <li><strong>「延迟 spike 一秒，不知道哪里慢」</strong>——只能靠「内核里做阈值过滤 + 命中时抓栈」，§8 给完整套路。</li>
       </ul>
 
@@ -350,7 +350,7 @@
         <h2>工具栈全景 · 13 个核心工具 cheatsheet</h2>
       </div></div>
 
-      <p class="lead">先建立<u>工具地图</u>。下面 13 个工具 cover 95% 的生产 observability 场景，按「什么场景 → 选什么」组织：</p>
+      <p class="lead">先建立<u>工具地图</u>。下面 13 个工具 cover 95% 的生产 observability 场景，按「什么场景 → 选什么」组织。先不用背每个工具的参数，记住「遇到什么症状该找谁」就够了：</p>
 
       <div class="cheatsheet">
         <table>
@@ -374,14 +374,14 @@
       </div>
 
       <div class="intuition">
-        这张表最该记住的一列是<strong>「数据形态」</strong>，不是工具名。<code>strace</code> 和 <code>bpftrace</code> 的差距不在新旧：<code>strace</code> 靠 <code>ptrace</code>，每次 syscall 都要把目标进程<strong>停下来两次</strong>；eBPF 探针在内核里同步执行完就走。同样看 syscall，一个能上生产一个不能，差别在机制不在参数。
+        这张表最该记住的一列是<strong>「数据形态」</strong>，不是工具名。<code>strace</code> 和 <code>bpftrace</code> 的差距不在新旧：<code>strace</code> 靠 <code>ptrace</code>（一个「父亲盯着孩子」式的老机制——每次 syscall 都要把目标进程<strong>停下来两次</strong>，先拦下来看参数、再等返回看结果）；eBPF 探针在内核里同步执行完就走。同样看 syscall，一个能上生产一个不能，差别在机制不在参数。
       </div>
 
       <h3>1.1 先分层，再选工具：USE 与 RED</h3>
 
-      <p>拿到「系统慢」的报障，第一步不是打开工具而是<strong>决定要在哪一层找</strong>。<strong>USE</strong>（资源视角：利用率 / 饱和度 / 错误）面向 CPU、内存、磁盘、网卡这些有限资源，是本文的主场；<strong>RED</strong>（请求视角：速率 / 错误率 / 时延分布）面向服务对外提供的请求，属于 <a href="../perf-debug/observability_guide.html">应用层可观测性</a>，本文只在它指向内核时接手。</p>
+      <p>拿到「系统慢」的报障，第一步不是打开工具而是<strong>决定要在哪一层找</strong>。<strong>USE</strong>（资源视角：利用率 / 饱和度 / 错误——把机器当成 CPU、内存、磁盘、网卡这些有限资源，逐个问「用满了吗、排队了吗、报错了吗」）面向这些资源，是本文的主场；<strong>RED</strong>（请求视角：速率 / 错误率 / 时延分布——把系统当成对外提供请求的服务，问「请求快不快、错得多不多」）面向服务对外提供的请求，属于 <a href="../perf-debug/observability_guide.html">应用层可观测性</a>，本文只在它指向内核时接手。</p>
 
-      <div class="box tip"><strong>饱和度比利用率重要得多。</strong> CPU 利用率 60% 完全可能同时存在严重排队——负载集中在少数几个核上，或者被 cgroup 限流。利用率是「有没有在干活」，饱和度是「有多少人在门口排队」。<code>runqlat</code>、<code>biolatency</code> 之所以值钱，就是它们直接量饱和度，而 <code>top</code> 永远量不到。PSI（<code>/proc/pressure/*</code>）是内核自己给出的饱和度指标，成本为零，值得先看一眼。</div>
+      <div class="box tip"><strong>饱和度比利用率重要得多。</strong> CPU 利用率 60% 完全可能同时存在严重排队——负载集中在少数几个核上，或者被 cgroup（内核给进程组记账和限额的机制）限流。利用率是「有没有在干活」，饱和度是「有多少人在门口排队」——好比餐厅上座率 60% 看着健康，但门口排了三十桌的队，客人体验照样崩。<code>runqlat</code>、<code>biolatency</code> 之所以值钱，就是它们直接量饱和度，而 <code>top</code> 永远量不到。PSI（<code>/proc/pressure/*</code>，压力失速信息——内核直接统计「任务因为等资源停了多少时间」）是内核自己给出的饱和度指标，成本为零，值得先看一眼。</div>
 
       <h3>1.2 按「症状 → 工具」的决策路径</h3>
 
@@ -458,7 +458,7 @@
         <h2>perf 速通 · 火焰图工作流</h2>
       </div></div>
 
-      <div class="box tip"><strong>这一节刻意做薄。</strong> <a href="../perf-debug/perf_landscape.html">perf 全景</a> 已经讲透了 <a href="../perf-debug/perf_landscape.html#ch2">PMU 采样原理</a>、<a href="../perf-debug/perf_landscape.html#ch4">16 个子命令</a>、<a href="../perf-debug/perf_landscape.html#ch8">FP / DWARF / LBR 三种栈回溯</a>、<a href="../perf-debug/perf_landscape.html#ch9">符号化与 <code>[unknown]</code></a>、<a href="../perf-debug/perf_landscape.html#ch7">Top-Down</a>。<strong>本节只留「够用的速查」和「火焰图怎么读」</strong>——后者是 eBPF 侧 <code>profile</code>、<code>offcputime</code> 共用的判读能力。</div>
+      <div class="box tip"><strong>这一节刻意做薄。</strong> <a href="../perf-debug/perf_landscape.html">perf 全景</a> 已经讲透了 <a href="../perf-debug/perf_landscape.html#ch2">PMU 采样原理</a>（PMU——CPU 里专门数硬件事件的小计数器）、<a href="../perf-debug/perf_landscape.html#ch4">16 个子命令</a>、<a href="../perf-debug/perf_landscape.html#ch8">FP / DWARF / LBR 三种栈回溯</a>、<a href="../perf-debug/perf_landscape.html#ch9">符号化与 <code>[unknown]</code></a>、<a href="../perf-debug/perf_landscape.html#ch7">Top-Down</a>。<strong>本节只留「够用的速查」和「火焰图怎么读」</strong>——后者是 eBPF 侧 <code>profile</code>、<code>offcputime</code> 共用的判读能力。</div>
 
       <h3>2.1 五分钟速查</h3>
 
@@ -487,7 +487,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3>2.2 on-CPU 与 off-CPU 回答的是两个问题</h3>
 
-      <p>一次请求的<strong>墙上时间</strong>只能拆成两段：线程<u>在 CPU 上执行</u>与<u>不在 CPU 上</u>。两种火焰图各覆盖一半，<strong>只看一种必然漏掉另一半</strong>——这是「CPU 才 20% 但接口就是慢」的根源。</p>
+      <p>一次请求的<strong>墙上时间</strong>（wall time——从外面看这件事总共花了多久，不管 CPU 有没有在干活）只能拆成两段：线程<u>在 CPU 上执行</u>与<u>不在 CPU 上</u>。两种火焰图各覆盖一半，<strong>只看一种必然漏掉另一半</strong>——这是「CPU 才 20% 但接口就是慢」的根源。</p>
 
       <div class="fig">
         <svg viewBox="0 0 900 250" role="img" aria-label="一次请求的墙上时间拆解图：总时长分为 on-CPU 执行时间与 off-CPU 时间；off-CPU 又细分为 runqueue 排队等待、磁盘 IO 等待、锁与条件变量等待、等待下游响应四段。图中标注 on-CPU 段由 perf record 或 profile 采样覆盖，runqueue 段由 runqlat 覆盖，IO 段由 biolatency 覆盖，锁与下游等待由 offcputime 覆盖">
@@ -612,11 +612,11 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         <h2>ftrace · 内核函数追踪</h2>
       </div></div>
 
-      <p class="lead">ftrace 是<strong>内核内置的追踪框架</strong>：不装任何东西、不需要编译器与 BTF，<code>echo</code> 几个文件就能跑。它比 eBPF 老得多，但至今仍是<u>「看内核函数调用图与逐层耗时」最快的路径</u>，也是<strong>连 bpftrace 都装不上的老旧生产机</strong>上唯一还能用的手段。</p>
+      <p class="lead">ftrace 是<strong>内核内置的追踪框架</strong>：不装任何东西、不需要编译器与 BTF，<code>echo</code> 几个文件就能跑。它比 eBPF 老得多，但至今仍是<u>「看内核函数调用图与逐层耗时」最快的路径</u>，也是<strong>连 bpftrace 都装不上的老旧生产机</strong>上唯一还能用的手段。你可以把它理解成内核出厂自带的一套「函数级行车记录仪」开关。</p>
 
       <h3>3.1 机制：为什么它关着的时候几乎不要钱</h3>
 
-      <p>内核编译时带 <code>-pg -mfentry</code>，编译器在<strong>每个函数入口</strong>插一条对 <code>__fentry__</code> 的调用。每次调用都真跳一趟内核会慢到不能用，所以 <code>CONFIG_DYNAMIC_FTRACE</code> 在启动时把这些 call <strong>全部原地改写成 NOP</strong>，并把地址记进一张表。</p>
+      <p>内核编译时带 <code>-pg -mfentry</code>，编译器在<strong>每个函数入口</strong>插一条对 <code>__fentry__</code> 的调用。每次调用都真跳一趟内核会慢到不能用，所以 <code>CONFIG_DYNAMIC_FTRACE</code> 在启动时把这些 call <strong>全部原地改写成 NOP</strong>（NOP——一条「什么都不做」的占位指令，执行代价趋近于零），并把地址记进一张表。</p>
 
       <div class="fig">
         <svg viewBox="0 0 880 214" role="img" aria-label="动态 ftrace 的 NOP 与 call 互换机制图：内核编译时在每个函数入口插入对 __fentry__ 的调用；启动时全部原地改写成 NOP，同时把这些地址记进 available_filter_functions 这张表，此时开销为零；用户通过 set_ftrace_filter 点名某几个函数后，内核只把这几处的 NOP 改回 call，跳到 ftrace 的处理路径；未点名的函数仍然是 NOP。图中标注被内联或标了 notrace 的函数根本没有这个插入点，所以挂不上" style="min-width:800px;height:auto">
@@ -673,7 +673,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3>3.3 function_graph：带耗时的调用树</h3>
 
-      <p>这是 ftrace 最有价值的 tracer：同时挂函数入口和返回，输出<strong>缩进的调用树 + 每层实际耗时</strong>，粒度比 <code>strace</code> 细一整个层级。开法是三条 <code>echo</code>：<code>function_graph</code> 写进 <code>current_tracer</code>、目标函数写进 <code>set_graph_function</code>、阈值写进 <code>tracing_thresh</code>，然后读 <code>trace</code>。</p>
+      <p>这是 ftrace 最有价值的 tracer（tracer——一种「记录什么」的追踪模式，比如只记函数名、记调用树、记耗时）：同时挂函数入口和返回，输出<strong>缩进的调用树 + 每层实际耗时</strong>，粒度比 <code>strace</code> 细一整个层级。开法是三条 <code>echo</code>：<code>function_graph</code> 写进 <code>current_tracer</code>、目标函数写进 <code>set_graph_function</code>、阈值写进 <code>tracing_thresh</code>，然后读 <code>trace</code>。</p>
 
       <div class="fig">
         <svg viewBox="0 0 880 296" role="img" aria-label="function_graph 输出判读图：以一次 do_sys_openat2 调用为例，画出缩进的调用树与每层耗时——总耗时 174 微秒，其中 getname_flags 占 1.9 微秒，do_filp_open 占 171 微秒；再往下 link_path_walk 占 2.1 微秒、open_last_lookups 占 21.4 微秒、do_open 里的 ext4_file_open 占 142.9 微秒。图中标注 DURATION 一列只在函数返回那一行有值，代表这个函数连同所有子调用的总耗时也就是包含时间而不是 self time，要算某一层自己花了多少需要减去子调用之和；并标注内核自动打的耗时符号：加号超过 10 微秒、叹号超过 100 微秒、井号超过 1000 微秒。结论是耗时集中在文件系统层的 ext4_file_open 而不是路径查找" style="min-width:820px;height:auto">
@@ -733,7 +733,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3>3.4 事件追踪：比函数追踪更该优先用</h3>
 
-      <p><code>events/</code> 下是内核所有静态 tracepoint。<strong>能用 tracepoint 就别用 function tracer</strong>：参数结构化、相对稳定、开销更低。固定流程：</p>
+      <p><code>events/</code> 下是内核所有静态 tracepoint（静态 tracepoint——内核开发者预先埋在代码里的观测点，参数格式固定、对外承诺稳定）。<strong>能用 tracepoint 就别用 function tracer</strong>：参数结构化、相对稳定、开销更低。固定流程：</p>
 
       <table>
         <thead><tr><th>步骤</th><th>操作（以 <code>block:block_rq_issue</code> 为例）</th><th>为什么</th></tr></thead>
@@ -789,16 +789,16 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         <h2>eBPF 概念 · BPF map / probes / JIT / Verifier</h2>
       </div></div>
 
-      <p class="lead">eBPF = <strong>「在内核里跑 sandboxed 程序」</strong>：你写一段 BPF 字节码（受限 C 或 bpftrace DSL），内核 verifier 检查安全后 JIT 成原生码运行。<u>这是 Linux 过去十年最大的内核创新。</u></p>
+      <p class="lead">eBPF = <strong>「在内核里跑 sandboxed 程序」</strong>（sandboxed——关在沙箱里的：能力被限制、进场前先被检查，出不了事）：你写一段 BPF 字节码（受限 C 或 bpftrace DSL，DSL——为这一个领域定制的小语言），内核 verifier（验证器——加载前的安检员）检查安全后 JIT（当场翻译成 CPU 原生指令）成原生码运行。<u>这是 Linux 过去十年最大的内核创新。</u></p>
 
       <div class="insight-grid">
         <div class="card violet">
           <h4>① 挂载点（§4.5）</h4>
-          <p><strong>在哪里 hook</strong>：kprobe / fentry · tracepoint · uprobe / USDT · perf_event · XDP / tc · LSM。</p>
+          <p><strong>在哪里 hook</strong>（hook——把你的代码「挂」到系统某个关键位置，路过时就执行）：kprobe / fentry · tracepoint · uprobe / USDT · perf_event · XDP / tc · LSM。</p>
         </div>
         <div class="card violet">
           <h4>② BPF map（§4.3）</h4>
-          <p><strong>唯一的持久化存储，也是内核 ↔ 用户态的通道</strong>。<u>能不能在内核里聚合完全看 map 选得对不对</u>——eBPF 便宜的根本原因。</p>
+          <p><strong>唯一的持久化存储，也是内核 ↔ 用户态的通道</strong>（map——内核里的一张键值表，探针往里写、你从外面读）。<u>能不能在内核里聚合完全看 map 选得对不对</u>——eBPF 便宜的根本原因。</p>
         </div>
         <div class="card violet">
           <h4>③ Verifier（§4.2）</h4>
@@ -812,7 +812,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3 id="ch4-1">4.1 eBPF 为什么可行：三个前提缺一不可</h3>
 
-      <p>「让用户提供一段代码，在内核态、在中断上下文里、以完全的内核权限同步执行」——听起来就不该被允许。它成立靠三件事同时到位：</p>
+      <p>「让用户提供一段代码，在内核态、在中断上下文里、以完全的内核权限同步执行」——听起来就不该被允许。它成立靠三件事同时到位，好比让陌生人进金库：门口安检、动作受限、全程戴镣铐，缺一样都不敢放行：</p>
 
       <div class="fig">
         <svg viewBox="0 0 920 300" role="img" aria-label="eBPF 程序的生命周期流程图：源码经 clang 编译为 BPF 字节码，通过 bpf 系统调用加载，内核 Verifier 做静态检查，通过后由 JIT 编译为本机指令，挂载到 kprobe、tracepoint、XDP 等钩子上执行；执行结果写入 BPF map，用户态通过 bpf 系统调用读取 map 或从 ringbuf 消费事件；Verifier 检查失败时返回 EACCES 与验证日志，程序根本不会进入内核执行">
@@ -875,13 +875,13 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         <figcaption>加载路径上，Verifier 是唯一的守门人；运行路径上，「写 map」和「外送事件」的成本差几个数量级。</figcaption>
       </div>
 
-      <p><strong>① 受限的指令集</strong>——刻意设计得<u>容易被机器分析</u>的 RISC 风格虚拟 ISA：11 个 64 位寄存器（<code>r0</code> 返回值、<code>r1</code>–<code>r5</code> 传参、<code>r6</code>–<code>r9</code> 被调用者保存、<code>r10</code> 是<strong>只读</strong>栈帧指针）、定长指令、<strong>栈只有 512 字节</strong>、只能调 helper 白名单与 kfunc、没有动态内存分配。<strong>② Verifier 的静态检查</strong>（§4.2）。<strong>③ JIT</strong>——让一个「读几个字段、更新一次 map」的探针落在几十到几百纳秒。<u>安全和便宜必须同时成立。</u></p>
+      <p><strong>① 受限的指令集</strong>——刻意设计得<u>容易被机器分析</u>的 RISC 风格虚拟 ISA（ISA——指令集，即这门「字节码语言」有哪些指令可用）：11 个 64 位寄存器（<code>r0</code> 返回值、<code>r1</code>–<code>r5</code> 传参、<code>r6</code>–<code>r9</code> 被调用者保存、<code>r10</code> 是<strong>只读</strong>栈帧指针）、定长指令、<strong>栈只有 512 字节</strong>、只能调 helper 白名单与 kfunc（helper——内核预先备好、逐个登记在册的辅助函数，不在册的调不到）、没有动态内存分配。<strong>② Verifier 的静态检查</strong>（§4.2）。<strong>③ JIT</strong>——让一个「读几个字段、更新一次 map」的探针落在几十到几百纳秒。<u>安全和便宜必须同时成立。</u></p>
 
       <div class="box tip"><strong>三个使用层级，按需求选。</strong> ① 直接用现成的 BCC / libbpf-tools，一行命令，不用懂 eBPF；② 写 bpftrace 一行脚本，学一小时，覆盖八成临时排障；③ 写 libbpf + CO-RE 的 C 程序，学一周，用于长期常驻的基础设施。<u>绝大多数人停在 ② 就够了</u>，但 §4.2–§4.7 的原理即使只用 ①② 也必须懂——否则你不知道为什么脚本报错、为什么数字不准、为什么它把机器拖慢了。</div>
 
       <h3 id="ch4-2">4.2 Verifier 讲透：它到底拒绝什么</h3>
 
-      <p>Verifier 干的事一句话：<strong>加载时把所有可能的执行路径都走一遍，对每个寄存器推导出「可能是什么类型、取值落在什么范围」，然后证明每次内存访问都合法、且程序必然终止。</strong> 这是<u>静态证明</u>而非运行时检查——通不过就是加载失败，通过了运行时就没有额外开销。</p>
+      <p>Verifier 干的事一句话：<strong>加载时把所有可能的执行路径都走一遍，对每个寄存器推导出「可能是什么类型、取值落在什么范围」，然后证明每次内存访问都合法、且程序必然终止。</strong> 这是<u>静态证明</u>而非运行时检查——通不过就是加载失败，通过了运行时就没有额外开销。换句话说，安全检查的成本在门口一次付清，进去之后不再收钱。</p>
 
       <div class="analogy">把它想成<strong>机场安检而不是机上的保安</strong>：每件行李摊开确认，不能确认就不让上飞机；代价是排队慢、有些无害的东西也被拦下，好处是<u>飞机上不需要再配保安</u>。你遇到的大多数 verifier 报错，本质是「我写的东西是安全的，但我没有把这件事<strong>证明给它看</strong>」。</div>
 
@@ -968,7 +968,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3 id="ch4-3">4.3 BPF map：类型选择决定了工具准不准</h3>
 
-      <p>map 是 BPF 程序<strong>唯一</strong>的持久化存储，也是它和用户态之间的通道。没有 map，探针只能触发一次打印一行——等于把全部聚合推给用户态，事件量一大先被自己压垮。</p>
+      <p>map 是 BPF 程序<strong>唯一</strong>的持久化存储，也是它和用户态之间的通道。没有 map，探针只能触发一次打印一行——等于把全部聚合推给用户态，事件量一大先被自己压垮。好比查账：没有 map 就得把每一笔流水都抄出来带回家慢慢加总，有了 map 就相当于在柜台里当场把账加好，出门只带一个总数。</p>
 
       <div class="fig">
         <svg viewBox="0 0 900 320" role="img" aria-label="BPF map 类型选择决策图：按用途分四组——按维度聚合用 HASH，键空间无界如按线程或请求存开始时间用 LRU_HASH，高频路径上的计数器必须用 PERCPU_HASH 或 PERCPU_ARRAY，固定桶的直方图与配置项用 ARRAY；需要栈的用 STACK_TRACE；需要向用户态推事件流的在内核 5.8 以上用 RINGBUF、更老的内核或极高事件率下用 PERF_EVENT_ARRAY；其余特殊用途包括 PROG_ARRAY 做 tail call、LPM_TRIE 做 IP 网段最长前缀匹配、SK_STORAGE 与 TASK_STORAGE 做每连接每线程的本地存储且随对象生命周期自动回收。图中标注三个常见翻车点：用普通 HASH 存无界键空间会满了之后静默丢数据、非 percpu map 做高频计数会丢更新导致数值系统性偏低、max_entries 设太大会预分配吃掉几百兆内核内存" style="min-width:840px;height:auto">
@@ -1036,11 +1036,11 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         </tbody>
       </table>
 
-      <div class="box danger"><strong>共享 map 上写 <code>(*v)++</code> 是最隐蔽的一类错误。</strong> 这条语句是「读—改—写」三步、不是原子操作，多核并发会丢更新；而且所有核更新同一个 value 就是<u>在争同一条 cache line</u>，让<strong>探针本身成为系统里竞争最激烈的地方</strong>。退一步的 <code>__sync_fetch_and_add(v, 1)</code> 数对了，但仍在争那条 cache line。<u>高频路径的正解只有一个：换成 per-CPU map，然后普通自增。</u></div>
+      <div class="box danger"><strong>共享 map 上写 <code>(*v)++</code> 是最隐蔽的一类错误。</strong> 这条语句是「读—改—写」三步、不是原子操作，多核并发会丢更新；而且所有核更新同一个 value 就是<u>在争同一条 cache line</u>（cache line——CPU 缓存的最小存取单位，多核抢同一条就等于排队用同一块小白板），让<strong>探针本身成为系统里竞争最激烈的地方</strong>。退一步的 <code>__sync_fetch_and_add(v, 1)</code> 数对了，但仍在争那条 cache line。<u>高频路径的正解只有一个：换成 per-CPU map，然后普通自增。</u></div>
 
       <h3 id="ch4-4">4.4 ringbuf 相比 perf buffer 改进了什么</h3>
 
-      <p>当你确实需要把<strong>每一条事件</strong>送到用户态（比如 <code>execsnoop</code> 要打印每次 exec 的命令行），就需要一个内核到用户态的高速通道。历史上是 perf buffer，5.8 之后有了 ringbuf。</p>
+      <p>当你确实需要把<strong>每一条事件</strong>送到用户态（比如 <code>execsnoop</code> 要打印每次 exec 的命令行），就需要一个内核到用户态的高速通道。历史上是 perf buffer（perf 事件缓冲区——每个 CPU 一个独立信箱），5.8 之后有了 ringbuf（环形缓冲区——全机共用一条传送带，事件按先后排着出来）。</p>
 
       <div class="fig">
         <svg viewBox="0 0 900 300" role="img" aria-label="一次事件从内核采集到用户态的三条路径对比图：探针在事件发生时同步执行；路径一是在内核里用 map 聚合，用户态定期读一次 map，输出量恒定、成本最低，是首选；路径二是通过 ringbuf 外送，全局共享一个缓冲、多生产者单消费者、事件全局有序、支持 reserve 就地填写 submit 省一次拷贝、还能 discard 反悔、可控制唤醒时机；路径三是通过 perf buffer 外送，每个 CPU 一个独立环形缓冲、跨 CPU 事件顺序无保证、必须先在 512 字节栈上组装再整体拷入、内存随核数线性增长、负载不均时忙的核溢出丢事件而闲的核缓冲空着。图中标注成本差几个数量级，原则是能在内核里聚合就绝不外送" style="min-width:840px;height:auto">
@@ -1079,7 +1079,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         <figcaption>三条路的成本关系是①≪②&lt;③。②③ 的选择只在「要不要每一条事件」已经确定之后才需要考虑。</figcaption>
       </div>
 
-      <p>结构性差异图里已经画清，剩下三条是写代码时才会碰到的：</p>
+      <p>结构性差异图里已经画清，剩下三条是写代码时才会碰到的。这里的关键词先记两个：<code>reserve</code> 是「先在传送带上占个位」、<code>submit</code> 是「填好了放行」：</p>
 
       <table>
         <thead><tr><th></th><th>perf buffer（<code>PERF_EVENT_ARRAY</code>）</th><th>ringbuf（5.8+）</th></tr></thead>
@@ -1156,7 +1156,7 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
         <figcaption>探针位置决定了它能看见什么，也决定了开销与稳定性。<strong>内核函数只能挂 kprobe / fentry，uprobe 只能挂用户态二进制</strong>——<code>__schedule</code> 这类内核函数不存在「挂 uprobe」这个选项。</figcaption>
       </div>
 
-      <p>位置与开销图里已经给全，这张表只补「用的时候容易被咬一口的地方」：</p>
+      <p>位置与开销图里已经给全，这张表只补「用的时候容易被咬一口的地方」。先给几个挂载点一句话白话：tracepoint 是内核官方埋的观测点；fentry / fexit 挂在函数进 / 出口；kprobe 是「临时在内核函数上打补丁」的动态手段；uprobe 打在用户态程序上；USDT 是应用作者自己预埋的点：</p>
 
       <table>
         <thead><tr><th>挂载点</th><th>典型用途</th><th>要注意什么</th></tr></thead>
@@ -1197,13 +1197,13 @@ flamegraph.pl --color=io --title="Off-CPU Time" --countname=us out.stacks &gt; o
 
       <h3 id="ch4-6">4.6 CO-RE 与 BTF：eBPF 工程化最关键的一步</h3>
 
-      <p>BPF 程序经常要读内核结构体的字段（比如从 <code>struct sock</code> 里取目的 IP），编译出来是一条 <code>load [r1 + 40]</code>——<strong>偏移量 40 是编译时写死的常量</strong>。而 <u>结构体布局随内核版本、随 <code>CONFIG_</code> 组合而变</u>：同一个字段在 5.4 上偏移 40，5.15 上可能是 48。拿着写死 40 的程序去跑，读到的是隔壁字段——不会崩，只会给你错数据。</p>
+      <p>BPF 程序经常要读内核结构体的字段（比如从 <code>struct sock</code> 里取目的 IP），编译出来是一条 <code>load [r1 + 40]</code>——<strong>偏移量 40 是编译时写死的常量</strong>（「字段住在结构体里第 40 字节」这个位置被硬编码进了指令）。而 <u>结构体布局随内核版本、随 <code>CONFIG_</code> 组合而变</u>：同一个字段在 5.4 上偏移 40，5.15 上可能是 48。拿着写死 40 的程序去跑，读到的是隔壁字段——不会崩，只会给你错数据。</p>
 
       <p>BCC 的解法简单粗暴：<strong>把 C 源码随工具发出去，运行时在目标机上现场调 clang 编译</strong>。代价很实在：每台机器要装 clang/LLVM + 匹配的内核头文件（容器镜像里通常两者都没有，这是「在 Pod 里跑 BCC 失败」最常见的原因）；启动要<strong>几秒钟</strong>；编译期<strong>内存峰值可达几百 MB</strong>——在一台已经因内存问题在排查的机器上，工具自己把它推过了 OOM 线，这不是段子。</p>
 
-      <div class="def"><strong>BTF</strong>（BPF Type Format）：一种<u>极其紧凑</u>的类型描述格式，记录内核里每个结构体有哪些字段、各在什么偏移、什么类型。内核编译时开 <code>CONFIG_DEBUG_INFO_BTF=y</code> 就会把它<strong>嵌进内核镜像自身</strong>，运行时通过 <code>/sys/kernel/btf/vmlinux</code> 暴露。它只有几 MB，比完整 DWARF 小一到两个数量级，所以发行版愿意默认打开。</div>
+      <div class="def"><strong>BTF</strong>（BPF Type Format）：一种<u>极其紧凑</u>的类型描述格式，记录内核里每个结构体有哪些字段、各在什么偏移、什么类型——相当于一份「内核结构体的户口簿」。内核编译时开 <code>CONFIG_DEBUG_INFO_BTF=y</code> 就会把它<strong>嵌进内核镜像自身</strong>，运行时通过 <code>/sys/kernel/btf/vmlinux</code> 暴露。它只有几 MB，比完整 DWARF（另一种更全但也大得多的调试信息格式）小一到两个数量级，所以发行版愿意默认打开。</div>
 
-      <p><strong>CO-RE</strong>（Compile Once – Run Everywhere）反过来解：既然偏移量是唯一会变的东西，那就<u>别在编译时写死，留一个待填的空</u>。① <strong>编译时</strong> clang 遇到 <code>BPF_CORE_READ(sk, __sk_common.skc_daddr)</code> 会额外生成一条<strong>重定位记录</strong>；② <strong>加载时</strong> libbpf 读<u>目标机器</u>的 BTF 查出真实偏移，<strong>就地改写字节码里的立即数</strong>；③ 字段在老内核上不存在也有办法——<code>bpf_core_field_exists()</code> 让两条分支都编译进去，加载时由重定位决定走哪条。</p>
+      <p><strong>CO-RE</strong>（Compile Once – Run Everywhere，一次编译到处运行）反过来解：既然偏移量是唯一会变的东西，那就<u>别在编译时写死，留一个待填的空</u>。① <strong>编译时</strong> clang 遇到 <code>BPF_CORE_READ(sk, __sk_common.skc_daddr)</code> 会额外生成一条<strong>重定位记录</strong>（相当于在表格里留一行「这个数字到目标机上再查」）；② <strong>加载时</strong> libbpf 读<u>目标机器</u>的 BTF 查出真实偏移，<strong>就地改写字节码里的立即数</strong>；③ 字段在老内核上不存在也有办法——<code>bpf_core_field_exists()</code> 让两条分支都编译进去，加载时由重定位决定走哪条。</p>
 
       <p>下面是最小 CO-RE 骨架，把前面几节的纪律落在一处：<u><code>vmlinux.h</code> 拿类型、per-CPU map 聚合、LRU map 存无界键、查找后判空、存了就删</u>。</p>
 
@@ -1284,7 +1284,7 @@ int BPF_PROG(on_fsync_exit, struct file *file, loff_t s, loff_t e, int datasync,
 
       <h3 id="ch4-7">4.7 开销与安全边界：安全 ≠ 便宜</h3>
 
-      <p>这是生产使用 eBPF 时<strong>唯一一条真正会伤到你的认知差</strong>：Verifier 保证的是<u>内存安全和终止性</u>，完全不保证你不会给一条每秒执行千万次的路径加上一段代码。</p>
+      <p>这是生产使用 eBPF 时<strong>唯一一条真正会伤到你的认知差</strong>：Verifier 保证的是<u>内存安全和终止性</u>（程序不会崩内核、不会死循环），但它完全不保证你不会给一条每秒执行千万次的路径加上一段代码——好比安检员只管你带没带违禁品，不管你要不要在早高峰的高速公路上摆摊。</p>
 
       <table>
         <thead><tr><th>开销来源</th><th>量级</th><th>什么时候会失控</th><th>怎么控</th></tr></thead>
@@ -1322,7 +1322,7 @@ int BPF_PROG(on_fsync_exit, struct file *file, loff_t s, loff_t e, int datasync,
         </tbody>
       </table>
 
-      <p>安全边界上还有三条约束：<strong>探针不能睡眠</strong>，也不能调用任意内核函数（helper 是白名单）；<strong>递归风险真实存在</strong>——在分配路径或锁实现上挂探针而探针自己又触发同一条路径，内核用 per-CPU 递归保护挡住，代价是<u>丢掉那些事件</u>；<strong>加载能力本身就是攻击面</strong>——能加载 BPF 基本等价于能读任意内核内存，所以发行版默认 <code>kernel.unprivileged_bpf_disabled=1</code>。</p>
+      <p>安全边界上还有三条约束：<strong>探针不能睡眠</strong>，也不能调用任意内核函数（helper 是白名单）；<strong>递归风险真实存在</strong>——在分配路径或锁实现上挂探针而探针自己又触发同一条路径，内核用 per-CPU 递归保护挡住，代价是<u>丢掉那些事件</u>；<strong>加载能力本身就是攻击面</strong>——能加载 BPF 基本等价于能读任意内核内存，所以发行版默认 <code>kernel.unprivileged_bpf_disabled=1</code>（不允许普通用户加载 BPF 程序）。</p>
 
       <div class="box tip"><strong>生产使用 eBPF 的四条纪律。</strong><br>
       ① <strong>先在压测环境量开销</strong>：挂探针前后各跑一次，对比业务 P99 和 <code>perf stat</code> 的 IPC。<br>
@@ -1338,7 +1338,7 @@ int BPF_PROG(on_fsync_exit, struct file *file, loff_t s, loff_t e, int datasync,
         <div class="sub">12 个覆盖常见诊断的 one-liner + 判读要点</div>
       </div></div>
 
-      <p class="lead">bpftrace 是 <strong>「eBPF 的 awk」</strong>：同样是「模式 → 动作」的极简 DSL，同样适合一行解决一个问题，把 §4 那一整套（编译、验证、加载、map、输出）全藏在背后。<u>学会写一行 bpftrace，就跨过了「能不能问内核任何问题」这条线。</u></p>
+      <p class="lead">bpftrace 是 <strong>「eBPF 的 awk」</strong>（awk——以「条件 → 动作」著称的老牌文本处理语言）：同样是「模式 → 动作」的极简 DSL，同样适合一行解决一个问题，把 §4 那一整套（编译、验证、加载、map、输出）全藏在背后。<u>学会写一行 bpftrace，就跨过了「能不能问内核任何问题」这条线。</u></p>
 
       <h3>5.1 三分钟语法</h3>
 
@@ -1376,7 +1376,7 @@ sudo bpftrace -e '
 
       <h3>5.2 聚合函数：先选对形态，再写脚本</h3>
 
-      <p>回到 §0.2 的三种数据形态——bpftrace 里它们对应三组函数，<strong>选错了要么信息不够，要么把机器压垮</strong>：</p>
+      <p>回到 §0.2 的三种数据形态——bpftrace 里它们对应三组函数，<strong>选错了要么信息不够，要么把机器压垮</strong>。聚合函数（把许多事件在内核里当场算成一个结果的函数）与逐条打印的分工如下：</p>
 
       <table>
         <thead><tr><th>函数</th><th>产出</th><th>什么时候用</th><th>成本</th></tr></thead>
@@ -1393,7 +1393,7 @@ sudo bpftrace -e '
 
       <h3>5.3 十二个一行脚本</h3>
 
-      <p>这 12 条覆盖绝大多数临时排障。<strong>「判读」一列比命令本身更值钱</strong>——命令能抄，判据不能。</p>
+      <p>这 12 条覆盖绝大多数临时排障。<strong>「判读」一列比命令本身更值钱</strong>——命令能抄，判据不能。one-liner（一行脚本）的意思是：一条命令、不需要写文件、跑完即走。</p>
 
       <table>
         <thead><tr><th>#</th><th>想知道什么</th><th>一行脚本（<code>sudo bpftrace -e</code> 后面的部分）</th><th>判读要点</th></tr></thead>
@@ -1482,7 +1482,7 @@ sudo bpftrace -e '
         <div class="sub">已经写好的 60+ 个 eBPF 工具 · 装 <code>bpfcc-tools</code> 就有</div>
       </div></div>
 
-      <p class="lead">装上 <code>bpfcc-tools</code> 就有六十多个开箱即用的工具（Debian/Ubuntu 上命令带 <code>-bpfcc</code> 后缀）。<strong>遇到问题的第一反应应该是「有没有现成工具」，而不是「我来写一个」</strong>——它们处理了大量你一时想不到的边界情况。</p>
+      <p class="lead">装上 <code>bpfcc-tools</code> 就有六十多个开箱即用的工具（Debian/Ubuntu 上命令带 <code>-bpfcc</code> 后缀）。<strong>遇到问题的第一反应应该是「有没有现成工具」，而不是「我来写一个」</strong>——它们处理了大量你一时想不到的边界情况。好比生病先问药师有没有现成的药，别第一反应就自己上山采药煎药。</p>
 
       <div class="box tip"><strong>同一个仓库里有两套实现，别混了。</strong> 老的 <code>tools/</code> 是 Python + 内嵌 C，运行时现场编译（§4.6 那套）；新的 <code>libbpf-tools/</code> 是 <strong>C + CO-RE</strong>，几百 KB 静态二进制、无运行时依赖、毫秒级启动。<u>功能相同的优先用后者</u>——在容器里、批量跑、或内存紧张时，差别不是「快一点」而是「能不能用」。</div>
 
@@ -1600,20 +1600,20 @@ sudo bpftrace -e '
         <h2>USDT / kprobes / uprobes · 应用层 hook</h2>
       </div></div>
 
-      <p class="lead">§4.5 给了挂载点全景，这一章补上<strong>机制细节</strong>——kprobe 怎么在运行中的内核上插入断点、uprobe 为什么明显更贵、以及一条用血换来的纪律：<u>在高频路径上挂探针能把一台健康的机器打垮</u>。</p>
+      <p class="lead">§4.5 给了挂载点全景，这一章补上<strong>机制细节</strong>——kprobe 怎么在运行中的内核上插入断点、uprobe 为什么明显更贵、以及一条用血换来的纪律：<u>在高频路径上挂探针能把一台健康的机器打垮</u>。hook（挂钩子）在这里的意思是：让内核或程序在路过某个位置时，顺带执行你的观测代码。</p>
 
       <div class="box tip"><strong>先把「谁能挂在哪」钉死。</strong> <u>内核函数（<code>__schedule</code>、<code>vfs_fsync_range</code>）只能挂 kprobe/kretprobe 或 fentry/fexit；uprobe/uretprobe 只能挂用户态二进制里的函数。</u> 两者不能互换——不存在「给 <code>__schedule</code> 挂 uprobe」这个选项，也不存在「给 <code>malloc</code> 挂 kprobe」。看到脚本里写反了，那份脚本就是错的。</div>
 
       <h3>7.1 kprobe：在跑着的内核上改指令</h3>
 
-      <p>内核做的事很直接：<strong>把目标地址的指令保存下来，那里改成一条断点指令</strong>（x86 上是单字节 <code>int3</code>）。CPU 执行到这里触发异常，内核认出这是一个 kprobe、调用你的处理函数，然后<u>把被覆盖的那条指令搬到别处单步执行</u>，最后跳回去继续。</p>
+      <p>内核做的事很直接：<strong>把目标地址的指令保存下来，那里改成一条断点指令</strong>（x86 上是单字节 <code>int3</code>——CPU 碰到它就立刻陷入内核，像踩到了警报地砖）。CPU 执行到这里触发异常，内核认出这是一个 kprobe、调用你的处理函数，然后<u>把被覆盖的那条指令搬到别处单步执行</u>，最后跳回去继续。</p>
 
       <div class="analogy">像在<strong>一条正在通车的高速路上装测速点</strong>：把某段路面换成岔道口（<code>int3</code>），车被引到旁边小房间登记（处理函数），再把原本这段路补跑一遍，然后回主路。<u>登记本身不慢，慢的是「下高速再上高速」</u>。优化版不挖岔道口，而在原地放一块<strong>跳板</strong>（<code>int3</code> 换成 5 字节 <code>jmp</code>），省掉异常处理那一趟。</div>
 
       <ul>
         <li><strong>优化版 kprobe（<code>CONFIG_OPTPROBES</code>）</strong>：条件允许时内核自动把断点换成跳转，绕开异常路径。<u>不是每个 kprobe 都能被优化</u>——同一行脚本挂在不同函数上开销可能差好几倍。</li>
         <li><strong>kretprobe 的实例池</strong>：要在返回时触发，得在入口处<strong>把返回地址换成蹦床地址</strong>，真地址存进一个「实例」。实例数由 <code>maxactive</code> 限定，<u>并发线程数超过实例数时多出来的直接不记录</u>，表现为「调用次数比实际少」且没有任何提示。</li>
-        <li><strong>有 <code>fexit</code> 就别用 <code>kretprobe</code></strong>：<code>fentry/fexit</code> 基于 BPF trampoline（5.5+，依赖 BTF），从 ftrace 预留的入口 NOP 处调过来，<u>没有异常、没有实例池、参数带类型</u>，还能同时拿到入参和返回值。</li>
+        <li><strong>有 <code>fexit</code> 就别用 <code>kretprobe</code></strong>：<code>fentry/fexit</code> 基于 BPF trampoline（5.5+，依赖 BTF；trampoline——内核准备好的跳板，从 ftrace 预留的入口 NOP 处直接调过来，不走异常路径），<u>没有异常、没有实例池、参数带类型</u>，还能同时拿到入参和返回值。</li>
       </ul>
 
       <h3>7.2 uprobe：为什么比 kprobe 贵一个数量级</h3>
@@ -1677,7 +1677,7 @@ sudo bpftrace -e '
 
       <h3>7.4 给自己的 C++ 服务埋 USDT 探针</h3>
 
-      <p>USDT 是「把可观测性设计进代码里」最轻的做法。关键性质：<strong>没有人观测时，那里只是一条 NOP</strong>——不是「开销很小」，是<u>真的没有开销</u>。所以可以在生产二进制里长期保留埋点，不用在「信息量」和「性能」之间取舍。</p>
+      <p>USDT 是「把可观测性设计进代码里」最轻的做法。关键性质：<strong>没有人观测时，那里只是一条 NOP</strong>——不是「开销很小」，是<u>真的没有开销</u>。所以可以在生产二进制里长期保留埋点，不用在「信息量」和「性能」之间取舍。USDT（User-Level Statically Defined Tracing——应用作者自己预留的观测点，编译后是空指令）。</p>
 
       <div class="tool-card violet">
         <h4>埋点 → 确认 → 挂载：一条完整链路</h4>
@@ -1725,7 +1725,7 @@ $ sudo bpftrace -e '
         <h2>5 个真实诊断 case</h2>
       </div></div>
 
-      <p class="lead">五个 case 都按同一条链条组织：<strong>现象 → 列出所有假设 → 用哪个探针去<u>排除</u>假设 → 结论与修复</strong>。这个顺序比任何具体结论都重要——<u>排障效率不取决于你会多少工具，而取决于能不能每一步都砍掉一半可能性</u>。</p>
+      <p class="lead">五个 case 都按同一条链条组织：<strong>现象 → 列出所有假设 → 用哪个探针去<u>排除</u>假设 → 结论与修复</strong>。这个顺序比任何具体结论都重要——<u>排障效率不取决于你会多少工具，而取决于能不能每一步都砍掉一半可能性</u>。好比医生先用最便宜的检查排除大病，而不是一上来就做全套手术探查。</p>
 
       <div class="case-card">
         <div class="cc-head">Case 1 · 服务 P99 从 50 ms 跳到 2 秒，日志里看不出任何异常</div>
@@ -1889,7 +1889,7 @@ $ sudo bpftrace -e '
 
       <h3>9.2 常驻还是临时：两种完全不同的探针纪律</h3>
 
-      <p>同样是 eBPF，「7×24 跑在几千台机器上」和「排障时跑三十秒」是两套工程要求。<strong>把临时脚本直接转正是最常见的事故来源</strong>：</p>
+      <p>同样是 eBPF，「7×24 跑在几千台机器上」和「排障时跑三十秒」是两套工程要求。<strong>把临时脚本直接转正是最常见的事故来源</strong>——就像借来的拖车用顺手了就长期挂在车尾，年检必出事：</p>
 
       <table>
         <thead><tr><th></th><th>常驻监控</th><th>临时排障</th></tr></thead>
@@ -1901,7 +1901,7 @@ $ sudo bpftrace -e '
         </tbody>
       </table>
 
-      <div class="box danger"><strong>「静默失效的监控比没有监控更危险」。</strong> 没有监控时你知道自己是瞎的；有一个一直在出数但数字是错的监控时，你会在故障中<u>用它去排除一个其实有问题的方向</u>。所以常驻探针的第一条护栏不是准确性，而是<strong>「它还活着吗」</strong>——加载状态、事件计数、最后一次更新时间。</div>
+      <div class="box danger"><strong>「静默失效的监控比没有监控更危险」。</strong> 没有监控时你知道自己是瞎的；有一个一直在出数但数字是错的监控时，你会在故障中<u>用它去排除一个其实有问题的方向</u>——好比指南针坏了却还在用它导航，比没有指南针更糟。所以常驻探针的第一条护栏不是准确性，而是<strong>「它还活着吗」</strong>——加载状态、事件计数、最后一次更新时间。</div>
 
       <h3>9.3 跟 perf-debug 主线的分工</h3>
 
@@ -1922,7 +1922,7 @@ $ sudo bpftrace -e '
         </tbody>
       </table>
 
-      <p><strong>典型的联合用法</strong>：① 生产上用 bpftrace / BCC 把问题<u>缩小到某个进程、某条路径</u>；② 在压测环境用 perf、sanitizer 对那条路径做深度剖析。互补不替代。</p>
+      <p><strong>典型的联合用法</strong>：① 生产上用 bpftrace / BCC 把问题<u>缩小到某个进程、某条路径</u>；② 在压测环境用 perf、sanitizer（一类专查内存越界 / 数据竞争的检查工具，代价是慢，适合测试环境）对那条路径做深度剖析。互补不替代。</p>
 
       <h3>9.4 四周学习路线</h3>
 

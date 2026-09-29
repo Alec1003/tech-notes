@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linux 安全模型 · DAC / capabilities / seccomp / LSM / user namespace / 容器逃逸与加固</title>
-<meta name="description" content="Linux 安全模型：一次系统调用要过几道关卡 · DAC 权限位与 setuid 三套 id · capabilities 五个集合与 execve 计算规则 · seccomp-bpf 收窄系统调用面 · SELinux / AppArmor 强制访问控制 · namespace 到底隔离了什么 · 容器逃逸的六条真实路径与检测命令 · 分层加固清单与 auditd / eBPF 运行时检测">
+<meta name="description" content="用白话讲透 Linux 安全模型：一次系统调用要过哪五道关卡，DAC 权限位与 setuid 三套 id 怎么看，capabilities 如何拆分 root，seccomp-bpf 怎么收窄系统调用，SELinux / AppArmor 强制访问控制，namespace 隔离了什么没隔离什么，容器逃逸的六条真实路径，以及 auditd / eBPF 检测和分层加固清单。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/linux_security_model.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/linux_security_model.html">
 <meta property="og:title" content="Linux 安全模型 · DAC / capabilities / seccomp / LSM / user namespace / 容器逃逸与加固">
-<meta property="og:description" content="Linux 安全模型：一次系统调用要过几道关卡 · DAC 权限位与 setuid 三套 id · capabilities 五个集合与 execve 计算规则 · seccomp-bpf 收窄系统调用面 · SELinux / AppArmor 强制访问控制 · namespace 到底隔离了什么 · 容器逃逸的六条真实路径与检测命令 · 分层加固清单与 auditd / eBPF 运行时检测">
+<meta property="og:description" content="用白话讲透 Linux 安全模型：一次系统调用要过哪五道关卡，DAC 权限位与 setuid 三套 id 怎么看，capabilities 如何拆分 root，seccomp-bpf 怎么收窄系统调用，SELinux / AppArmor 强制访问控制，namespace 隔离了什么没隔离什么，容器逃逸的六条真实路径，以及 auditd / eBPF 检测和分层加固清单。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Linux 安全模型 · DAC / capabilities / seccomp / LSM / user namespace / 容器逃逸与加固">
-<meta name="twitter:description" content="Linux 安全模型：一次系统调用要过几道关卡 · DAC 权限位与 setuid 三套 id · capabilities 五个集合与 execve 计算规则 · seccomp-bpf 收窄系统调用面 · SELinux / AppArmor 强制访问控制 · namespace 到底隔离了什么 · 容器逃逸的六条真实路径与检测命令 · 分层加固清单与 auditd / eBPF 运行时检测">
+<meta name="twitter:description" content="用白话讲透 Linux 安全模型：一次系统调用要过哪五道关卡，DAC 权限位与 setuid 三套 id 怎么看，capabilities 如何拆分 root，seccomp-bpf 怎么收窄系统调用，SELinux / AppArmor 强制访问控制，namespace 隔离了什么没隔离什么，容器逃逸的六条真实路径，以及 auditd / eBPF 检测和分层加固清单。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -115,7 +115,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 55 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 60 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -154,7 +154,7 @@
     <h1>Linux 安全模型</h1>
     <p class="sub">
       同一台机器上，内核凭什么决定「<strong>这个进程能不能做这件事</strong>」？这篇把答案拆成五层——
-      seccomp 收窄系统调用面、DAC 看属主与权限位、capabilities 把 root 切成碎片、LSM 让策略压过属主、namespace 划出可见范围——
+      seccomp（收窄系统调用面）、DAC（看属主与权限位）、capabilities（把 root 切成碎片）、LSM（让策略压过属主）、namespace（划出可见范围）——
       再用它们去解释「容器到底隔离了什么、又漏了什么」。<br>
       <strong>与另一篇的分工</strong>：<a href="../perf-debug/security_hardening_guide.html">C++ 安全加固指南</a>讲的是<strong>代码层面</strong>的安全（内存漏洞、编译期硬化、sanitizer、供应链）；
       本篇讲<strong>操作系统层面</strong>的安全模型——即使你的代码被攻破，攻击者能拿到什么，由这一层决定。<br>
@@ -163,7 +163,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">面试高频</span>
-      <span class="pill green">阅读时长 ~55 min</span>
+      <span class="pill green">阅读时长 ~60 min</span>
       <span class="pill amber">前置 进程 · 文件系统 · 容器原理</span>
     </div>
     <div class="meta">
@@ -181,9 +181,9 @@
     <div class="t"><h2>权限检查发生在哪</h2><p class="sub">一次 open() 要连过五道关卡</p></div>
   </div>
 
-  <p>一次 <code>open("/etc/shadow", O_RDONLY)</code> 要过<strong>五道独立关卡</strong>，任何一道拒绝就失败——它们是<strong>「与」不是「或」</strong>。「我 <code>chmod 777</code> 了为什么还是 Permission denied」的答案几乎永远是：你只打开了 DAC 那一道门。</p>
+  <p>一次 <code>open("/etc/shadow", O_RDONLY)</code>（open 是程序请内核帮忙打开文件的那次「系统调用」——用户态程序自己碰不到磁盘，所有事都得递申请给内核办）要过<strong>五道独立关卡</strong>，任何一道说「不行」整个请求就失败——它们是<strong>「与」不是「或」</strong>，五道必须全过。「我 <code>chmod 777</code> 了为什么还是 Permission denied」的答案几乎永远是：你只打开了 DAC（Discretionary Access Control，自主访问控制——按「文件属主 + rwx 权限位」判断的传统检查）那一道门，后面几道根本没动。</p>
 
-  <div class="analogy">进公司大楼要过五道关：<strong>门禁闸机</strong>（seccomp——你这张卡根本没被允许刷这台机器）、<strong>工位归属</strong>（DAC——这个抽屉是不是你的）、<strong>职级牌</strong>（capabilities——你有没有「可以开别人抽屉」的特权）、<strong>公司红头文件</strong>（MAC——就算抽屉是你的，制度规定研发不得带出财务资料）、<strong>楼层可见性</strong>（namespace——你的门禁卡只能到 3 楼，其他楼层对你来说根本不存在）。五道全过才进得去；任意一道不过就是「Permission denied」，而且<strong>错误码通常长得一模一样</strong>，这正是排障最难的地方。</div>
+  <div class="analogy">好比进公司大楼要过五道关：<strong>门禁闸机</strong>（seccomp——进程给自己装的系统调用过滤器，你这张卡根本没被允许刷这台机器）、<strong>工位归属</strong>（DAC——这个抽屉是不是你的）、<strong>职级牌</strong>（capabilities——root 特权被拆成的一堆小权限位，你有没有「可以开别人抽屉」的特权）、<strong>公司红头文件</strong>（MAC——强制访问控制，就算抽屉是你的，制度规定研发不得带出财务资料）、<strong>楼层可见性</strong>（namespace——命名空间，你的门禁卡只能到 3 楼，其他楼层对你来说根本不存在）。五道全过才进得去；任意一道不过就是「Permission denied」，而且<strong>错误码通常长得一模一样</strong>——你不知道是哪道关卡拦的你，这正是排障最难的地方。</div>
 
   <div class="fig">
     <svg viewBox="0 0 800 330" role="img" aria-label="一次 open 依次经过 seccomp、DAC、capabilities、LSM 四道检查，namespace 决定作用域；任何一层拒绝都会失败" style="min-width:680px;height:auto">
@@ -243,7 +243,7 @@
   </div>
 
   <h3>为什么要这么多层</h3>
-  <p>每一层都在补上一层的洞：</p>
+  <p>每一层都在补上一层的洞。按出现顺序看这个演进就很自然——先有最简单的属主检查，发现不够用，再一层层加上去：</p>
 
   <table>
     <thead><tr><th>层</th><th>它补的洞</th><th>它自己的短板</th><th>引入时间</th></tr></thead>
@@ -258,7 +258,7 @@
 
   <div class="intuition">一句话：<strong>seccomp 决定「能敲哪些门」，DAC 决定「门是不是你家的」，capabilities 决定「有没有万能钥匙」，LSM 决定「制度允不允许开」，namespace 决定「你在哪一栋楼」。</strong></div>
 
-  <div class="box star"><strong>顺序与翻盘</strong>：① seccomp 在系统调用入口，拒绝时是 <code>SIGSYS</code> 或指定 errno，不是 <code>EACCES</code>；② DAC 拒绝后 capabilities <strong>还能翻盘</strong>（<code>CAP_DAC_OVERRIDE</code>）；③ LSM 拒绝<strong>没有任何东西能翻盘</strong>，连 root 都不行——这就是 MAC 相对 DAC 的本质差别。</div>
+  <div class="box star"><strong>顺序与翻盘</strong>：① seccomp 在系统调用入口，拒绝时是 <code>SIGSYS</code> 或指定 errno，不是 <code>EACCES</code>；② DAC 拒绝后 capabilities <strong>还能翻盘</strong>（<code>CAP_DAC_OVERRIDE</code>——一张「无视文件权限位」的通行证）；③ LSM 拒绝<strong>没有任何东西能翻盘</strong>，连 root 都不行——这就是 MAC 相对 DAC 的本质差别。</div>
 
   <div class="note">本篇是<strong>操作系统层</strong>。代码层的内存漏洞、编译器硬化、供应链见 <a href="../perf-debug/security_hardening_guide.html">C++ 安全加固指南</a>。两者是纵深的两端：代码层降低「被攻破」的概率，系统层降低「被攻破之后的损失」。</div>
 </section>
@@ -270,10 +270,10 @@
     <div class="t"><h2>传统 DAC：属主说了算</h2><p class="sub">看似人人都懂，细节处处是坑</p></div>
   </div>
 
-  <div class="def"><strong>DAC（Discretionary Access Control，自主访问控制）</strong>：访问权限由<strong>客体的属主自行决定</strong>。你的文件，你想给谁看就给谁看，内核不干涉这个决定。「自主」这个词是关键——它同时是 DAC 的便利之处和它的根本弱点。</div>
+  <div class="def"><strong>DAC（Discretionary Access Control，自主访问控制）</strong>：访问权限由<strong>客体的属主自行决定</strong>（「客体」是被访问的东西——文件、目录、socket 都算）。你的文件，你想给谁看就给谁看，内核不干涉这个决定。「自主」这个词是关键——它同时是 DAC 的便利之处和它的根本弱点。</div>
 
   <h3>2.1 权限位：目录的 r 和 x 完全是两回事</h3>
-  <p>文件的 <code>rwx</code> 很直观，<strong>目录的 <code>rwx</code> 才是考点</strong>：</p>
+  <p>文件的 <code>rwx</code>（读/写/执行三个权限位）很直观，<strong>目录的 <code>rwx</code> 才是考点</strong>——同样的字母放在目录上，含义会变掉一多半：</p>
 
   <table>
     <thead><tr><th>位</th><th>对普通文件</th><th>对目录</th><th>没有它会怎样</th></tr></thead>
@@ -309,10 +309,10 @@
     </svg>
     <figcaption>目录 <code>x</code> 不含 <code>r</code> = 知道名字才能进。反过来只有 <code>r</code>：看得见名字、什么都打不开。</figcaption>
   </div>
-  <p>这就是家目录常见的 <code>711</code>：外人列不出你有哪些文件，但你可以把 <code>~/public_html/index.html</code> 这种约定路径告诉别人。路径上<strong>每一级</strong>都要 x——文件本身 644 却读不了，多半断在上层某级目录。反过来，共享盘给了 <code>r</code> 忘了 <code>x</code>，<code>ls</code> 热闹、打开全是 <code>EACCES</code>。</p>
+  <p>这就是家目录常见的 <code>711</code>：外人列不出你有哪些文件，但你可以把 <code>~/public_html/index.html</code> 这种约定路径告诉别人，对方照样能打开。路径上<strong>每一级</strong>都要 x——文件本身 644 却读不了，多半断在上层某级目录。反过来，共享盘给了 <code>r</code> 忘了 <code>x</code>，就会出现「<code>ls</code> 热闹、打开全是 <code>EACCES</code>」的怪象：名字看得见，却一步都走不进去。</p>
 
   <h3>2.2 umask：新文件权限的减法</h3>
-  <p><code>umask</code> 不是默认权限，而是<strong>要减掉的位</strong>：内核用 <code>mode &amp; ~umask</code>。普通文件 <code>open</code> 常传 <code>0666</code>，目录 <code>0777</code>。</p>
+  <p><code>umask</code> 不是默认权限，而是<strong>要减掉的位</strong>：程序创建新文件时说「我想要 0666」，内核实际给的是 <code>mode &amp; ~umask</code>（想给的权限减去 umask 挡掉的部分）。普通文件 <code>open</code> 常传 <code>0666</code>，目录 <code>0777</code>。相当于程序开价、umask 砍价，最终成交价是两者相与。</p>
   <table>
     <thead><tr><th>umask</th><th>普通文件结果</th><th>典型场景</th></tr></thead>
     <tbody>
@@ -334,15 +334,15 @@
     </tbody>
   </table>
 
-  <div class="def"><strong><code>/tmp</code> 为什么是 <code>1777</code></strong>：<code>777</code> 让所有人能建临时文件；前面的 <code>1</code>（sticky）堵住「目录 w = 能删别人文件」。sticky 只管删除，不管创建——固定文件名的 symlink / TOCTOU 仍在。对策：<code>mkstemp()</code> 或 <code>O_CREAT|O_EXCL|O_NOFOLLOW</code>，服务再叠 <code>PrivateTmp=yes</code>；内核兜底 <code>fs.protected_symlinks=1</code> / <code>fs.protected_hardlinks=1</code>。</div>
+  <div class="def"><strong><code>/tmp</code> 为什么是 <code>1777</code></strong>：<code>777</code> 让所有人能建临时文件；前面的 <code>1</code>（sticky，粘滞位）堵住「目录 w = 能删别人文件」这个洞。sticky 只管删除，不管创建——固定文件名的 symlink / TOCTOU（Time-Of-Check-To-Time-Of-Use：内核检查「这是不是符号链接」和真正「打开文件」之间有时间差，攻击者在这个缝隙里把文件换成自己的）仍在。对策：<code>mkstemp()</code> 或 <code>O_CREAT|O_EXCL|O_NOFOLLOW</code>，服务再叠 <code>PrivateTmp=yes</code>；内核兜底 <code>fs.protected_symlinks=1</code> / <code>fs.protected_hardlinks=1</code>。</div>
 
   <h3>2.4 进程的三套 uid：real / effective / saved</h3>
 
-  <div class="def">每个进程有<strong>三个</strong> user ID（gid 同理还有三个），外加 Linux 特有的第四个 <code>fsuid</code>：
+  <div class="def">每个进程有<strong>三个</strong> user ID（gid 同理还有三个），外加 Linux 特有的第四个 <code>fsuid</code>。可以粗记成「你是谁 / 你现在扮成谁 / 万一要换回去记得原来的谁」：
     <ul>
       <li><strong>real uid（ruid）</strong>：你<strong>是谁</strong>——登录时确定，代表进程的真实归属，决定谁能给它发信号。</li>
       <li><strong>effective uid（euid）</strong>：你<strong>现在以谁的身份行事</strong>——<strong>所有权限检查用的都是它</strong>。</li>
-      <li><strong>saved set-user-ID（suid）</strong>：<code>execve</code> 时保存的一份「备份」，让进程<strong>能在特权与非特权之间来回切</strong>而不丢失恢复能力。</li>
+      <li><strong>saved set-user-ID（suid）</strong>：<code>execve</code>（执行新程序的系统调用）时保存的一份「备份」，让进程<strong>能在特权与非特权之间来回切</strong>而不丢失恢复能力。</li>
       <li><strong>fsuid</strong>：仅用于文件系统访问检查，通常自动跟随 euid。历史上给 NFS 服务器用，普通程序不必碰。</li>
     </ul>
   </div>
@@ -405,8 +405,8 @@
   </div>
 
   <h3>2.5 为什么现代做法是尽量不用 setuid 二进制</h3>
-  <p>setuid 程序是「用户任意控制输入、却以 root 身份跑」的攻击面——环境变量、已打开 fd、cwd、rlimit 全由调用者控制。动态链接器会忽略 <code>LD_PRELOAD</code>，但你自己 <code>system()</code> 出去的子进程不会。权限还是全量的：<code>passwd</code> 只想改一个文件，却拿到完整 root。</p>
-  <p>三种替代：① 文件 capability（<code>setcap</code>）只给这一位；② systemd socket activation，特权进程绑好端口把 fd 传过去；③ 特权 helper 经 Unix 域套接字暴露极窄接口，用 <code>SO_PEERCRED</code> 验身份。镜像里 setuid 二进制应趋近于零：<code>find / -xdev -perm -4000 -type f</code> 定期 diff。</p>
+  <p>setuid 程序是「用户任意控制输入、却以 root 身份跑」的攻击面——环境变量、已打开 fd（文件描述符）、cwd（当前工作目录）、rlimit（资源限制）全由调用者控制。动态链接器会忽略 <code>LD_PRELOAD</code>，但你自己 <code>system()</code> 出去的子进程不会。权限还是全量的：<code>passwd</code> 只想改一个文件，却拿到完整 root。</p>
+  <p>三种替代：① 文件 capability（<code>setcap</code>）只给这一位；② systemd socket activation（套接字激活——特权进程先把端口绑好，再把现成的 fd 传给非特权服务进程）；③ 特权 helper 经 Unix 域套接字暴露极窄接口，用 <code>SO_PEERCRED</code> 验身份。镜像里 setuid 二进制应趋近于零：<code>find / -xdev -perm -4000 -type f</code> 定期 diff。</p>
 
   <div class="note">挂载选项也是 DAC 的一部分：对 <code>/tmp</code>、<code>/dev/shm</code>、用户可写挂载点，<strong><code>nosuid,nodev</code> 应是默认</strong>——即使放得进 setuid-root 文件也执行不出特权。<code>findmnt -o TARGET,OPTIONS</code> 一次看全。</div>
 </section>
@@ -418,7 +418,7 @@
     <div class="t"><h2>capabilities：把 root 拆开</h2><p class="sub">四十多把小钥匙，替代一把万能钥匙</p></div>
   </div>
 
-  <p>传统 Unix 只有 uid 0（内核跳过绝大多数检查）和其他。一个只想 <code>bind(80)</code> 的进程被迫拥有加载模块、格式化磁盘的能力。<strong>capabilities 把 root 切成 40 多个独立位</strong>，按需授予。</p>
+  <p>传统 Unix 只有两种进程：uid 0（也就是 root，内核跳过绝大多数检查）和其他。一个只想 <code>bind(80)</code> 的进程被迫拥有加载模块、格式化磁盘的能力。<strong>capabilities（能力位）把 root 切成 40 多个独立位</strong>，按需授予——好比把万能钥匙换成一串各自开门的小钥匙。</p>
 
   <div class="analogy">从<strong>万能钥匙</strong>换成<strong>按需门禁卡</strong>。丢一张保洁卡损失停在走廊；但若图省事发了「除机房外全部楼层」，那就和万能钥匙没区别——这就是 <code>CAP_SYS_ADMIN</code>。</div>
 
@@ -448,7 +448,7 @@
   <div class="danger"><strong><code>CAP_SYS_ADMIN</code> 约等于 root</strong>：历史上的垃圾桶，一百多个不相干操作，其中挂载、<code>setns</code>、cgroup v1 写 <code>release_agent</code> 都能换成完整 root。听到「容器需要 <code>--cap-add=SYS_ADMIN</code>」，正确反应是追问它到底要哪一个操作——十有八九能换成更窄的位，或宿主侧预先备好资源再挂进去。</div>
 
   <h3>3.2 五个集合与 execve 的计算规则</h3>
-  <p>这是 capabilities 里最容易讲糊涂、也最容易被追问的部分。每个<strong>进程</strong>有五个集合，每个带文件 capability 的<strong>可执行文件</strong>有三个集合。</p>
+  <p>这是 capabilities 里最容易讲糊涂、也最容易被追问的部分。每个<strong>进程</strong>有五个集合（可以理解成同一个进程身上五本不同的「权限账本」，各有各的用途），每个带文件 capability 的<strong>可执行文件</strong>有三个集合。</p>
 
   <table>
     <thead><tr><th>集合</th><th>缩写</th><th>含义</th><th>一句话记忆</th></tr></thead>
@@ -513,6 +513,8 @@
 
   <h3>3.3 文件 capability：setuid 的现代替代</h3>
 
+  <p>setuid-root 的问题在于「给就给一整把」；文件 capability 则是把特权直接写在文件的扩展属性（文件元数据里的一段额外字段）上，谁执行这个文件，谁就只拿到指定的那一位。下图对比两种做法的差别：</p>
+
   <div class="fig">
     <svg viewBox="0 0 820 168" role="img" aria-label="setuid-root 把整把 root 钥匙交给二进制；文件 capability 只授一位例如 CAP_NET_BIND_SERVICE" style="min-width:680px;height:auto">
       <rect class="box-r" x="16" y="16" width="380" height="96" rx="10"/>
@@ -543,6 +545,8 @@
   </table>
 
   <h3>3.5 在代码里主动降权</h3>
+
+  <p>下面这段代码演示「程序启动时还是 root，绑好端口后自己把特权降到只剩必需的一位」的标准流程，五处关键步骤用 ★ 标出：</p>
 
 <pre><span class="pp">#include</span> <span class="str">&lt;sys/capability.h&gt;</span>   <span class="cm">// libcap，编译加 -lcap</span>
 <span class="pp">#include</span> <span class="str">&lt;sys/prctl.h&gt;</span>
@@ -577,7 +581,7 @@
     <span class="kw">return</span> prctl(PR_SET_NO_NEW_PRIVS, <span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>) == <span class="num">0</span>;
 }</pre>
 
-  <div class="danger"><strong>忘了 <code>PR_SET_KEEPCAPS</code> 是这段最常见的 bug。</strong>euid 从 0 变成非 0 时内核默认清空 Permitted / Effective。必须<strong>先</strong> KEEPCAPS 保住钱包，降完 uid 再挑要留的。它只保护「本进程降 uid」这一刻，<code>execve</code> 时自动清零。</div>
+  <div class="danger"><strong>忘了 <code>PR_SET_KEEPCAPS</code> 是这段最常见的 bug。</strong>euid 从 0 变成非 0 时，内核默认会把 Permitted / Effective 两个集合清空。必须<strong>先</strong> KEEPCAPS 保住钱包，降完 uid 再挑要留的。它只保护「本进程降 uid」这一刻，<code>execve</code> 时自动清零。</div>
 
   <div class="note">容器里通常不用自己写：<code>--cap-drop=ALL --cap-add=NET_BIND_SERVICE --user 1000</code>，或 K8s 的 <code>securityContext.capabilities</code>。自己写降权的价值是<strong>不依赖部署方配置正确</strong>。两者叠加最好。</div>
 </section>
@@ -589,9 +593,9 @@
     <div class="t"><h2>seccomp-bpf：收窄系统调用面</h2><p class="sub">用不到的门，直接砌死</p></div>
   </div>
 
-  <p>DAC 和 capabilities 回答的是「你能不能操作<strong>这个对象</strong>」。seccomp 回答的是一个完全不同的问题：<strong>「你能不能调用<strong>这个系统调用</strong>」</strong>——不管对象是谁。它是纵深防御里非常划算的一层，因为内核提供了 300 多个系统调用入口，而一个具体的服务进程通常只用到其中 40～60 个，剩下 250 个纯粹是白送给攻击者的攻击面。</p>
+  <p>DAC 和 capabilities 回答的是「你能不能操作<strong>这个对象</strong>」。seccomp（secure computing，系统调用过滤机制）回答的是一个完全不同的问题：<strong>「你能不能调用<strong>这个系统调用</strong>」</strong>——它根本不看对象是谁，只看你敲的是哪扇门。它是纵深防御里非常划算的一层，因为内核提供了 300 多个系统调用入口（系统调用是用户态程序请内核办事的唯一通道），而一个具体的服务进程通常只用到其中 40～60 个，剩下 250 个纯粹是白送给攻击者的攻击面。</p>
 
-  <div class="analogy">一栋楼有三百扇门，你的部门日常只走其中四十扇。<strong>seccomp 就是把剩下那二百六十扇直接砌死</strong>——不是加锁（加锁还有配钥匙、撬锁、内鬼的可能），是砌墙。哪怕攻击者拿到了你的员工卡（RCE 拿到了进程控制权），他也没法从那些门出去。代价是：万一你哪天真的需要走某扇被砌死的门，程序不是失败，而是<strong>当场被打死</strong>（<code>SIGSYS</code>）——所以「砌哪些门」这份名单必须建立在真实数据上。</div>
+  <div class="analogy">好比一栋楼有三百扇门，你的部门日常只走其中四十扇。<strong>seccomp 就是把剩下那二百六十扇直接砌死</strong>——不是加锁（加锁还有配钥匙、撬锁、内鬼的可能），是砌墙。哪怕攻击者拿到了你的员工卡（RCE 拿到了进程控制权），他也没法从那些门出去。代价是：万一你哪天真的需要走某扇被砌死的门，程序不是失败，而是<strong>当场被打死</strong>（<code>SIGSYS</code>，内核直接发来的致命信号）——所以「砌哪些门」这份名单必须建立在真实数据上。</div>
 
   <div class="def"><strong>seccomp（SECure COMPuting）</strong>：进程<strong>自愿</strong>给自己安装一份系统调用过滤器，之后<strong>不可撤销</strong>，且被所有子进程和 <code>execve</code> 出来的程序继承。「自愿 + 不可撤销 + 可继承」这三个性质合起来，让它成为沙箱的理想基石——沙箱在做危险事情<strong>之前</strong>先把自己关起来，之后就算被完全控制也出不去。</div>
 
@@ -678,9 +682,9 @@
 
   <h3>4.3 no_new_privs：装过滤器的前提</h3>
 
-  <div class="def"><strong><code>no_new_privs</code></strong>：一旦置位无法清除、被子进程继承。置位后 <code>execve</code> <strong>不再因 setuid 或文件 cap 提升权限</strong>。</div>
+  <div class="def"><strong><code>no_new_privs</code></strong>（「不再获得新特权」标志）：一旦置位无法清除、被子进程继承。置位后 <code>execve</code> <strong>不再因 setuid 或文件 cap 提升权限</strong>——相当于主动声明「从现在起，我这个进程树别想再往上爬」。</div>
 
-  <p>装 filter 必须先置这个位（除非有 <code>CAP_SYS_ADMIN</code>）。否则普通用户能构造<strong>混淆代理人</strong>：过滤器会被 <code>execve</code> 继承，而即将变成 setuid-root 的那个程序会在扭曲的系统调用语义下跑——典型手法是让 <code>setgroups</code> 返回成功却不真正清附加组，特权程序以为自己降干净了。</p>
+  <p>装 filter 必须先置这个位（除非有 <code>CAP_SYS_ADMIN</code>）。否则普通用户能构造<strong>混淆代理人</strong>（confused deputy：借一个高权限程序的手，按攻击者的意愿办事）攻击：过滤器会被 <code>execve</code> 继承，而即将变成 setuid-root 的那个程序会在扭曲的系统调用语义下跑——典型手法是让 <code>setgroups</code> 返回成功却不真正清附加组，于是特权程序以为自己降干净了，实际上漏洞留给了攻击者。</p>
   <p><strong>no_new_privs 是装 seccomp 的前提，否则普通用户能绕。</strong>置位之后再 exec 那个 setuid 二进制，它拿不到额外特权，过滤器坑到的只剩自己。K8s 的 <code>allowPrivilegeEscalation: false</code>、Docker 的 <code>--security-opt no-new-privileges</code> 设的就是这个位——它同时关掉 setuid 和文件 cap 两条提权路，所以和 seccomp 是一对，不要只装过滤器忘了它。</p>
 
   <div class="fig">
@@ -699,7 +703,7 @@
   </div>
 
   <h3>4.4 用 libseccomp 写一个白名单过滤器</h3>
-  <p>手写 cBPF 指令既痛苦又容易错（还要自己处理架构判断），生产上一律用 <code>libseccomp</code>。下面是一个「只做 JSON 解析、除必需 IO 外什么都不许干」的沙箱子进程的完整过滤器：</p>
+  <p>手写 cBPF 指令（seccomp 过滤器的底层指令格式）既痛苦又容易错（还要自己处理架构判断），生产上一律用 <code>libseccomp</code>（把底层指令封装成人话的库）。下面是一个「只做 JSON 解析、除必需 IO 外什么都不许干」的沙箱子进程的完整过滤器：</p>
 
 <pre><span class="pp">#include</span> <span class="str">&lt;seccomp.h&gt;</span>      <span class="cm">// libseccomp-dev，编译加 -lseccomp</span>
 <span class="pp">#include</span> <span class="str">&lt;sys/prctl.h&gt;</span>
@@ -804,12 +808,12 @@
     <div class="t"><h2>LSM 与 MAC：SELinux / AppArmor</h2><p class="sub">策略说了算，属主也改不了</p></div>
   </div>
 
-  <div class="def"><strong>MAC</strong>：规则由系统级策略规定，属主无权修改。<strong>DAC 是「我的文件我做主」，MAC 是「制度说不行就是不行，属主和 root 都不例外」</strong>。</div>
+  <div class="def"><strong>MAC</strong>（Mandatory Access Control，强制访问控制）：规则由系统级策略规定，属主无权修改。<strong>DAC 是「我的文件我做主」，MAC 是「制度说不行就是不行，属主和 root 都不例外」</strong>。</div>
 
   <div class="analogy">DAC 像家门锁，钥匙你配。MAC 像公司涉密制度：文件是你写的，但不能带出研发区，签字权不在你手上。Web 被打穿后，DAC 下攻击者能碰所有 <code>apache</code> 能碰的；MAC 下他锁在 <code>httpd_t</code>，策略没写 allow 的一律拒绝。</div>
 
   <h3>5.1 LSM：内核里的钩子框架</h3>
-  <p><strong>LSM</strong> 不是策略，而是遍布内核的钩子：打开文件、创建 socket、exec、<code>ptrace</code>… 具体模块挂上去判断。位置<strong>永远在 DAC 和 capabilities 之后</strong>。</p>
+  <p><strong>LSM</strong>（Linux Security Modules，Linux 安全模块框架）不是策略，而是遍布内核的钩子（hook——预埋在关键代码路径上的「检查点」，谁想管安全就往上面挂自己的判断逻辑）：打开文件、创建 socket、exec、<code>ptrace</code>… 具体模块（SELinux、AppArmor）挂上去做判断。它的位置<strong>永远在 DAC 和 capabilities 之后</strong>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 860 280" role="img" aria-label="LSM 钩子在 DAC 与 capabilities 之后只能收紧；SELinux 按 inode 上的四段 label 做类型强制，AppArmor 按路径通配规则约束" style="min-width:720px;height:auto">
@@ -854,7 +858,7 @@
   </div>
 
   <h3>5.2 SELinux 的模型：一切皆 label</h3>
-  <p>每个主体和客体都贴四段 label：<code>user:role:type:level</code>。<strong>Type Enforcement</strong> 是核心：策略写「哪个 source type 能对哪个 target type 做哪种操作」，默认拒绝。服务器场景出问题几乎总是 type 对不上。</p>
+  <p>SELinux 给每个主体（进程）和客体（文件、端口等）都贴四段 label（安全标签）：<code>user:role:type:level</code>。<strong>Type Enforcement</strong>（类型强制——SELinux 的核心机制）是关键：策略写「哪个 source type 能对哪个 target type 做哪种操作」，没写到的默认拒绝。服务器场景出问题几乎总是 type 对不上。</p>
   <table>
     <thead><tr><th>模式</th><th>行为</th><th>何时用</th></tr></thead>
     <tbody>
@@ -868,6 +872,7 @@
   <div class="danger"><strong>关掉 SELinux 是最糟的解决方案。</strong><code>SELINUX=disabled</code> 后内核停止维护文件 label，期间新建的文件没有正确 type。再开启只能全盘 <code>restorecon -R /</code>——TB 级文件系统是几小时停机。<strong>临时手段永远是 Permissive</strong>：业务先跑，同时拿到「要放开哪些」清单。</div>
 
   <h3>5.3 实操：从 AVC denied 到修好</h3>
+  <p>AVC（Access Vector Cache，SELinux 的访问决策缓存）denied 是 SELinux 拦下操作时留下的日志记录。排查按下面五步走：</p>
   <ol>
     <li><code>ausearch -m AVC,USER_AVC -ts recent -i</code> 确认是 MAC 拦的，不是 DAC。</li>
     <li>逐字段读：<code>denied { read }</code>、<code>scontext</code>（谁，如 <code>httpd_t</code>）、<code>tcontext</code>（对谁）、<code>tclass</code>、<code>permissive=0</code> 表示真拒了。</li>
@@ -888,7 +893,7 @@
   </div>
 
   <h3>5.4 AppArmor：按路径而不是按 label</h3>
-  <p>不给文件贴 label，profile 里直接写路径通配。入门成本低——一份可读文本。代价是 bind mount 与路径别名会让规则对不上；SELinux 跟的是 inode 上的 type，搬文件只要 label 跟着走。排障路径因此完全不同：AppArmor 先对路径，SELinux 先对 type。</p>
+  <p>AppArmor 不给文件贴 label，profile（配置文件，一份描述「这个程序能干什么」的可读文本）里直接写路径通配。入门成本低——一份可读文本。代价是 bind mount（把已有目录挂到另一个位置）与路径别名会让规则对不上；SELinux 跟的是 inode 上的 type，搬文件只要 label 跟着走。排障路径因此完全不同：AppArmor 先对路径，SELinux 先对 type。</p>
   <table>
     <thead><tr><th>规则</th><th>含义</th></tr></thead>
     <tbody>
@@ -926,7 +931,7 @@
     <div class="t"><h2>namespace 的安全边界</h2><p class="sub">隔离了什么，更重要的是没隔离什么</p></div>
   </div>
 
-  <p>前五层回答「能不能做」。namespace 回答「<strong>能看见什么</strong>」。看不见的自然操作不了，所以常被当成隔离——但它<strong>不是为安全设计的</strong>，初衷是资源视图虚拟化。机制原理见 <a href="cgroup_namespace_containers.html">cgroup / namespace 与容器原理</a>，这里只谈安全边界。</p>
+  <p>前五层回答「能不能做」。namespace（命名空间——内核给进程各自一副「世界视图」的机制）回答「<strong>能看见什么</strong>」。看不见的自然操作不了，所以常被当成隔离——但它<strong>不是为安全设计的</strong>，初衷是资源视图虚拟化。机制原理见 <a href="cgroup_namespace_containers.html">cgroup / namespace 与容器原理</a>，这里只谈安全边界。</p>
 
   <div class="fig">
     <svg viewBox="0 0 860 248" role="img" aria-label="namespace 隔离的是视图：mnt pid net uts ipc user cgroup time；不隔离的是同一份内核、大部分 sysctl、cgroup 限额仍由宿主设定、硬件与侧信道" style="min-width:720px;height:auto">
@@ -975,7 +980,7 @@
 
   <h3>6.2 user namespace：唯一非特权可创建的那个</h3>
 
-  <div class="def"><strong>user namespace</strong>：唯一普通用户无需特权就能创建的 namespace。新 ns 里可以是 uid 0 并拥有<strong>该 ns 内</strong>全套 capability——但只对同属这个 ns 的资源有效。它是 rootless 的基石，也是争议最大的一块。</div>
+  <div class="def"><strong>user namespace</strong>（用户命名空间）：唯一普通用户无需特权就能创建的 namespace。新 ns 里进程可以是 uid 0 并拥有<strong>该 ns 内</strong>全套 capability——但这份「root」只对同属这个 ns 的资源有效，出了边界就是普通人。它是 rootless（无 root 运行容器）的基石，也是争议最大的一块。</div>
 
   <div class="analogy">像<strong>剧组里的国王</strong>：片场内对布景道具有绝对权威，走出摄影棚就是普通人。为了戏演得像，内核给了他不少过去只有 root 才走得到的代码路径——这些路径审计远不充分，大量 userns CVE 就来自这里。</div>
 
@@ -1031,7 +1036,7 @@
     <div class="t"><h2>容器逃逸的真实路径</h2><p class="sub">绝大多数不是内核 0day，是配置错误</p></div>
   </div>
 
-  <div class="note">下面讲原理、成因和自查判据，<strong>不提供可运行的攻击脚本</strong>。真实逃逸<strong>绝大多数不是内核 0day</strong>，是写得太宽松的部署配置。前两条加起来覆盖大部分事故。</div>
+  <div class="note">下面讲原理、成因和自查判据，<strong>不提供可运行的攻击脚本</strong>。真实逃逸<strong>绝大多数不是内核 0day</strong>（还没公开的原生内核漏洞），是写得太宽松的部署配置。前两条加起来覆盖大部分事故。</div>
 
   <div class="fig">
     <svg viewBox="0 0 800 300" role="img" aria-label="容器逃逸路径：特权容器、docker.sock、SYS_ADMIN 加 release_agent、可写 proc、hostPID、以及共享内核漏洞" style="min-width:680px;height:auto">
@@ -1085,20 +1090,22 @@
     <li><strong><code>/sys</code> 变可写</strong>——cgroup、uevent、内核参数重新暴露。</li>
     <li><strong>宿主所有设备节点在 <code>/dev</code> 下可见</strong>——块设备可以直接 <code>mount</code>。</li>
   </ol>
-  <p>有了这些，容器里的 root 能直接看到宿主块设备并挂载它——改 <code>/etc/passwd</code>、写 <code>authorized_keys</code>、投个 cron 都是顺手的事。<strong>剩下的只有 namespace 提供的「视图隔离」，对一个能挂载宿主磁盘的进程毫无意义。</strong></p>
+  <p>有了这些，容器里的 root 能直接看到宿主块设备（硬盘设备）并挂载它——改 <code>/etc/passwd</code>、写 <code>authorized_keys</code>、投个 cron（定时任务）都是顺手的事。<strong>剩下的只有 namespace 提供的「视图隔离」，而对一个能挂载宿主磁盘的进程，视图隔离毫无意义——它根本不需要「看见」，直接就能摸到。</strong></p>
   <p>自查三条对上就是特权容器：<code>CapEff</code> 满 f（如 <code>0000003fffffffff</code>）+ <code>Seccomp: 0</code> + <code>ls /dev</code> 上百项且能看到 <code>/dev/sda</code>。唯一合理用途是系统组件（CNI、存储驱动、节点 agent）——它们本来就等于节点上的 root。常见借口与收窄：「要 DinD」换 <a href="../architect/cloud_native_kubernetes.html">Kaniko / buildah</a>；「要设 sysctl」用运行时的 <code>--sysctl</code>；「要挂 fuse / GPU」用 <code>--device</code> + 对应 cap，不要一把梭。</p>
 
   <h3>7.2 挂载 <code>/var/run/docker.sock</code>：把宿主 root 交出去</h3>
-  <p>比 privileged 更隐蔽：看起来只是挂了一个文件，CI runner、监控面板的官方文档里到处都是这个写法。推理链只有三步：这个 socket 是 Docker 守护进程的<strong>完整控制 API</strong> → 通过它可以创建<strong>新</strong>容器且参数由你指定 → 于是可以创建一个 privileged、把宿主 <code>/</code> 挂进去的容器。<strong>不需要任何漏洞，这就是 API 的正常功能。</strong></p>
+  <p>比 privileged 更隐蔽：看起来只是挂了一个文件，CI runner、监控面板的官方文档里到处都是这个写法。推理链只有三步：这个 socket（Unix 套接字文件）是 Docker 守护进程的<strong>完整控制 API</strong> → 通过它可以创建<strong>新</strong>容器且参数由你指定 → 于是可以创建一个 privileged、把宿主 <code>/</code> 挂进去的容器。<strong>不需要任何漏洞，这就是 API 的正常功能。</strong></p>
   <div class="intuition"><strong>能访问 docker.sock = 拥有宿主 root。</strong><code>containerd.sock</code> / <code>crio.sock</code> / 宿主 <code>docker</code> 组成员，完全同理。自查：<code>ls -l /var/run/docker.sock</code>、<code>mount | grep sock</code>、以及 <code>id</code> 看在不在 <code>docker</code> 组。集群侧用准入控制把挂了 <code>/var/run</code> 的 hostPath 全捞一遍。</div>
   <p>修：CI 换 rootless 构建器（buildah / Kaniko）；监控用只读 API 代理，不要把 socket 递进业务 Pod。绕不开就把这个工作负载按与宿主同等信任级别治理——它已经不是「一个容器」了。</p>
 
   <h3>7.3 <code>CAP_SYS_ADMIN</code> + cgroup v1 的 <code>release_agent</code></h3>
-  <p>cgroup v1 有一个「最后一个进程退出时通知」机制：某个 cgroup 的进程数掉到 0 时，内核会执行该 cgroup 的 <code>release_agent</code> 字段里写的路径。<strong>执行发生在宿主根 namespace、root 凭据</strong>——不是容器里那个进程的上下文。攻击链因此变成：在容器里挂上 cgroupfs（需要 <code>CAP_SYS_ADMIN</code>）→ 给某个子 cgroup 写 <code>release_agent=/恶意程序</code> → 把自己放进去再立刻退出 → 内核在宿主上帮你跑那个程序。</p>
+  <p>cgroup（control group，内核给进程分组限资源的机制）v1 有一个「最后一个进程退出时通知」机制：某个 cgroup 的进程数掉到 0 时，内核会执行该 cgroup 的 <code>release_agent</code> 字段里写的路径。<strong>执行发生在宿主根 namespace、以 root 凭据</strong>——不是容器里那个进程的上下文。攻击链因此变成：在容器里挂上 cgroupfs（需要 <code>CAP_SYS_ADMIN</code>）→ 给某个子 cgroup 写 <code>release_agent=/恶意程序</code> → 把自己放进去再立刻退出 → 内核在宿主上帮你跑那个程序。</p>
   <p>前置条件三件套：容器有 <code>CAP_SYS_ADMIN</code>、宿主仍是 cgroup v1、进程处于<strong>初始 user ns</strong>（ns 内的 SYS_ADMIN 打不到宿主的 cgroupfs）。自查：<code>stat -fc %T /sys/fs/cgroup</code> 是 <code>cgroup2fs</code> 则这条路径不存在；<code>/proc/self/uid_map</code> 若是 <code>0 0 4294967295</code> 表示没做 uid 重映射，逃逸收益仍是宿主 root。</p>
   <div class="box star"><strong>CVE-2022-0492</strong> 漏掉了对「必须在初始 user ns」的校验，连 <code>CAP_SYS_ADMIN</code> 都不再需要——非特权容器也能走到这条路径。「需要某 cap 才能利用」不是可靠防线：漏一个检查，整条假设就塌。切到 cgroup v2 是结构性修复——v2 改用 <code>cgroup.events</code> + inotify，<strong>不在内核里执行用户指定的程序</strong>。</div>
 
   <h3>7.4 可写的 <code>/proc</code> 与 <code>/sys</code></h3>
+
+  <p><code>/proc</code> 和 <code>/sys</code> 是内核暴露自身状态与开关的两个虚拟文件系统——里面很多「文件」其实是可以写的内核旋钮，容器里本该全部只读。下表列出最危险的几处：</p>
 
   <table>
     <thead><tr><th>路径</th><th>可写的后果</th><th>正常状态</th></tr></thead>
@@ -1141,7 +1148,7 @@
   </div>
 
   <h3>7.6 内核漏洞：共享内核意味着内核漏洞就是逃逸漏洞</h3>
-  <p>这一条没有「检测配置」，只有版本管理。Dirty COW、Dirty Pipe 都能在容器内直接利用，无需特殊配置——因为容器和宿主跑的是<strong>同一份内核代码</strong>。runC 的 CVE-2019-5736 用 <code>/proc/self/exe</code> 覆盖宿主 runc，说明运行时本身也是攻击面：容器进程看到的「自己」其实是宿主上那个特权二进制。</p>
+  <p>这一条没有「检测配置」可查，只有版本管理。Dirty COW、Dirty Pipe 都能在容器内直接利用，无需特殊配置——因为容器和宿主跑的是<strong>同一份内核代码</strong>。runC 的 CVE-2019-5736 用 <code>/proc/self/exe</code> 覆盖宿主 runc，说明运行时本身也是攻击面：容器进程看到的「自己」其实是宿主上那个特权二进制。</p>
   <div class="intuition"><strong>无法靠配置消除，只能三件事管理</strong>：① 补丁节奏（能量出集群最旧的内核，而不是只看「最新那台」）；② 开 user ns，降低利用价值；③ 不可信负载换 gVisor / Kata。「容器不是安全边界」指的就是这一条——对配置良好的自有服务不成立，对隔离敌意代码则完全成立。前五条是配置错误，这一条才是架构税。</div>
 </section>
 
@@ -1152,7 +1159,7 @@
     <div class="t"><h2>加固与运行时防护</h2><p class="sub">从一行配置到换一个内核</p></div>
   </div>
 
-  <p>按性价比从上往下：上面几条几乎零成本，下面几条要付性能与运维代价。</p>
+  <p>按性价比从上往下排：上面几条几乎零成本，下面几条要付性能与运维代价。</p>
 
   <div class="fig">
     <svg viewBox="0 0 840 200" role="img" aria-label="加固三层：第一层容器配置几乎零成本，第二层 systemd 或 Pod 准入强制，第三层用 gVisor 或 Kata 换掉共享内核" style="min-width:700px;height:auto">
@@ -1207,7 +1214,7 @@
   <p>Pod Security Standards 把这些打包成 privileged / baseline / restricted 三档，用命名空间标签强制。落地：先 <code>warn</code> + <code>audit</code> 收集违规，再切 <code>enforce</code>。</p>
 
   <h3>8.2 第二层：systemd 单元沙箱（非容器场景的同一套能力）</h3>
-  <p>裸机服务用同一套内核能力，入口换成 unit 指令。启动流程见 <a href="systemd_boot_init.html">systemd 与 Linux 启动流程</a>。改完用 <code>systemd-analyze security myserver.service</code> 打暴露分，从最差的单元开始改。</p>
+  <p>裸机服务用同一套内核能力，入口换成 unit 指令（systemd 的单元配置项——效果与容器那套旋钮一一对应）。启动流程见 <a href="systemd_boot_init.html">systemd 与 Linux 启动流程</a>。改完用 <code>systemd-analyze security myserver.service</code> 打暴露分（该服务还有多大面积暴露在风险下的量化评分），从最差的单元开始改。</p>
 
 <pre><span class="cm"># /etc/systemd/system/myserver.service</span>
 [Service]
@@ -1248,7 +1255,7 @@ SystemCallErrorNumber=EPERM                 <span class="cm"># 违规返回 EPER
   <p>这些指令和容器 <code>securityContext</code> 是同一套内核旋钮，只是入口换成 unit 文件。先上 <code>ProtectSystem</code> / <code>NoNewPrivileges</code> / <code>PrivateTmp</code>，再收 <code>SystemCallFilter</code>。<code>MemoryDenyWriteExecute</code> 对 JIT / 解释器会直接打死，灰度期先拿 <code>systemd-analyze security</code> 看暴露分，不要一上来全开。<code>SystemCallArchitectures=native</code> 关掉 32 位兼容 ABI，对应 §4.5 那条「换一套调用号绕过」。</p>
 
   <h3>8.3 第三层：换掉共享内核</h3>
-  <p>前两层都在「配置得更严」，但 §7.6 那条——共享内核——是配置改不动的。要动它只有两条路：</p>
+  <p>前两层都在「配置得更严」，但 §7.6 那条——共享内核——是配置改不动的。要动它只有两条路：要么在用户态重新实现一个「假内核」（gVisor），要么给每个容器配一个真虚拟机（Kata）：</p>
 
   <table>
     <thead><tr><th>维度</th><th>普通容器（runc）</th><th><strong>gVisor</strong>（runsc）</th><th><strong>Kata Containers</strong></th></tr></thead>
@@ -1292,10 +1299,10 @@ SystemCallErrorNumber=EPERM                 <span class="cm"># 违规返回 EPER
     <div class="t"><h2>审计与检测</h2><p class="sub">防不住的，至少要看得见</p></div>
   </div>
 
-  <p>预防总有漏网。第二个问题：<strong>出事了能不能发现、能不能还原</strong>。两条互补路线——auditd（全、重、离线）与 eBPF 运行时检测（轻、快、在线）。</p>
+  <p>预防总有漏网。第二个问题：<strong>出事了能不能发现、能不能还原</strong>。两条互补路线——auditd（内核自带的审计服务：全、重、离线）与 eBPF 运行时检测（内核里的可编程探针：轻、快、在线）。</p>
 
   <h3>9.1 auditd：内核自带的审计子系统</h3>
-  <div class="def"><strong>Linux Audit</strong>：独立于 LSM 的记录框架，写入 <code>/var/log/audit/audit.log</code>。SELinux 的 AVC 也走它，所以 §5 的 <code>ausearch</code> 就是在查 audit 日志。</div>
+  <div class="def"><strong>Linux Audit</strong>：独立于 LSM 的记录框架（谁在什么时间动过什么，一条条写下来），日志写入 <code>/var/log/audit/audit.log</code>。SELinux 的 AVC 也走它，所以 §5 的 <code>ausearch</code> 就是在查 audit 日志。</div>
 
   <table>
     <thead><tr><th>规则意图</th><th>写法要点</th><th>值不值得</th></tr></thead>
@@ -1308,12 +1315,12 @@ SystemCallErrorNumber=EPERM                 <span class="cm"># 违规返回 EPER
       <tr><td>锁定规则集</td><td>最后一行 <code>-e 2</code></td><td>改规则必须重启，防攻击者关审计</td></tr>
     </tbody>
   </table>
-  <p>查询：<code>ausearch -k identity -ts today</code>；<code>-i</code> 把数字译成名字。健康检查看 <code>auditctl -s</code> 的 <code>lost</code>（&gt;0 就是在丢事件）和 <code>backlog</code>。内核环形缓冲用 <code>-b</code> 加大；用户态跟不上就用 <code>-r</code> 限速，否则不是「记全了」，是「把机器拖死了还丢事件」。</p>
+  <p>查询：<code>ausearch -k identity -ts today</code>；<code>-i</code> 把数字译成名字。健康检查看 <code>auditctl -s</code> 的 <code>lost</code>（&gt;0 就是在丢事件）和 <code>backlog</code>（积压的待处理事件数）。内核环形缓冲（ring buffer，一块写满就从头覆盖的循环内存）用 <code>-b</code> 加大；用户态跟不上就用 <code>-r</code> 限速，否则不是「记全了」，是「把机器拖死了还丢事件」。</p>
 
   <div class="danger"><strong>审计量爆炸是真实事故，不是运维段子。</strong>无条件审计 <code>execve</code> 在 CI 机器上每秒上万条：磁盘打满、<code>lost</code> 疯涨、内核在 <code>audit_log_start</code> 上自旋。配置 <code>failure=2</code>（audit 失败就 panic）本意是合规「一条都不能丢」，碰上 backlog 打满会把整机直接踢下线。只审计「响了你知道做什么」的事件；<code>-F auid&gt;=1000</code> 丢掉系统账号噪音；上线前用压测量 EPS，再决定 <code>-b</code> / <code>-r</code>。把高价值规则转发 SIEM，不要把原始 audit.log 当产品。</div>
 
   <h3>9.2 基于 eBPF 的运行时检测</h3>
-  <p>auditd 是「记录一切、事后查询」。eBPF 工具是「内核里就地判断，只把命中送上来」。机制见 <a href="observability_ebpf.html">eBPF 与可观测性</a>。</p>
+  <p>auditd 是「记录一切、事后查询」。eBPF（extended Berkeley Packet Filter，能在内核里安全运行的小段验证过的程序）工具是「内核里就地判断，只把命中送上来」。机制见 <a href="observability_ebpf.html">eBPF 与可观测性</a>。</p>
 
   <div class="fig">
     <svg viewBox="0 0 820 150" role="img" aria-label="auditd 负责完整取证和合规留存，Falco 与 Tetragon 负责实时告警，两者分工不是二选一" style="min-width:680px;height:auto">

@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>文件系统与存储栈 · VFS / inode / ext4 / XFS / fsync 语义 / 页缓存回写 / LVM RAID / IO 排障</title>
-<meta name="description" content="文件系统与存储栈：write() 返回不等于数据落盘。这篇讲清 VFS 四个核心对象与硬链接的本质、ext4 与 XFS 的磁盘布局、fsync / fdatasync / 目录 fsync 的持久化语义与 fsyncgate、页缓存回写调优、df 与 du 对不上和 inode 耗尽这类线上事故、以及 LVM / RAID 分层与 I/O 排障工作流。">
+<meta name="description" content="文件系统与存储栈通俗指南：write() 返回不等于数据落盘。讲清 VFS 与 inode 的关系、硬链接本质、ext4 与 XFS 磁盘布局、fsync 语义与 fsyncgate、页缓存回写、df 与 du 对不上和 inode 耗尽事故、LVM RAID 分层与 I/O 排障。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/filesystem_storage_stack.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/filesystem_storage_stack.html">
 <meta property="og:title" content="文件系统与存储栈 · VFS / inode / ext4 / XFS / fsync 语义 / 页缓存回写 / LVM RAID / IO 排障">
-<meta property="og:description" content="文件系统与存储栈：write() 返回不等于数据落盘。这篇讲清 VFS 四个核心对象与硬链接的本质、ext4 与 XFS 的磁盘布局、fsync / fdatasync / 目录 fsync 的持久化语义与 fsyncgate、页缓存回写调优、df 与 du 对不上和 inode 耗尽这类线上事故、以及 LVM / RAID 分层与 I/O 排障工作流。">
+<meta property="og:description" content="文件系统与存储栈通俗指南：write() 返回不等于数据落盘。讲清 VFS 与 inode 的关系、硬链接本质、ext4 与 XFS 磁盘布局、fsync 语义与 fsyncgate、页缓存回写、df 与 du 对不上和 inode 耗尽事故、LVM RAID 分层与 I/O 排障。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="文件系统与存储栈 · VFS / inode / ext4 / XFS / fsync 语义 / 页缓存回写 / LVM RAID / IO 排障">
-<meta name="twitter:description" content="文件系统与存储栈：write() 返回不等于数据落盘。这篇讲清 VFS 四个核心对象与硬链接的本质、ext4 与 XFS 的磁盘布局、fsync / fdatasync / 目录 fsync 的持久化语义与 fsyncgate、页缓存回写调优、df 与 du 对不上和 inode 耗尽这类线上事故、以及 LVM / RAID 分层与 I/O 排障工作流。">
+<meta name="twitter:description" content="文件系统与存储栈通俗指南：write() 返回不等于数据落盘。讲清 VFS 与 inode 的关系、硬链接本质、ext4 与 XFS 磁盘布局、fsync 语义与 fsyncgate、页缓存回写、df 与 du 对不上和 inode 耗尽事故、LVM RAID 分层与 I/O 排障。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -117,7 +117,7 @@
       <a class="tn-home" href="../index.html">← 主页</a>
       <a href="linux_system_directory.html">目录</a>
       <a class="tn-icon" href="https://github.com/kavinChan13/tech-notes" target="_blank" rel="noopener" title="GitHub 仓库" aria-label="GitHub 仓库"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 60 min</span>
+      <span class="tn-readmeta" title="预计阅读时长"><svg class="tn-clock" viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true" style="vertical-align:-2px"><path d="M8 0a8 8 0 110 16A8 8 0 018 0ZM1.5 8a6.5 6.5 0 1013 0 6.5 6.5 0 00-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 01-.557 1.392l-2.5-1A.751.751 0 017 8.25v-3.5a.75.75 0 011.5 0Z"/></svg> 70 min</span>
       <button class="theme-btn" id="themeBtn" type="button" aria-label="切换浅色 / 深色">◐</button>
     </div>
   </div>
@@ -159,7 +159,7 @@
     <div class="meta-row">
       <span class="pill red">核心难度 ★★★★☆</span>
       <span class="pill cyan">面试高频</span>
-      <span class="pill green">阅读时长 ~60 min</span>
+      <span class="pill green">阅读时长 ~70 min</span>
       <span class="pill amber">前置 文件描述符 · I/O 栈</span>
     </div>
     <div class="meta">
@@ -178,7 +178,7 @@
     <div class="t"><h2>一次 write() 的完整旅程</h2><p class="sub">每一层都有一个缓存，每个缓存都是一个丢数据的机会</p></div>
   </div>
 
-  <p><code>write()</code> 返回成功，只表示数据进了某一层缓存。到盘片要穿过<strong>四个独立缓存</strong>，失效场景完全不同：进程崩溃、内核 panic、机器掉电、设备固件谎报。下图每一层标了「谁丢什么」。</p>
+  <p><code>write()</code> 返回成功，只表示数据进了某一层缓存，离真正写到盘上还远。一次写入要到达盘片（存储介质），得穿过<strong>四个互相独立的缓存</strong>，而它们各自的失效场景完全不同：进程崩溃、内核 panic（内核自己崩溃死机）、机器掉电、设备固件谎报完成。下图中每一层都标了「谁丢什么」。</p>
 
   <div class="analogy">把写文件想成<strong>寄一份合同</strong>。你把文件塞进办公室的<strong>出件篮</strong>（glibc 缓冲区）——你走了，篮子里的东西没人管；行政每小时来收一次，放进<strong>公司的待寄堆</strong>（页缓存）——公司着火，还是没了；快递员每天来取，装上<strong>车</strong>（设备写缓存）——车翻了也没了；只有对方<strong>签收</strong>那一刻，合同才算真的送到。<code>write()</code> 返回成功，只等于「塞进出件篮了」。</div>
 
@@ -282,10 +282,10 @@
       <tr><td>只 <code>fsync</code> 了文件、没 <code>fsync</code> 父目录</td><td>文件内容在，但<strong>文件名可能不存在</strong></td><td><code>fsync</code> 父目录的 fd（见 §5）</td></tr>
     </tbody>
   </table></div>
-  <p>四层缓存的失效彼此独立：stdio 只怕进程死；页缓存怕掉电和 panic；设备写缓存怕掉电且没 FLUSH；盘片才怕介质损坏。所以「加一个 fsync」挡不住 fwrite 没 fflush，也挡不住 nobarrier，更挡不住廉价 SSD 谎报 FLUSH。每一层要用那一层的原语去推。</p>
+  <p>四层缓存的失效彼此独立：stdio 缓冲只怕进程死；页缓存怕掉电和 panic；设备写缓存怕掉电且没发过 FLUSH（强制把缓存刷进介质的命令）；盘片才怕介质损坏。所以「加一个 fsync」挡不住 fwrite 没 fflush（用户态缓冲没倒进内核），也挡不住 nobarrier（挂载参数里关掉刷盘屏障），更挡不住廉价 SSD 谎报 FLUSH。每一层要用属于那一层的原语（对应的机制/调用）去推。</p>
 
   <h3>stdio：终端 vs 文件</h3>
-  <p><code>fwrite</code> 不到 4 KB 或不遇到换行，根本不会进内核。日志少了最后几百行，八成停在用户态。</p>
+  <p><code>fwrite</code> 写的内容不到 4 KB、又没遇到换行时，根本不会进内核——字节还停在程序自己的内存里。日志少了最后几百行，八成是停在了用户态缓冲区。</p>
   <table>
     <thead><tr><th>输出目标</th><th>缓冲</th><th><code>write()</code> 次数</th><th><code>kill -9</code> 会丢</th></tr></thead>
     <tbody>
@@ -294,7 +294,7 @@
     </tbody>
   </table>
 
-  <div class="note"><strong>写日志绕开 stdio。</strong>裸 <code>write()</code>（常规文件加 <code>O_APPEND</code>）或 <code>setvbuf(..., _IOLBF, 0)</code>。信号杀死时 <code>atexit</code> 不跑；<code>fork</code> 后子进程 <code>exit()</code> 还会把父进程缓冲区再吐一遍（见 <a href="ipc_guide.html">多进程与 IPC</a>）。<code>fsync</code> <strong>管不到</strong> glibc 缓冲区——<code>fwrite</code> 之后不 <code>fflush</code>，fsync 的是空的内核缓冲，用户态那批字节崩溃时照样消失。这是「我明明 fsync 了怎么还丢」的第一号误诊。</div>
+  <div class="note"><strong>写日志要绕开 stdio。</strong>用裸 <code>write()</code>（常规文件再加 <code>O_APPEND</code> 追加标志），或 <code>setvbuf(..., _IOLBF, 0)</code>（改成行缓冲）。信号杀死时 <code>atexit</code>（退出钩子）不会跑；<code>fork</code> 后子进程 <code>exit()</code> 还会把父进程缓冲区再吐一遍（见 <a href="ipc_guide.html">多进程与 IPC</a>）。特别注意 <code>fsync</code> <strong>管不到</strong> glibc 缓冲区——<code>fwrite</code> 之后不 <code>fflush</code>，fsync 刷的只是空的内核缓冲，用户态那批字节在崩溃时照样消失。这是「我明明 fsync 了怎么还丢」的第一号误诊。</div>
 
   <h3>本篇的分工</h3>
   <p>上图 ⑦⑧（bio、blk-mq、调度器、<code>io_uring</code>）在 <a href="io_linux_kernel_guide.html">Linux I/O 与内核 I/O 栈</a>。本篇切 ③–⑥：</p>
@@ -312,7 +312,7 @@
     <div class="t"><h2>VFS 的四个核心对象</h2><p class="sub">文件名不在 inode 里——这一句能解释一大半疑问</p></div>
   </div>
 
-  <p>Linux 支持几十种文件系统，但应用只见到一套 <code>open/read/write/stat</code>。中间这层抽象叫 <strong>VFS（Virtual File System）</strong>，它定义了四个核心对象和一组函数指针表（<code>super_operations</code>、<code>inode_operations</code>、<code>file_operations</code>、<code>dentry_operations</code>）。具体文件系统只要填这些表，就能挂到 VFS 上。理解这四个对象的分工，是读懂后面所有内容的前提。</p>
+  <p>Linux 支持几十种文件系统，但应用程序看到的永远是同一套 <code>open/read/write/stat</code>。中间这层统一抽象叫 <strong>VFS（Virtual File System，虚拟文件系统——好比各家快递公司前台统一的收发室，不管背后是哪家，你递单子的流程都一样）</strong>。它定义了四个核心对象和一组函数指针表（<code>super_operations</code>、<code>inode_operations</code>、<code>file_operations</code>、<code>dentry_operations</code>——每种文件系统各自填写的一套「回调函数清单」）。具体文件系统只要把这些表填上，就能挂到 VFS 上工作。理解这四个对象的分工，是读懂后面所有内容的前提。</p>
 
   <div class="cheatsheet"><table>
     <thead><tr><th>对象</th><th>内核结构体</th><th>代表什么</th><th>生命周期</th><th>存不存在磁盘上</th></tr></thead>
@@ -324,8 +324,8 @@
     </tbody>
   </table></div>
 
-  <div class="def"><strong>inode</strong>：index node 的缩写。它是文件的<strong>全部元数据加数据块索引</strong>，唯一标识是「superblock + inode 号」。<strong>inode 里没有文件名</strong>——名字存在<strong>目录</strong>里。目录本身也只是一个特殊类型的文件，它的数据内容就是一串「名字 → inode 号」的记录。</div>
-  <p>两个进程打开同一个文件，是两个 <code>struct file</code>、两份 <code>f_pos</code>。<code>lseek</code> 互不影响。<code>dup</code> / <code>fork</code> 才共享同一个 <code>struct file</code>（fork 后父子的偏移会一起走）。「打开」和「文件」不是一回事：这是 <code>O_APPEND</code> 必须由内核在每次 write 时取文件末尾、而不能靠用户态 lseek 的原因。</p>
+  <div class="def"><strong>inode</strong>：index node（索引节点）的缩写。它记录一个文件的<strong>全部元数据加数据块索引</strong>（这个文件多大、权限是谁、内容存在哪些磁盘块上），唯一标识是「superblock + inode 号」。<strong>inode 里没有文件名</strong>——名字存在<strong>目录</strong>里。目录本身也只是一个特殊类型的文件，它的数据内容就是一串「名字 → inode 号」的登记记录。</div>
+  <p>两个进程分别打开同一个文件，会得到两个 <code>struct file</code>、两份互不相干的 <code>f_pos</code>（各自的读写位置），<code>lseek</code> 互不影响。只有 <code>dup</code> / <code>fork</code> 出来的 fd 才共享同一个 <code>struct file</code>（fork 后父子的偏移会一起走）。「打开」和「文件」不是一回事：这正是 <code>O_APPEND</code> 必须由内核在每次 write 时取文件末尾、而不能靠用户态先 lseek 的原因。</p>
 
   <div class="fig">
     <svg viewBox="0 0 780 350" role="img" aria-label="VFS 四对象：fd 指向 struct file，file 经 dentry 找到 inode；文件名只住在 dentry，inode 里没有名字；super_block 是已挂载的文件系统实例" style="min-width:720px;height:auto">
@@ -391,7 +391,7 @@
   </div>
 
   <h3>硬链接、符号链接、unlink 仍占空间</h3>
-  <p>硬链接不是快捷方式，是<strong>给同一个 inode 再起一个平等的名字</strong>。<code>rm</code> 是 <code>unlink</code>：只拆掉「名字 → inode」，空间要等 <code>i_nlink == 0</code> <strong>且</strong> <code>i_count == 0</code> 才释放。</p>
+  <p>硬链接不是快捷方式，而是<strong>给同一个 inode（文件本体）再起一个完全平等的名字</strong>。<code>rm</code> 实际执行的是 <code>unlink</code>（解除名字绑定）：只拆掉「名字 → inode」这条线，磁盘空间要等 <code>i_nlink</code>（磁盘上指向它的名字数）<strong>归零且</strong> <code>i_count</code>（内存里的引用数）也<strong>归零</strong>，两个条件同时满足才释放。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 268" role="img" aria-label="硬链接两个目录项指向同一 inode；符号链接是独立 inode 存路径字符串；unlink 后名字没了但进程仍持有 fd 时数据块不释放" style="min-width:720px;height:auto">
@@ -453,10 +453,10 @@
 
   <div class="box star"><strong>「visited inode 集合」挡不住目录硬链接成的环。</strong>合法的文件硬链接本来就会让同一个 inode 出现两次，遍历工具不能见重复就停。环会让 <code>find</code>/<code>du</code> 无法停机；「..」有多个父目录；引用计数收不回环。所以内核直接 <code>EPERM</code>。符号链接不进 nlink，默认不跟随。</div>
 
-  <p>i_nlink 是磁盘上的名字数，i_count 是内存里的打开数。运维只看见名字（<code>ls</code>、<code>du</code>），内核还看见打开（<code>lsof</code>）。两个计数对不上时，空间账就对不上。备份工具也可能把硬链接展开成两份数据：容量规划前先 <code>find -links +1</code> 看有没有大量共享 inode，否则「备份后体积翻倍」会吓一跳。硬链接不能跨文件系统（inode 号只在本 superblock 内唯一），<code>ln</code> 跨设备直接 <code>EXDEV</code>；符号链接存的是路径字符串，指向哪都行，也可以指向还不存在的目标，访问时才再走一遍路径解析。</p>
+  <p><code>i_nlink</code> 数的是磁盘上的名字个数，<code>i_count</code> 数的是内存里还打开着的引用数。运维工具只看得见名字（<code>ls</code>、<code>du</code>），内核还看得见打开状态（<code>lsof</code>）。两个计数对不上时，空间账就对不上。备份工具也可能把硬链接展开成两份数据：容量规划前先 <code>find -links +1</code> 看有没有大量共享 inode，否则「备份后体积翻倍」会吓一跳。硬链接不能跨文件系统（inode 号只在自己的 superblock 内唯一），<code>ln</code> 跨设备直接 <code>EXDEV</code>（不允许跨设备的报错）；符号链接存的是路径字符串，指向哪都行，也可以指向还不存在的目标，访问时才再走一遍路径解析。</p>
 
   <h3><code>unlink</code> 之后怎么还空间</h3>
-  <p>上图③：名字没了但 java 还握着 fd，30 GB 继续涨。<code>df</code> 不动是因为空间释放要 <code>i_nlink == 0</code> <strong>且</strong> <code>i_count == 0</code>。</p>
+  <p>对应上图③的场景：名字已经没了，但 java 进程还握着 fd，那个 30 GB 的文件还会继续涨。<code>df</code> 不动，是因为空间释放要等 <code>i_nlink == 0</code> <strong>且</strong> <code>i_count == 0</code> 两个条件都成立。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -466,7 +466,7 @@
     </tbody>
   </table>
   <div class="warn">正确轮转是 <code>copytruncate</code> 或发 reopen 信号，不是 <code>rm</code> + <code>truncate</code>。这也是 <code>logrotate</code> 默认要给服务发信号的原因。</div>
-  <p>「打开后立刻 unlink」造真正的无名临时文件：路径不可见，进程退出（含 <code>SIGKILL</code>）自动回收。<code>tmpfile()</code> 如此；更现代是 <code>O_TMPFILE</code>，再用 <code>linkat</code> 补名字。比 <code>mkstemp</code> + <code>rename</code> 干净：给名字之前对整个系统不可见，崩溃不留 <code>.tmp</code>。不是所有文件系统都支持（ext4/XFS 可以，有的网络 FS 不行），失败要有回退。</p>
+  <p>「打开后立刻 unlink」可以造出真正的无名临时文件：路径不可见，进程退出（包括被 <code>SIGKILL</code> 杀死）时自动回收。<code>tmpfile()</code> 就是这么做的；更现代的做法是 <code>O_TMPFILE</code>（创建时干脆不给名字），写完需要保留时再用 <code>linkat</code> 补一个名字。这比 <code>mkstemp</code> + <code>rename</code> 更干净：补名字之前对整个系统不可见，崩溃不留 <code>.tmp</code> 残骸。注意不是所有文件系统都支持（ext4/XFS 可以，有的网络 FS 不行），失败要有回退路径。</p>
 
 <pre><span class="cm">// O_TMPFILE：先造无名文件，写完再 linkat 命名。崩溃不留 .tmp</span>
 <span class="kw">int</span> fd = open(<span class="str">"/data"</span>, O_TMPFILE | O_RDWR | O_CLOEXEC, <span class="num">0600</span>);
@@ -478,7 +478,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
 <span class="cm">// 名字出现仍要 fsync(dirfd)，见 §5</span></pre>
 
   <h3>dentry cache：<code>slabtop</code> 里几个 GB 不是泄漏</h3>
-  <p>路径解析走 dcache（父 dentry + 名字 → 子 dentry）。否定结果也缓存：<strong>negative dentry</strong> 加速反复 <code>stat</code> 不存在的路径，也能让乱扫路径的程序把内存吃满。</p>
+  <p>路径解析每一步都走 dcache（dentry cache，目录项缓存——「父目录 + 名字 → 子项」的查找缓存）。否定结果也会被缓存：<strong>negative dentry</strong>（「这个路径不存在」的缓存记录）能加速反复 <code>stat</code> 不存在路径的场景，但反过来也能让乱扫路径的程序把内存吃满。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -486,12 +486,12 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
       <tr><td><code>cat /proc/sys/vm/vfs_cache_pressure</code></td><td>回收倾向</td><td>100 默认；调大更激进收 dentry/inode；调小更倾向保留</td></tr>
     </tbody>
   </table>
-  <div class="note">这块算进 <code>free</code> 的 buff/cache，内存紧时会自动还。<strong>病态</strong>是压力已经很大 slab 还在涨。不要靠 <code>drop_caches</code>（§6）。动态链接器搜 <code>.so</code>、Python 找模块会反复 <code>stat</code> 不存在的路径——negative dentry 正是为此加速。反过来，乱扫随机路径能把 dcache 喂满；回收时路径解析会突然变慢，表现为「偶发 open 变卡」而不是泄漏告警。</div>
+  <div class="note">这块内存算在 <code>free</code> 输出的 buff/cache 里，内存吃紧时会自动归还。<strong>病态情况</strong>是内存压力已经很大、slab 却还在涨。不要靠 <code>drop_caches</code> 手动清（§6 会讲）。动态链接器搜 <code>.so</code>、Python 找模块时会反复 <code>stat</code> 不存在的路径——negative dentry 正是为此而生。反过来，乱扫随机路径也能把 dcache 喂满；回收时路径解析会突然变慢，表现为「偶发 open 变卡」而不是泄漏告警。</div>
 
   <h3><code>rename()</code> 原子性 ≠ 崩溃持久性</h3>
-  <div class="def"><strong><code>rename(old, new)</code></strong>：同一文件系统内，别人看到的要么是完整旧文件、要么是完整新文件，不会「不存在」或「半新半旧」。目标已存在则原子替换。</div>
-  <div class="analogy">原地改文件像当众改一份正在被阅读的合同；<code>rename</code> 是旁边誊好再一把换掉。任何时刻看到的要么是完整旧版，要么是完整新版——这只保证<strong>别人看不见中间态</strong>。</div>
-  <div class="danger"><strong>原子性是命名空间可见性，不是掉电后还在。</strong>改名本身也只是页缓存里的元数据。<strong>「写临时文件 + rename」只解决并发可见，要持久必须 <code>fsync(临时文件)</code> + <code>fsync(父目录)</code></strong>。完整写法在 §5。ext4 的 <code>data=ordered</code> 帮不上这个忙：它不保证新内容与新名字一起出现（§3）。</div>
+  <div class="def"><strong><code>rename(old, new)</code></strong>：在同一个文件系统内，别人看到的要么是完整旧文件、要么是完整新文件，绝不会出现「不存在」或「半新半旧」的中间态。目标已存在则原子替换。</div>
+  <div class="analogy">原地改文件像当众修改一份正在被阅读的合同；<code>rename</code> 是在旁边誊好一份，再一把换掉。任何时刻读者看到的要么是完整旧版，要么是完整新版——但这只保证<strong>别人看不见中间态</strong>。</div>
+  <div class="danger"><strong>原子性只保证「别人看不见中间态」，不保证掉电后还在。</strong>改名本身也只是页缓存里的元数据改动。<strong>「写临时文件 + rename」只解决并发可见性，要持久必须 <code>fsync(临时文件)</code> + <code>fsync(父目录)</code></strong>。完整写法在 §5。ext4 的 <code>data=ordered</code> 帮不上这个忙：它不保证新内容与新名字一起出现（§3）。</div>
   <div class="point"><div class="label"><code>RENAME_NOREPLACE</code></div><div>目标已存在就失败。比 <code>access()</code> 再 <code>rename</code> 可靠（无 TOCTOU）。</div></div>
   <div class="point"><div class="label"><code>RENAME_EXCHANGE</code></div><div>原子交换两条已存在路径。灰度切目录 / 回滚；ext4、XFS、Btrfs 支持，overlayfs 有限制。</div></div>
 
@@ -505,10 +505,10 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     <div class="t"><h2>ext4 的磁盘布局</h2><p class="sub">block group、extent、延迟分配、以及被误解最深的 data=ordered</p></div>
   </div>
 
-  <p>ext4 是 Linux 上最保守也最普及的选择：它从 ext2 一路演进而来，兼容层厚、工具链成熟、故障案例库最全。理解它的磁盘布局有直接的实用价值——<code>mkfs</code> 时定错一个参数，可能要等到半年后文件系统「明明还有 40 GB 空间却创建不了文件」时才暴露。</p>
+  <p>ext4 是 Linux 上最保守也最普及的选择：它从 ext2 一路演进而来，兼容层厚、工具链成熟、故障案例库最全。理解它的磁盘布局（数据在盘上怎么组织）有直接的实用价值——<code>mkfs</code>（格式化文件系统）时定错一个参数，可能要等到半年后文件系统「明明还有 40 GB 空间却创建不了文件」时才暴露。</p>
 
   <h3>block group：把整块盘切成小区</h3>
-  <p>4 KB 块位图有 32768 位 → 每个 group <strong>128 MiB</strong>。分配优先落在「inode 所在的 group」，元数据和数据挨着。</p>
+  <p>ext4 把整块盘切成固定大小的 block group（块组——盘上的「小区」，每个小区自带一套登记簿）。一块 4 KB 的块位图有 32768 位，能管 32768 个块 → 每个 group <strong>128 MiB</strong>。分配时优先落在「inode 所在的 group」，让元数据和数据在物理上挨着。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 248" role="img" aria-label="ext4 把盘切成 128 MiB 的 block group；每个 group 内依次是 super/GDT、块位图、inode 位图、inode 表、数据块。flex_bg 把连续 16 个 group 的元数据集中到第一个 group" style="min-width:720px;height:auto">
@@ -554,7 +554,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     </svg>
     <figcaption>128 MiB 不是拍的：一块 4 KB 位图只能管 32768 个块。inode 表大小 = inodes_per_group × inode_size，mkfs 时写死。</figcaption>
   </div>
-  <p>分配数据块时优先落在 inode 所在 group：机械盘少寻道，SSD 少读元数据页。ext4 的 group 只是位图分片，分配路径仍有全局串行点；XFS 的 AG 才是并发单元（§4）。<code>sparse_super</code> 只在 0、1 和 3/5/7 的幂次 group 备份 superblock；主 SB 坏了用 <code>fsck -b</code> 指定备份（BG1 总是有）。<code>metadata_csum</code> 只保护元数据，数据块位翻转 ext4 看不见——要端到端校验得上 Btrfs/ZFS。</p>
+  <p>分配数据块时优先选 inode 所在的 group：机械盘少寻道，SSD 少读元数据页。ext4 的 group 只是位图的分片，分配路径上仍有全局串行点（大家都要排队过的那道闸）；XFS 的 AG（allocation group）才是真正的并发单元（§4）。<code>sparse_super</code> 让 superblock 备份只存在 0、1 和 3/5/7 的幂次 group；主 SB 坏了用 <code>fsck -b</code> 指定备份位置恢复（BG1 总是有备份）。<code>metadata_csum</code> 校验只覆盖元数据，数据块自己发生位翻转 ext4 看不见——要端到端校验得上 Btrfs/ZFS。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -564,7 +564,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
   </table>
 
   <h3>inode 数量在 <code>mkfs</code> 时就定死了</h3>
-  <div class="danger"><strong>ext4 inode 表预分配，格式化后无法增加。</strong>默认每 16 KB 配一个 inode（100 GiB ≈ 655 万）。海量 200 字节小文件会在空间只用 2% 时 <code>ENOSPC</code>，<code>df -h</code> 仍 98% free。<strong>没有事后补救，只能备份重 mkfs。</strong>XFS 动态分配（§4）。inode 耗尽时 creat 的 errno 和「盘真的满了」相同。监控如果只采 <code>df -h</code> 的 Use%，会在 inode 打满那天才第一次报警。数据盘必须同时采 <code>df -i</code>。</div>
+  <div class="danger"><strong>ext4 的 inode 表是格式化时预分配的，之后无法增加。</strong>默认每 16 KB 空间配一个 inode（100 GiB ≈ 655 万个）。海量 200 字节小文件会在空间只用 2% 时就报 <code>ENOSPC</code>（「没有空间」错误），而 <code>df -h</code> 还显示 98% free——满的是 inode 不是字节。<strong>没有事后补救，只能备份数据后重新 mkfs。</strong>XFS 是动态分配（§4）。inode 耗尽时 creat 的 errno 和「盘真的满了」一模一样。监控如果只采 <code>df -h</code> 的 Use%，会拖到 inode 打满那天才第一次报警。数据盘必须同时采 <code>df -i</code>（inode 使用率）。</div>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据 / 代价</th></tr></thead>
     <tbody>
@@ -607,7 +607,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
   </table></div>
 
   <h3>延迟分配：性能收益与 0 字节文件</h3>
-  <div class="def"><strong>delayed allocation</strong>：<code>write()</code> 只在页缓存记账，物理块推迟到回写那一刻才挑——内核已经知道总长度，能拿一段连续空间。</div>
+  <div class="def"><strong>delayed allocation（延迟分配）</strong>：<code>write()</code> 时只在页缓存里记账，物理块推迟到回写那一刻才真正挑选——此时内核已经知道文件总长度，可以一次拿下一整段连续空间。</div>
   <div class="fig">
     <svg viewBox="0 0 900 168" role="img" aria-label="延迟分配时间线：write 返回时物理块仍是 0 且标 delalloc；sync 之后才出现真实 extent。元数据操作可能先于数据落盘" style="min-width:720px;height:auto">
       <rect class="box-y" x="20" y="20" width="200" height="56" rx="7"/>
@@ -634,10 +634,10 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     <figcaption>write 成功 ≠ 有物理块。<code>close()</code> 返回值必须查：迟到的 ENOSPC 常在这里浮现。</figcaption>
   </div>
   <div class="point warn"><div class="label">ENOSPC 迟到</div><div><code>write()</code> 可能成功，分配时才发现盘满。错误只在 <code>fsync</code> / <code>close</code> / 异步回写时出现。</div></div>
-  <div class="warn">auto_da_alloc 检测到「rename 覆盖」和「truncate 到 0 再 close」会提前分配，<strong>不发 FLUSH、不管父目录</strong>。正确代码仍然自己 <code>fsync</code>。ext3 的 ordered 日志每 5 秒提交时，常常顺带把数据刷下去，坏代码侥幸没出事；ext4 延迟分配让数据待更久，元数据操作反而先落盘。POSIX 从没承诺不 fsync 能活过掉电。</div>
+  <div class="warn">内核的 auto_da_alloc（自动延迟分配兜底）检测到「rename 覆盖」和「truncate 到 0 再 close」这两种模式会提前分配，但<strong>不发 FLUSH、也不管父目录</strong>。正确代码仍然要自己 <code>fsync</code>。ext3 的 ordered 日志每 5 秒提交时，常常顺带把数据刷下去，坏代码侥幸没出事；ext4 延迟分配让数据待得更久，元数据操作反而先落盘。POSIX 从没承诺过不 fsync 的数据能活过掉电。</div>
 
   <h3>jbd2：<code>data=ordered</code> 保证什么、不保证什么</h3>
-  <div class="def"><strong>日志</strong>：先把即将做的<strong>元数据</strong>顺序追加并提交，再改原地。崩溃后重放，不用全盘 fsck。解决的是「inode 说占了这块、位图说空闲」这种矛盾。</div>
+  <div class="def"><strong>日志（journal，由 jbd2 内核线程管理）</strong>：改动前先把即将做的<strong>元数据</strong>顺序追加到日志区并提交，然后再改原地。崩溃后重放日志就能恢复，不用全盘 fsck。它解决的是「inode 说占了这块、位图却说空闲」这种自相矛盾。</div>
   <div class="fig">
     <svg viewBox="0 0 900 200" role="img" aria-label="data=ordered：数据块先落盘，再提交引用它的元数据日志。保证不读到别人的旧数据，不保证你没 fsync 的内容还在" style="min-width:720px;height:auto">
       <text class="tb" x="20" y="22">data=ordered（默认）时间线</text>
@@ -694,8 +694,8 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     </tbody>
   </table>
 
-  <div class="danger"><strong><code>data=ordered</code> 保证元数据一致、不读到别人的旧数据，<u>不</u>保证你写的数据不丢。</strong>没 <code>fsync</code> 的文件崩溃后完全可能是空的或半截。想不丢，只能自己 <code>fsync</code>。</div>
-  <div class="warn"><strong><code>data=ordered</code> 也不保证文件内容与 <code>rename</code> 原子。</strong>它只约束「提交<em>引用这些块的</em>元数据之前，数据块已经落盘」。rename 是另一次元数据操作，完全可以先于你刚写入、还在页缓存里的新内容提交。崩溃后：名字已经切到新文件，内容却是空的或半截——这就是 2009 年那批 0 字节配置。想「要么完整旧版要么完整新版」活过掉电，只能自己 <code>fsync</code> 临时文件再 <code>rename</code> 再 <code>fsync</code> 父目录（§5）。挂载选项替代不了。</div>
+  <div class="danger"><strong><code>data=ordered</code> 保证的是元数据一致、不读到别人的旧数据，<u>不</u>保证你写的数据不丢。</strong>没 <code>fsync</code> 过的文件崩溃后完全可能是空的或半截。想不丢，只能自己 <code>fsync</code>。</div>
+  <div class="warn"><strong><code>data=ordered</code> 也不保证「文件内容与 rename 一起生效」。</strong>它只约束「提交<em>引用这些块的</em>元数据之前，数据块已经落盘」。rename 是另一次独立的元数据操作，完全可以先于你刚写入、还在页缓存里的新内容被提交。崩溃后就会出现：名字已经切到新文件，内容却是空的或半截——这就是 2009 年那批 0 字节配置文件的来历。想「要么完整旧版要么完整新版」活过掉电，只能自己 <code>fsync</code> 临时文件，再 <code>rename</code>，再 <code>fsync</code> 父目录（§5）。挂载选项替代不了这三步。</div>
 
   <table>
     <thead><tr><th>命令 / 选项</th><th>目的</th><th>判据 / 代价</th></tr></thead>
@@ -718,10 +718,10 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     <div class="t"><h2>XFS 与文件系统选型</h2><p class="sub">allocation group 的并发红利，与「不能缩容」这道硬伤</p></div>
   </div>
 
-  <p>ext4 从 ext3 稳妥演进；XFS 从第一天为大文件、大容量、高并发服务。2014 年起是 RHEL 默认。本质差别在<strong>分配器的并发结构</strong>。</p>
+  <p>ext4 是从 ext3 一路稳妥演进来的；XFS 从设计第一天起就是为大文件、大容量、高并发服务的。2014 年起它是 RHEL 的默认文件系统。两者的本质差别在<strong>分配器（负责挑空闲块的那部分代码）的并发结构</strong>。</p>
 
   <h3>allocation group：把「分配」并行化</h3>
-  <div class="def"><strong>AG</strong>：每个 AG 自带空闲空间 B+ 树、inode B+ 树和各自的锁。两个 CPU 上的线程可以同时在不同 AG 里分配，互不争抢。</div>
+  <div class="def"><strong>AG（allocation group，分配组）</strong>：每个 AG 自带空闲空间 B+ 树（一种查找树结构）、inode B+ 树和各自的锁。于是两个 CPU 上的线程可以同时在不同 AG 里分配空间，互不争抢——好比每个分区配一个管理员，而不是一个管理员拿着一整串钥匙。</div>
   <div class="fig">
     <svg viewBox="0 0 900 200" role="img" aria-label="XFS 四个 allocation group 各自有空闲树和 inode 树，两个 CPU 可并行分配；某个 AG 满了不会自动向邻居借" style="min-width:720px;height:auto">
       <rect class="box-a" x="20" y="20" width="200" height="96" rx="7"/>
@@ -748,17 +748,17 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     </svg>
     <figcaption>每个区一个管理员，不是一个管理员拿着一串钥匙。写满时的跨 AG 重试是代价。</figcaption>
   </div>
-  <p>agcount 按容量自动定，也可 <code>mkfs.xfs -d agcount=N</code>。线程数远大于 agcount 时加大可能有收益；盲目加大增加元数据开销。某个 AG 的空闲树先耗尽时，分配要跨 AG 重试——卷「看起来还有空间」但这个目录所在 AG 满了，创建变慢甚至 <code>ENOSPC</code>。这是 XFS 特有的「局部满」。<code>xfs_info</code> 还要看：<code>crc=1</code> 仍无数据块校验和、<code>finobt</code>、<code>reflink</code>、<code>sunit/swidth</code>（RAID 条带对齐）。</p>
+  <p>agcount（AG 的个数）按容量自动确定，也可以用 <code>mkfs.xfs -d agcount=N</code> 手工指定。线程数远大于 agcount 时加大可能有收益；盲目加大只会增加元数据开销。某个 AG 的空闲树先耗尽时，分配要跨 AG 重试——卷「看起来还有空间」，但这个目录所在的 AG 满了，创建就变慢甚至报 <code>ENOSPC</code>。这是 XFS 特有的「局部满」现象。<code>xfs_info</code> 还要看：<code>crc=1</code>（开了校验但仍然没有数据块校验和）、<code>finobt</code>、<code>reflink</code>、<code>sunit/swidth</code>（RAID 条带对齐参数）。</p>
 
   <h3>动态 inode：只要有空间就能建文件</h3>
-  <p>XFS <strong>不预分配 inode 表</strong>，按 64 个一组在需要时分配，<code>inobt</code> 索引。<code>imaxpct</code> 只是占用比例上限（<code>xfs_growfs -m</code> 可在线调），不是预留。查 inode 要走 B+ 树而不是算术，<code>finobt</code> 基本抹平了找空槽的开销。</p>
+  <p>XFS <strong>不预分配 inode 表</strong>：inode 按 64 个一组、需要时才现场分配，用 <code>inobt</code>（inode B+ 树）做索引。<code>imaxpct</code> 只是 inode 占空间的比例上限（<code>xfs_growfs -m</code> 可在线调），不是预留。查一个 inode 要走 B+ 树查找而不是简单算术，<code>finobt</code>（空闲 inode 反向树）基本抹平了找空槽的开销。</p>
 
   <h3>延迟日志</h3>
-  <p>往同一目录连建一万个文件，会把那个 B+ 节点改一万次。延迟日志在内存合并，只把最终结果写进日志，流量降一到两个数量级（2.6.39 起默认，现为唯一行为）。代价：崩溃可能丢更多「已经返回成功」的元数据操作——仍自洽，但 <code>mkdir</code> 成功后目录可能不在。<strong>需要持久的元数据，同样必须 fsync 父目录。</strong>reflink 拷贝只增加引用，第一次写入才真正 CoW；备份工具用它很快，但空间账要按「写满后」来算，和稀疏文件是同一类超卖。</p>
+  <p>往同一个目录连建一万个文件，就要把那个 B+ 节点改一万次。延迟日志（delayed logging）在内存里把这些修改合并，只把最终结果写进日志，日志流量能降一到两个数量级（2.6.39 起默认，现在是唯一行为）。代价是：崩溃时可能丢掉更多「已经返回成功」的元数据操作——文件系统仍然自洽，但 <code>mkdir</code> 成功过的目录可能不在了。<strong>需要持久的元数据，同样必须 fsync 父目录。</strong>reflink（写时复制引用）拷贝只增加引用计数，第一次写入时才真正复制数据；备份工具用它非常快，但空间账要按「写满后」来算——和稀疏文件是同一类超卖。</p>
 
   <h3>两道硬伤</h3>
-  <div class="danger"><strong>XFS 不能缩容，永远。</strong>不是没实现，是 AG 结构让在线搬迁极复杂。LVM 分大了想收回，只能备份重建。规划要保守：<strong>先给小，再扩</strong>（挂载状态下就能扩）。ext4 可缩，但必须先卸载。</div>
-  <div class="warn"><strong>早期崩溃后的 NULL 文件</strong>与 §3 的 0 字节同源：size 元数据先落盘、数据还在页缓存。现代内核已在提交 size 之前先刷数据。拿它当「XFS 不安全」过时了；真正的教训仍是——<strong>没有 fsync，任何文件系统都不承诺活过掉电</strong>。</div>
+  <div class="danger"><strong>XFS 不能缩容，永远不能。</strong>不是没实现，而是 AG 的结构让在线搬迁极其复杂。LVM 卷分大了想收回，只能备份后重建。规划要保守：<strong>先给小，再扩</strong>（挂载状态下就能扩）。ext4 可以缩，但必须先卸载。</div>
+  <div class="warn"><strong>早期版本崩溃后的 NULL 文件</strong>与 §3 的 0 字节文件同源：size 元数据先落盘、数据还留在页缓存。现代内核已在提交 size 之前先刷数据。拿它当「XFS 不安全」的说法过时了；真正的教训仍然是——<strong>没有 fsync，任何文件系统都不承诺数据活过掉电</strong>。</div>
 
   <h3>选型对比</h3>
   <table>
@@ -836,7 +836,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
       <tr><td><code>du -sh …/diff</code></td><td>看 copy-up 是否发生</td><td>只改了几字节但 upper 多了整份文件</td></tr>
     </tbody>
   </table>
-  <p>workdir 必须和 upper 在同一个文件系统，否则 copy-up 无法原子切换。whiteout 是上层的一个特殊标记，不是真删下层——所以「容器里 rm 了」宿主机 lower 层还在，镜像体积不会因此变小。有写压力的数据一律挂卷绕开 overlay，不要指望调优 copy-up。</p>
+  <p>workdir 必须和 upper 在同一个文件系统，否则 copy-up（把下层文件整份复制到上层的动作）无法原子切换。whiteout 是上层打的一个特殊标记，并不是真的删除下层——所以「容器里 rm 了」之后，宿主机的 lower 层还在，镜像体积不会因此变小。有写压力的数据一律挂卷绕开 overlay，不要指望调优 copy-up。</p>
 </section>
 
 <!-- ================================================================ §5 -->
@@ -846,7 +846,7 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     <div class="t"><h2>持久化语义</h2><p class="sub">全篇最重要的一章：数据到底什么时候真的落盘</p></div>
   </div>
 
-  <p>测试环境不掉电，持久化 bug 只在机房断电、panic、云主机被强杀时爆发。每个 API 的语义必须精确。应用事故几乎都是把下一层的承诺当成了上一层：日志框架用 <code>fwrite</code> 当「崩溃不丢」；配置写入用 <code>rename</code> 当「掉电还在」；数据库用 <code>O_DIRECT</code> 当「已经进介质」。</p>
+  <p>测试环境从来不掉电，所以持久化 bug 只在机房断电、内核 panic、云主机被强制回收时爆发。因此每个 API 的语义必须精确掌握。应用侧的事故几乎都出自同一个模式——把下一层的承诺当成了上一层的：日志框架以为 <code>fwrite</code> 能「崩溃不丢」；配置写入以为 <code>rename</code> 能「掉电还在」；数据库以为 <code>O_DIRECT</code> 等于「已经进介质」。</p>
   <table>
     <thead><tr><th>你以为防住了</th><th>实际只承诺到</th><th>还要补什么</th></tr></thead>
     <tbody>
@@ -872,10 +872,10 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
   </table>
 
   <h3><code>fdatasync</code> 到底省了什么</h3>
-  <p><code>fsync</code> 还要提交 inode <strong>全部</strong>元数据（含 mtime）——多一次日志事务 + 一次 FLUSH。<code>fdatasync</code> 只提交「读回数据所必需的」：原地覆盖、size 没变，就<strong>一条元数据都不用写</strong>。</p>
-  <div class="box star"><strong>WAL 为什么要预分配。</strong>每次追加都让文件变长，<code>fdatasync</code> 仍得写 size。PostgreSQL / MySQL 把 WAL 段预分配成定长（如 16 MB）再原地覆盖，每次提交从 3–4 次 I/O 降到 1–2 次。面试能讲到这一层，比背「fdatasync 不刷元数据」有说服力。</div>
-  <div class="warn"><strong><code>O_DIRECT</code> 不等于持久。</strong>它只绕过页缓存，数据仍停在设备写缓存，元数据也没处理。之后照样要 <code>fdatasync</code>（或 <code>O_DSYNC</code>）。</div>
-  <p>不是每次 write 都该 fsync。日志、指标、可重建的中间结果：丢几秒可以接受，每条 fsync 会把吞吐打成设备 IOPS 上限。配置、WAL、已向用户 ack 的订单：必须 fsync。判据是「丢了能不能从别处重建，以及用户是否已经收到成功」。把日志当 WAL 刷，是把在线服务写成了每秒几十次 FLUSH 的单线程。</p>
+  <p><code>fsync</code> 要提交 inode 的<strong>全部</strong>元数据（包括 mtime 修改时间）——比 fdatasync 多一次日志事务加一次 FLUSH。<code>fdatasync</code> 只提交「把数据读回来所必需的」那部分：原地覆盖、size 没变，就<strong>一条元数据都不用写</strong>。</p>
+  <div class="box star"><strong>WAL（Write-Ahead Log，预写日志——先记日志再改数据的事务机制）为什么要预分配。</strong>每次追加都让文件变长，<code>fdatasync</code> 仍得写 size。PostgreSQL / MySQL 把 WAL 段预分配成定长（如 16 MB）再原地覆盖，每次提交的 I/O 次数从 3–4 次降到 1–2 次。面试能讲到这一层，比背「fdatasync 不刷元数据」有说服力。</div>
+  <div class="warn"><strong><code>O_DIRECT</code> 不等于持久。</strong>它只是绕过页缓存直接下发，数据仍会停在设备写缓存里，元数据也完全没处理。之后照样要 <code>fdatasync</code>（或 <code>O_DSYNC</code>）。</div>
+  <p>也不是每次 write 都该 fsync。日志、指标、可重建的中间结果：丢几秒可以接受，每条都 fsync 会把吞吐打到设备 IOPS 上限（每秒 I/O 次数上限）。配置、WAL、已经向用户 ack 过的订单：必须 fsync。判据是「丢了能不能从别处重建，以及用户是否已经收到成功」。把日志当 WAL 刷，等于把在线服务写成了每秒几十次 FLUSH 的单线程。</p>
 
   <div class="note">本章讲的是<strong>一次 <code>fsync</code> 到底做了什么</strong>。「每秒几万次提交怎么只落几次 FLUSH」是再上一层的答案：WAL 的记录结构、组提交、checkpoint、InnoDB 的双写缓冲，见 <a href="../architect/storage_and_data_architecture.html#ch4">存储与数据架构 · WAL 与崩溃恢复</a>。<strong>判据</strong>：怀疑「写了却没落盘」，是本章的 API 语义问题；语义确认没错、只是提交吞吐上不去，那是引擎攒批与 WAL 布局的问题。</div>
 
@@ -899,11 +899,11 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
     </svg>
     <figcaption>货物入库贴了条码，忘了在库位本上登记。盘库时当来源不明清掉。</figcaption>
   </div>
-  <p><code>unlink</code> / <code>rmdir</code> 同样改目录项。做「先 rename 到 .trash 再异步删」的回收站，如果漏了 fsync 父目录，掉电后文件可能以旧名字复活，或者 .trash 里出现无名孤儿。持久化的是「目录树的这一刀」，不是「某个 inode 的内容」。</p>
+  <p><code>unlink</code> / <code>rmdir</code> 同样是在改目录项。做「先 rename 到 .trash 再异步删」这种回收站时，如果漏了 fsync 父目录，掉电后文件可能以旧名字复活，或者 .trash 里出现无名孤儿。要持久化的是「目录树上砍的这一刀」，而不是「某个 inode 的内容」。</p>
 
   <h3>坑二：设备自己的写缓存</h3>
-  <div class="def"><strong>易失写缓存</strong>：几乎所有盘内部都有 DRAM，数据进 DRAM 就向主机报完成。掉电这块全没。要进介质，主机必须发 <code>REQ_PREFLUSH</code>（先刷缓存再处理）或 <code>REQ_FUA</code>（本请求穿透缓存）。这才是 fsync「贵」的原因：FLUSH 近似串行。</div>
-  <p>一次普通 write 进设备缓存只要几十微秒；一次 FLUSH 要把缓存里未落盘的都推到介质，机械盘数毫秒到几十毫秒，消费级 SSD 也常是毫秒级，而且近似串行——这就是数据库「每个事务一次 fdatasync」成为 TPS 上限的原因。WAL 预分配的意义是：能少一次 FLUSH 就少一次。</p>
+  <div class="def"><strong>易失写缓存</strong>：几乎所有盘内部都有一块 DRAM，数据一进 DRAM 盘就向主机报「完成」。掉电时这块里的内容全部丢失。要真正进介质，主机必须发 <code>REQ_PREFLUSH</code>（先把缓存刷进介质再处理后续请求）或 <code>REQ_FUA</code>（让这一笔写入直接穿透缓存）。这才是 fsync「贵」的原因：FLUSH 近似串行，一笔没完下一笔进不来。</div>
+  <p>一次普通 write 进设备缓存只要几十微秒；一次 FLUSH 要把缓存里所有未落盘的数据推到介质，机械盘要数毫秒到几十毫秒，消费级 SSD 也常是毫秒级，而且近似串行——这就是数据库「每个事务一次 fdatasync」会成为 TPS（每秒事务数）上限的原因。WAL 预分配的意义正在于：能少一次 FLUSH 就少一次。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -912,17 +912,17 @@ linkat(AT_FDCWD, proc, AT_FDCWD, <span class="str">"/data/final.bin"</span>, AT_
       <tr><td><code>nvme id-ctrl | grep vwc</code></td><td>NVMe 易失写缓存</td><td>bit0=1 需要 FLUSH</td></tr>
     </tbody>
   </table>
-  <div class="danger"><strong>不要为了性能挂 <code>nobarrier</code>。</strong>文件系统不再发 FLUSH/FUA，掉电时连日志提交顺序都没了。唯一可考虑：存储有电池/电容（BBWC / PLP）。看采购文档，不要猜。</div>
-  <div class="warn">廉价 SSD / U 盘收到 FLUSH 立即返回、实际没写完——软件无法检测。需要真持久性就上带 PLP 的企业级盘。消费级盘跑数据库，代码写得再对也挡不住。</div>
+  <div class="danger"><strong>不要为了性能挂 <code>nobarrier</code>。</strong>挂了它，文件系统就不再发 FLUSH/FUA，掉电时连日志提交的先后顺序都没了。唯一可以考虑的场景：存储自带电池/电容掉电保护（BBWC / PLP）。要看采购文档确认，不要猜。</div>
+  <div class="warn">廉价 SSD / U 盘收到 FLUSH 会立即返回「完成」，实际并没写完——这一点软件无法检测。需要真持久性就上带 PLP（掉电保护）的企业级盘。用消费级盘跑数据库，代码写得再对也挡不住。</div>
 
   <h3>坑三：<code>fsync</code> 失败之后数据在哪？（fsyncgate）</h3>
-  <p>2018 年 PostgreSQL 披露的不是某个 bug，是<strong>被普遍误解的错误报告语义</strong>：</p>
+  <p>2018 年 PostgreSQL 披露的不是某一个 bug，而是<strong>一种被普遍误解的错误报告语义</strong>：</p>
 
-  <div class="point bad"><div class="label">① 错误只报一次，之后 fsync 返回成功</div><div>回写失败时内核记下错误，同时<strong>清掉 dirty 标记</strong>。第一次 <code>EIO</code>，按「重试」思路再调，<strong>第二次返回 0</strong>——脏页没了，内核认为无事可做。应用于是截断 WAL，而数据已经不存在。</div></div>
-  <div class="point bad"><div class="label">② 错误可能被别的进程吃掉</div><div>更早实现把错误记在 <code>address_space</code> 上，谁先 fsync 谁拿到。checkpointer 可能拿到一次干净的成功。</div></div>
-  <div class="point good"><div class="label">内核侧的改进</div><div>4.13 起 <code>errseq_t</code>：错误带序列号记在 <code>file</code> 上，每个 fd 至少看到一次打开之后的错误。修好了「谁拿到」。<strong>修不好「数据去哪了」</strong>——脏页已被丢弃。</div></div>
+  <div class="point bad"><div class="label">① 错误只报一次，之后的 fsync 都返回成功</div><div>回写失败时内核记下错误，同时<strong>清掉那页的 dirty 标记</strong>。第一次返回 <code>EIO</code>，如果按「重试」思路再调一次，<strong>第二次返回 0</strong>——脏页标记已经没了，内核认为无事可做。应用于是放心截断 WAL，而那段数据其实已经不存在。</div></div>
+  <div class="point bad"><div class="label">② 错误可能被别的进程吃掉</div><div>更早的实现把错误记在 <code>address_space</code>（文件的页缓存管理结构）上，谁先 fsync 谁拿到。checkpointer 进程可能拿到一次「干净的成功」。</div></div>
+  <div class="point good"><div class="label">内核侧的改进</div><div>4.13 起 <code>errseq_t</code>：错误带序列号记在 <code>file</code> 上，每个 fd 至少能看到一次打开之后发生的错误。这修好了「谁拿到错误」的问题。<strong>修不好「数据去哪了」</strong>——脏页已经被丢弃。</div></div>
 
-  <div class="danger"><strong>把 fsync 失败当不可恢复的致命错误。</strong>不要重试、不要忽略。磁盘上是你无法观测的混合状态——哪些页写成功了、哪些被丢掉，内核不会给你一张清单。PostgreSQL 选择 panic 并从 WAL 重放。代码里 <code>if (fsync(fd) &lt; 0) { log_warn(...); }</code> 然后继续跑，是定时炸弹。</div>
+  <div class="danger"><strong>把 fsync 失败当作不可恢复的致命错误。</strong>不要重试、不要忽略。此时磁盘上是无法观测的混合状态——哪些页写成功了、哪些被丢掉了，内核不会给你清单。PostgreSQL 的选择是 panic（数据库进程主动崩溃）并从 WAL 重放。代码里写 <code>if (fsync(fd) &lt; 0) { log_warn(...); }</code> 然后继续跑的，是定时炸弹。</div>
   <div class="point warn"><div class="label">close 返回值</div><div>延迟分配让 <code>ENOSPC</code> 迟到。<code>write</code> 成功、没调 fsync 时，错误可能在 <code>close</code> 才出现。忽略 close 等于丢掉最后一次报错机会。</div></div>
 
   <div class="intuition">写路径失败和读路径失败性质不同：读失败系统状态没变；写失败进入<strong>你无法观测的状态</strong>。有状态服务该停下来，从一个已知持久点重建。见 <a href="incident_playbook.html">线上故障处置手册</a>。持久化没法靠「跑一遍单测」证明：虚拟机里 write 之后 <code>echo b &gt; /proc/sysrq-trigger</code> 模拟 panic；用 dm-flakey 注入写失败，看应用是 panic 还是重试 fsync。测试环境不掉电，是这类 bug 能活到生产的原因。</div>
@@ -990,7 +990,7 @@ fail:
       <p>调用上面的 <code>write_file_durably()</code>。五道防线：临时文件（原文件始终完整）→ 裸 write 循环（无用户态缓冲）→ <code>fdatasync</code>（穿过页缓存和设备缓存）→ <code>rename</code>（原子切换）→ <code>fsync(父目录)</code>（名字也持久）。任一步失败返回 -1。解析失败不要覆盖已有配置——持久化正确 ≠ 内容合法。</p>
     </div>
   </div>
-  <p>短写不是异常：普通文件在被信号打断或磁盘将满时都可能 <code>n &lt; left</code>。循环 + <code>EINTR</code> 是 write 的正确用法。失败路径必须 <code>unlink</code> 临时文件，否则堆 <code>.tmp.pid</code>。rename 成功但 <code>fsync(dirfd)</code> 失败时，读者已经能看到新文件——并发可见有了，持久性还没有，调用方必须当失败。父目录 fd 要用 <code>O_DIRECTORY</code>；跨目录 rename 两个父目录都要 fsync，漏一个比「两边都没有」更难查。</p>
+  <p>短写不是异常情况：写普通文件时被信号打断、或磁盘将满，都可能出现 <code>n &lt; left</code>。循环补写加上处理 <code>EINTR</code>（被信号打断的重试）才是 write 的正确用法。失败路径必须 <code>unlink</code> 临时文件，否则会堆一堆 <code>.tmp.pid</code>。还有一种边角：rename 成功但 <code>fsync(dirfd)</code> 失败时，读者已经能看到新文件——并发可见性有了，持久性还没有，调用方必须按失败处理。父目录 fd 要用 <code>O_DIRECTORY</code> 打开；跨目录 rename 时两个父目录都要 fsync，只漏一个比「两边都没有」更难查。</p>
 
   <div class="checklist">
     <h4>持久化自检清单</h4>
@@ -1015,7 +1015,7 @@ fail:
     <div class="t"><h2>页缓存与回写调优</h2><p class="sub">脏页攒得越多吞吐越好，直到写者被一把按住</p></div>
   </div>
 
-  <p>页缓存让重复读免费、写入可合并；脏页攒到阈值时，内核会<strong>把正在写的进程按住</strong>。这是「平时 p99 5 ms、每隔几分钟蹦到 2 秒」的常见根因。</p>
+  <p>页缓存（page cache，内核拿空闲内存缓存文件内容的那一层）让重复读变得免费、让写入可以合并下发；但脏页（改了还没写到盘上的页）攒到阈值时，内核会<strong>把正在写的进程一把按住</strong>，强制它先等回写。这是「平时 p99 5 ms、每隔几分钟蹦到 2 秒」这类现象的常见根因。</p>
 
   <h3>脏页的三条回写路径</h3>
   <div class="fig">
@@ -1039,8 +1039,8 @@ fail:
     </svg>
     <figcaption>看到周期性延迟毛刺，先看 /proc/meminfo 的 Dirty 有没有「攒高再骤降」的锯齿。</figcaption>
   </div>
-  <p>确认手法：循环打 Dirty，看是不是「缓慢攒高 → 与毛刺同时骤降」的锯齿。没有锯齿就不要调 dirty_*，去 §9。有锯齿再改 <code>dirty_bytes</code>。预算很具体：<code>dirty_bytes ≈ 设备顺序写带宽 × 1～2 秒</code>。调小 = 偶发大毛刺换成持续小开销。</p>
-  <p>fsync 很勤的服务（数据库）几乎不靠这套阈值，脏页活不过一次提交；毛刺更常出现在「吞吐型写入 + 大内存 + 很少 fsync」：日志聚合、备份、对象存储网关。cgroup 的 <code>memory.high</code> 会缩小 dirtyable 集合，容器里同样的 ratio 对应的绝对字节数比宿主小，表现为「同样代码在容器里更早被按住」。</p>
+  <p>确认手法：持续打点观察 Dirty（脏页字节数），看是不是「缓慢攒高 → 与毛刺同时骤降」的锯齿形态。没有锯齿就不要动 dirty_* 参数，转去 §9 查设备。有锯齿再改 <code>dirty_bytes</code>。预算公式很具体：<code>dirty_bytes ≈ 设备顺序写带宽 × 1～2 秒</code>。调小的代价是：偶发大毛刺换成持续小开销。</p>
+  <p>fsync 很勤的服务（数据库）几乎不依赖这套阈值，脏页活不过一次提交；毛刺更常出现在「吞吐型写入 + 大内存 + 很少 fsync」的组合里：日志聚合、备份、对象存储网关。另外 cgroup 的 <code>memory.high</code>（容器内存上限）会缩小可脏内存的统计范围，容器里同样的 ratio 对应的绝对字节数比宿主机小，表现为「同样代码在容器里更早被按住」。</p>
 
   <div class="cheatsheet"><table>
     <thead><tr><th>参数</th><th>默认</th><th>语义与调优要点</th></tr></thead>
@@ -1068,7 +1068,7 @@ fail:
   </table>
 
   <h3>readahead 与 <code>posix_fadvise</code></h3>
-  <p>顺序读命中就加倍窗口，默认上限 128 KB。<code>/sys/block/*/queue/read_ahead_kb</code> 可调。随机读场景预读是纯浪费——看 <code>/proc/PID/io</code> 的 <code>read_bytes</code> 是否远大于文件本身。</p>
+  <p>readahead（预读——内核猜你接下来要读后面的数据，提前读进来）在顺序读命中时会把窗口加倍，默认上限 128 KB。<code>/sys/block/*/queue/read_ahead_kb</code> 可调。随机读场景下预读是纯浪费——看 <code>/proc/PID/io</code> 的 <code>read_bytes</code> 是不是远大于文件本身就能判断。</p>
   <div class="tool-card green">
     <h4><code>posix_fadvise</code> / <code>madvise</code></h4>
     <ul>
@@ -1080,20 +1080,20 @@ fail:
 <pre><span class="cm">// 流式扫 100 GB：加大预读，每 64 MB 丢掉已处理的干净页，免得冲光别人的热缓存</span>
 posix_fadvise(fd, <span class="num">0</span>, <span class="num">0</span>, POSIX_FADV_SEQUENTIAL);
 posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*MB, POSIX_FADV_DONTNEED);  <span class="cm">/* 留 8 MB 余量 */</span></pre>
-  <p>流式扫描如果不用 DONTNEED，100 GB 会把别人的热缓存挤光，扫完以后在线请求全 miss。留 8 MB 余量是因为预读窗口还在往后取，切太干净会把正在用的页丢掉、变成同步读。DONTNEED 不会先刷脏页——边扫边写同一文件时，要先 <code>sync_file_range</code>。</p>
+  <p>流式扫描如果不用 DONTNEED，100 GB 的内容会把别人的热缓存全部挤光，扫完以后在线请求全部 cache miss。留 8 MB 余量是因为预读窗口还在往后取数据，切得太干净会把正在用的页也丢掉、让读取退化成同步读。另外注意 DONTNEED 不会先刷脏页——边扫边写同一文件时，要先 <code>sync_file_range</code> 把脏页落盘。</p>
 
   <h3><code>O_DIRECT</code>：把缓存决策权交给应用</h3>
   <div class="point good"><div class="label">该用</div><div>应用自己有更好的缓存（InnoDB <code>innodb_flush_method=O_DIRECT</code>），或一次性顺序流（备份）。双重缓存等于浪费一半内存。</div></div>
   <div class="point warn"><div class="label">约束</div><div>缓冲区、偏移、长度按逻辑块对齐，否则 <code>EINVAL</code>。<code>statx(STATX_DIOALIGN)</code> 查准确值，别硬编码 512/4096。</div></div>
   <div class="point bad"><div class="label">误用</div><div>当持久化（见 §5）；在小 I/O 上用——失去合并与预读，随机小读写可能差几倍。</div></div>
-  <p>数据库 buffer pool 已经按页管理了，再走页缓存等于同一份数据两份内存，而且两次缓存的失效策略还不一致（内核 LRU vs InnoDB flush list）。<code>O_DIRECT</code> 把决策权交回去。代价是对齐和失去内核合并——4 KB 随机直写往往比走页缓存更慢，所以「所有程序都 O_DIRECT」是错的。</p>
+  <p>数据库的 buffer pool（数据库自己的内存缓存池）已经按页管理数据了，再走一遍页缓存等于同一份数据占两份内存，而且两层缓存的淘汰策略还不一致（内核用 LRU，InnoDB 用 flush list）。<code>O_DIRECT</code> 把「要不要缓存」的决策权交还给应用。代价是对齐要求和失去内核合并——4 KB 随机直写往往比走页缓存更慢，所以「所有程序都 O_DIRECT」是错的。</p>
 
   <h3><code>free</code> 的 buff/cache 与 <code>drop_caches</code></h3>
-  <p><code>free</code> 列很低是健康的（空闲被拿去做缓存）。<strong>只看 <code>available</code></strong>：不触发换出就能拿到的量。available 持续接近 0 才是告急。</p>
+  <p><code>free</code> 里 free 列很低反而是健康的表现（空闲内存被拿去做缓存了）。<strong>只看 <code>available</code> 这一列</strong>：它表示不触发换出就能拿到的内存量。available 持续接近 0 才是真的告急。</p>
 
   <div class="danger"><strong>不要在生产 <code>echo 3 &gt; /proc/sys/vm/drop_caches</code>。</strong>立刻丢掉全部可回收页缓存和 slab：① 热数据重新打满磁盘；② 大内存机器上遍历可能卡住几秒到几十秒；③ 解决不了泄漏。唯一正当用途是性能测试的冷缓存基线。它也<strong>丢不掉脏页</strong>——Dirty 还在，只是干净缓存没了，于是下一次读更慢、写路径没被修好。</div>
 
-  <div class="intuition">周期性延迟毛刺 → 先看 Dirty 锯齿。有，往 <code>dirty_bytes</code> 调；没有，去 §9。kswapd 回收文件页和写者被 <code>balance_dirty_pages</code> 按住会叠在一起：内存紧时既要腾干净页给新读，又要把脏页写下去。表现为「读也慢、写也慢、iowait 不高」（CPU 在做回收）。这时先看 PSI memory，不要只当 I/O 问题处理。</div>
+  <div class="intuition">周期性延迟毛刺 → 先看 Dirty 是不是锯齿。有，往 <code>dirty_bytes</code> 方向调；没有，去 §9 查设备。注意 kswapd（内核回收内存的线程）回收文件页和写者被 <code>balance_dirty_pages</code> 按住这两件事会叠在一起：内存紧时既要腾出干净页给新读取，又要把脏页写下去。表现为「读也慢、写也慢、iowait 却不高」（CPU 忙的是回收而不是等 I/O）。这时先看 PSI memory（内核的压力指标），不要只当 I/O 问题处理。</div>
 </section>
 
 <!-- ================================================================ §7 -->
@@ -1103,7 +1103,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     <div class="t"><h2>空间与 inode 事故</h2><p class="sub">线上最高频的一类问题，几乎全是「看错了数字」</p></div>
   </div>
 
-  <p>「磁盘满」最多。棘手的不是满了怎么办，是<strong>你以为满了其实没满，或以为没满已经写不进去</strong>。</p>
+  <p>「磁盘满」是最多的一类告警。棘手的不是满了怎么办，而是<strong>你以为满了其实没满，或者以为没满却已经写不进去</strong>。</p>
 
   <div class="cheatsheet"><table>
     <thead><tr><th>现象</th><th>定位命令</th><th>根因</th></tr></thead>
@@ -1121,7 +1121,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
   </table></div>
 
   <h3><code>df</code> 与 <code>du</code> 为什么对不上</h3>
-  <p><code>df</code> 问 superblock「还有多少空闲块」；<code>du</code> 从目录遍历<strong>能通过路径访问到的</strong>文件。占着块但没有路径的，df 看得见、du 看不见。</p>
+  <p><code>df</code> 问的是 superblock「还有多少空闲块」；<code>du</code> 则是从目录树出发，只加总<strong>能通过路径访问到的</strong>文件。于是占着块但没有路径的文件（已删除但仍被打开），df 看得见、du 看不见——差额就出在这里。</p>
   <div class="fig">
     <svg viewBox="0 0 900 150" role="img" aria-label="df 统计 superblock 已用块；du 只加得路径的文件。已 unlink 仍打开的 30 GB 日志在 df 里、不在 du 里" style="min-width:700px;height:auto">
       <rect class="box-a" x="20" y="20" width="260" height="72" rx="8"/>
@@ -1141,7 +1141,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </svg>
     <figcaption>差几十 GB 时先 lsof +L1，再怀疑挂载点被覆盖。</figcaption>
   </div>
-  <p>典型事故：新机器服务先起、往 <code>/data</code> 写，过几天才把数据盘挂到 <code>/data</code>。上层遮住了底层那批文件，<code>du /data</code> 看不见，<code>df</code> 仍记账。<code>mount --bind / /mnt</code> 再 <code>du /mnt/data</code> 才能揭开。</p>
+  <p>典型事故：新机器上服务先起了、往 <code>/data</code> 写入数据，过几天才把数据盘挂到 <code>/data</code>。上层挂载遮住了底层那批文件，<code>du /data</code> 看不见它们，<code>df</code> 却仍记着这笔账。要 <code>mount --bind / /mnt</code> 再 <code>du /mnt/data</code> 才能揭开被遮住的部分。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -1153,10 +1153,10 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
   </table>
 
   <h3>inode 耗尽</h3>
-  <p><code>df -i</code> 的 IUse% 到 100%，<code>df -h</code> 可能只用了 7%。ext4 上 <code>resize2fs</code> <strong>不能增加 inode 总数</strong>。救：删文件 / 打成 tar / 备份重建 / <strong>换 XFS</strong>。定位按文件数统计目录（<code>ls -U</code> 不排序，大目录比 <code>ls</code> 快几十倍）。预防：凡是海量小文件的用途一律选 XFS；非要用 ext4 就在 mkfs 时把密度提上来，并算清 inode 表本身要占的空间。</p>
+  <p><code>df -i</code> 的 IUse% 到 100% 时，<code>df -h</code> 可能只显示用了 7%。ext4 上 <code>resize2fs</code> <strong>不能增加 inode 总数</strong>。抢救办法：删文件 / 打包成 tar / 备份后重建 / <strong>换 XFS</strong>。定位时按文件数统计各目录（<code>ls -U</code> 不排序，大目录下比 <code>ls</code> 快几十倍）。预防：凡是海量小文件的用途一律选 XFS；非要用 ext4 就在 mkfs 时把 inode 密度提上来，并算清 inode 表本身要占的空间。</p>
 
   <h3>稀疏文件与 <code>fallocate</code></h3>
-  <div class="def"><strong>稀疏文件</strong>：逻辑长度里有从未写过的空洞，不占物理块。<code>ls -l</code> 看 <code>i_size</code>，<code>du</code> 看 <code>st_blocks</code>，可以差几个数量级。</div>
+  <div class="def"><strong>稀疏文件</strong>：逻辑长度里存在从未写过的空洞，这些空洞不占物理块。<code>ls -l</code> 读的是 <code>i_size</code>（逻辑长度），<code>du</code> 算的是 <code>st_blocks</code>（实际占块数），两者可以差几个数量级。</div>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -1167,13 +1167,13 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
       <tr><td><code>fallocate(FALLOC_FL_KEEP_SIZE)</code></td><td>预留空间不改 i_size</td><td><code>posix_fallocate</code> 在不支持的 FS 上会真写零</td></tr>
     </tbody>
   </table>
-  <div class="warn">稀疏文件是文件层超卖：30 个「10 GB」镜像可能只占 800 MB × 30，直到客户机写满。监控看 <code>df</code>，规划按 <code>du --apparent-size</code>。</div>
-  <p><code>fallocate</code> 造的是 unwritten extent：元数据说「这些块是你的」，介质上还没写零。第一次读返回零，第一次写才真正占用介质带宽。这就是为什么预分配「瞬间完成」——它几乎只改元数据。<code>posix_fallocate</code> 在不支持的 FS 上会真写零，启动时间差两个数量级。</p>
+  <div class="warn">稀疏文件本质是文件层的超卖：30 个「10 GB」的镜像可能实际只占 800 MB × 30，直到客户机把它们写满为止。监控看 <code>df</code>（实际占用），容量规划按 <code>du --apparent-size</code>（逻辑大小）。</div>
+  <p><code>fallocate</code> 造的是 unwritten extent（未写范围）：元数据先声明「这些块归你了」，介质上还没有写零。第一次读返回零，第一次写才真正消耗介质带宽。这就是预分配「瞬间完成」的原因——它几乎只改元数据。<code>posix_fallocate</code> 在不支持的 FS 上会退化为真写零，启动时间能差两个数量级。</p>
   <div class="point"><div class="label">预分配的两个理由</div><div>① 把 ENOSPC 提前到启动时；② 一次性拿到连续空间，降低碎片。<strong>最好的碎片对策是 fallocate，不是事后 defrag。</strong></div></div>
 
   <h3>碎片化与单目录文件数</h3>
-  <p>SSD 上碎片的代价不是寻道，是 extent 树变深和请求放大。<code>filefrag</code> 一个 10 GB 文件 200 条 extent 健康，18 万条该处理（<code>e4defrag</code> / <code>xfs_fsr</code>，低峰做）。</p>
-  <p>ext4 <code>dir_index</code>（HTree）让「open 一个已知名字」在 300 万文件的目录里仍然快。<strong>慢的是遍历</strong>：<code>readdir</code> 是哈希序，inode 是创建序，<code>ls -l</code>/<code>du</code> 变成对 inode 表的随机访问。SSD 上这表现为「元数据 IOPS 打满、数据盘很闲」。工程上单目录控制在几万，用两级十六进制分片（<code>ab/cd/abcdef.jpg</code>）。面试能说出「慢的是遍历不是查找」，比说「文件太多要分目录」深一层。</p>
+  <p>SSD 上碎片的代价不再是磁头寻道，而是 extent 树变深和请求放大。<code>filefrag</code> 查看：一个 10 GB 文件 200 条 extent 属于健康，18 万条就该处理了（<code>e4defrag</code> / <code>xfs_fsr</code>，挑低峰做）。</p>
+  <p>ext4 的 <code>dir_index</code>（HTree，目录名的哈希索引）让「按名字 open 一个已知文件」在 300 万文件的目录里仍然快。<strong>慢的是遍历</strong>：<code>readdir</code> 吐出来的是哈希序，inode 存的是创建序，<code>ls -l</code>/<code>du</code> 就变成对 inode 表的随机访问。SSD 上这表现为「元数据 IOPS 打满、数据盘很闲」。工程上单目录控制在几万个文件，用两级十六进制分片（<code>ab/cd/abcdef.jpg</code>）。面试能说出「慢的是遍历不是查找」，比说「文件太多要分目录」深一层。</p>
 </section>
 
 <!-- ================================================================ §8 -->
@@ -1249,7 +1249,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </svg>
     <figcaption>五层各解决一个问题，也各有一个故障域。注意故障域是「向上放大」的：一块盘坏了 RAID 能扛，但 thin pool 写满会让上面所有卷同时不可用</figcaption>
   </div>
-  <p>排障口诀：服务还活着但某个文件没了 → 文件系统；一块盘灯红了但卷还在 → RAID；所有卷同时只读 → thin pool；I/O 全部卡住 <code>kill -9</code> 无效 → 多路径 <code>queue_if_no_path</code> 或盘全挂。层找错了，工具全白费。</p>
+  <p>排障口诀：服务还活着但某个文件没了 → 查文件系统层；一块盘灯红了但卷还在 → 查 RAID；所有卷同时变只读 → thin pool 写满；I/O 全部卡住、<code>kill -9</code> 都无效 → 多路径的 <code>queue_if_no_path</code> 或盘全挂。层找错了，工具全白费。</p>
 
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
@@ -1272,9 +1272,9 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </tbody>
   </table>
 
-  <div class="danger"><strong>大盘时代不要 RAID 5。</strong>16 TB 重建按 150 MB/s 也要约 30 小时，期间读遍剩余盘，URE 概率撞上重建窗口；同批盘故障相关，不是独立事件。「重建中彻底失效」反复发生。大容量用 RAID 6 或 RAID 10；哪种都不能替代备份。URE 按厂商 10<sup>14</sup> 比特一遇估算，读完 16 TB × (N−1) 块盘，窗口里撞上不可恢复读错误并不稀罕。RAID 6 能扛重建期二次故障，RAID 10 重建只读镜像伙伴、窗口短得多。</div>
+  <div class="danger"><strong>大盘时代不要用 RAID 5。</strong>16 TB 的盘重建（把坏盘数据重新算出来写到新盘）按 150 MB/s 也要约 30 小时，期间要读遍所有剩余盘，URE（不可恢复读错误）的概率正好撞上这个重建窗口；而且同批购买的盘故障是相关的，不是独立事件。「重建中彻底失效」因此在反复发生。大容量请用 RAID 6 或 RAID 10；但哪种都不能替代备份。URE 按厂商规格 10<sup>14</sup> 比特一遇估算，读完 16 TB × (N−1) 块盘，在窗口里撞上一次并不稀罕。RAID 6 能扛住重建期的二次故障，RAID 10 重建只读镜像伙伴那块盘、风险窗口短得多。</div>
 
-  <div class="def"><strong>写洞</strong>：RAID 5/6 条带的数据块和校验块在不同盘上，无法原子更新。「数据已写、校验未写」时掉电，校验是错的而 RAID 不知道。平时读不走校验；真要重建时得到静默错误数据。</div>
+  <div class="def"><strong>写洞（write hole）</strong>：RAID 5/6 的一个条带里，数据块和校验块分布在不同盘上，两者无法原子地一起更新。「数据已写、校验还没写」的瞬间掉电，校验就是错的，而 RAID 自己不知道。平时读取不经过校验，看不出问题；真到重建时才会得到静默出错的数据。</div>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -1283,10 +1283,10 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
       <tr><td><code>echo check &gt; …/sync_action</code></td><td>巡检</td><td><code>mismatch_cnt</code> 非 0 = 潜伏坏块。不巡检会拖到重建才暴露</td></tr>
     </tbody>
   </table>
-  <p>write-intent bitmap 只能缩短重建时间，不能补上「数据已写、校验未写」的那一个条带。PPL / 独立 journal 才针对写洞。巡检会把每个条带的校验再算一遍：<code>mismatch_cnt</code> 非 0 说明平时已经有静默错误，拖到重建才发现就晚了。</p>
+  <p>write-intent bitmap（写意图位图——记录哪些块正在被写的日志）只能缩短重建时间，补不上「数据已写、校验未写」的那一个条带。PPL / 独立 journal 才是针对写洞的。巡检（scrub）会把每个条带的校验重算一遍：<code>mismatch_cnt</code> 非 0 说明平时已经有静默错误，拖到重建时才发现就晚了。</p>
 
   <h3>LVM 快照：两种「写满」后果完全不同</h3>
-  <div class="def"><strong>传统快照</strong>：不复制数据，只留 COW 区。原卷每次写入未复制过的块，先把旧内容拷到 COW 再写。做快照瞬间，之后每次修改变贵。</div>
+  <div class="def"><strong>传统快照</strong>：不复制数据，只留一块 COW（copy-on-write，写时复制）区。原卷每次要写入尚未复制过的块时，先把旧内容拷进 COW 再写。所以做快照那一瞬间是免费的，之后每次修改变贵。</div>
   <div class="analogy">传统快照像「复印一份档案后，每次改某一页之前先把原页复印到副本」。快照瞬间免费，之后每次修改都多一次读+一次写。COW 区用完，副本作废，原件还在。thin pool 则是整栋楼共用一个水箱：水箱空了，所有住户同时停水。</div>
   <div class="danger"><strong>传统快照 COW 满：快照失效，原卷继续工作。thin pool 满：池上所有卷一起 I/O 错误，文件系统通常变只读。</strong>更隐蔽的是 metadata_percent——容量小、更容易满。监控两个百分比，且 VG 必须有空闲 PE，否则 autoextend 无效。</div>
   <table>
@@ -1313,10 +1313,10 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </svg>
     <figcaption>扩：先设备后文件系统。缩：先文件系统后设备。记反会丢数据。</figcaption>
   </div>
-  <p><code>lvextend -r</code> 会自动调 <code>resize2fs</code> / <code>xfs_growfs</code>，少一次人肉顺序错误。XFS 的扩参是<strong>挂载点</strong>不是设备名。缩容仅 ext4，且必须卸载 + <code>e2fsck -f</code>；<code>lvreduce -f</code> 拦不住你先砍 LV。分区表扩完还要通知内核（<code>partprobe</code>），否则文件系统看到的还是旧大小。</p>
+  <p><code>lvextend -r</code> 会自动接着调 <code>resize2fs</code> / <code>xfs_growfs</code>，帮你少犯一次人肉顺序错误。XFS 的扩容参数是<strong>挂载点</strong>不是设备名。缩容只有 ext4 支持，且必须先卸载再加 <code>e2fsck -f</code>；<code>lvreduce -f</code> 的强制参数拦不住你先砍 LV。分区表扩完还要通知内核重读（<code>partprobe</code>），否则文件系统看到的还是旧大小。</p>
 
   <h3>多路径：<code>queue_if_no_path</code> 会把机器挂死</h3>
-  <p><code>dm-multipath</code> 保护的是链路不是盘。所有路径都断时，<code>queue_if_no_path</code> 把 I/O 无限排队 → 进程永久 D 状态，<code>kill -9</code> 无效，往往只能硬重启。生产配 <code>no_path_retry N</code>，有界等待后向上报错。路径抖动时「failed faulty」先查线缆、交换机端口、HBA，不要先换盘。active/passive 阵列如果策略配成 round-robin，会把 I/O 打到 standby 路径上，表现为周期性几百毫秒毛刺。</p>
+  <p><code>dm-multipath</code>（多路径设备映射）保护的是链路冗余，不是盘本身。所有路径都断掉时，<code>queue_if_no_path</code> 策略会把 I/O 无限排队 → 相关进程永久停在 D 状态（不可中断睡眠），<code>kill -9</code> 无效，往往只能硬重启。生产环境配 <code>no_path_retry N</code>：有界等待后向上层报错。路径抖动、状态显示「failed faulty」时先查线缆、交换机端口、HBA（主机总线适配器），不要急着换盘。active/passive 阵列（同一时刻只有一条路径活跃）如果把策略配成 round-robin，I/O 会打到 standby 路径上，表现为周期性几百毫秒的毛刺。</p>
   <table>
     <thead><tr><th>命令</th><th>目的</th><th>判据</th></tr></thead>
     <tbody>
@@ -1333,7 +1333,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     <div class="t"><h2>I/O 排障工作流</h2><p class="sub">先判断「是不是 I/O」，再判断「是哪一层」</p></div>
   </div>
 
-  <p>「看到 %wa 高就换盘」是答错最多的路径。先用两个便宜判据分层，再上对应工具。</p>
+  <p>「看到 %wa（iowait，CPU 等待 I/O 的占比）高就换盘」是答错最多的一条路。正确做法是先用两个便宜的判据分层，再上对应的工具。</p>
 
   <div class="fig">
     <svg viewBox="0 0 900 430" role="img" aria-label="I/O 排障分层：PSI 证明是不是 I/O；iostat 看 await 与队列深度不要看百分 util；再定位进程和文件；blktrace 拆 I2D 与 D2C；最后才查硬件" style="min-width:720px;height:auto">
@@ -1408,9 +1408,9 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </svg>
     <figcaption>先 PSI 证明是 I/O，再按 await × 队列深度分成三条路。%util 在 NVMe 上只表示「没闲着」。</figcaption>
   </div>
-  <div class="danger"><strong>NVMe 上不要看 <code>%util</code>。</strong>它的定义是「采样周期内至少有一个请求在飞」的时间占比，隐含「设备一次只能干一件事」。机械盘一个磁头时 100% 约等于饱和；NVMe 内部几十上百个并行队列，98% 只表示「没闲着」，await 仍可能是 0.3 ms。饱和度看 await 是否随 aqu-sz 恶化，以及设备公布的 QD 上限。</div>
-  <p>iowait 高只说明「有 CPU 闲着在等 I/O」：空闲机器拷文件可以 90%，盘可能很好；64 核上一根线程卡死最多贡献约 1.5%。业务被 I/O 拖死而 iowait 0.3% 是常态，因为别人在跑用户态，这笔账记到 %user。用 PSI 和 D 状态，不要用 iowait 当开关。</p>
-  <p>周期性毛刺先排除 §6 的 Dirty 锯齿，再排除容器 overlay copy-up 和 <code>io.max</code>。这三件都表现为「盘不忙但应用卡」，工具却完全不同：<code>meminfo</code>、<code>du</code> 容器可写层、cgroup <code>io.stat</code>。拿着 iostat 死盯 %util 会三件都漏掉。</p>
+  <div class="danger"><strong>NVMe 盘上不要看 <code>%util</code>。</strong>它的定义是「采样周期内至少有一个请求在飞」的时间占比，隐含假设「设备一次只能干一件事」。机械盘只有一个磁头时，100% 大致等于饱和；NVMe 内部有几十上百个并行队列，98% 只表示「没闲着」，此时 await 仍可能只有 0.3 ms。饱和度要看 await 是否随 aqu-sz（队列深度）恶化，以及对照设备公布的 QD（队列深度）上限。</div>
+  <p>iowait 高只说明「有 CPU 闲着在等 I/O」：一台空闲机器拷文件可以到 90%，盘本身可能很好；反过来 64 核机器上一根线程卡死，最多只贡献约 1.5%。业务被 I/O 拖死而 iowait 只有 0.3% 是常态，因为其他核在跑用户态任务，这笔等待账被记到了 %user。判断依据要用 PSI 和 D 状态进程，不要拿 iowait 当开关。</p>
+  <p>周期性毛刺先排除 §6 讲的 Dirty 锯齿，再排除容器 overlay copy-up 和 <code>io.max</code>（cgroup 的 I/O 限速）。这三件事都表现为「盘不忙但应用卡」，用的工具却完全不同：<code>meminfo</code>、容器可写层的 <code>du</code>、cgroup 的 <code>io.stat</code>。拿着 iostat 死盯 %util，三件都会漏掉。</p>
 
   <h3>工具怎么用：命令 → 目的 → 判据</h3>
   <table>
@@ -1428,7 +1428,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
       <tr><td><code>cat …/io.max</code> <code>io.stat</code> <code>io.pressure</code></td><td>cgroup 限流</td><td>设备很闲但应用很慢的高频原因。容器默认可能被套了带宽上限，宿主机 iostat 看起来很闲</td></tr>
     </tbody>
   </table>
-  <p><code>blktrace</code> 把一次请求拆成插入队列（I）到下发设备（D）再到完成（C）。<strong>I2D 大</strong>说明内核在排队：限流、QD、合并、cgroup，换更快的盘解决不了；<strong>D2C 大</strong>才是设备或链路。这是「到底该调软件还是换硬件」的分界。</p>
+  <p><code>blktrace</code> 把一次请求的生命周期拆成三段：插入队列（I）、下发到设备（D）、完成（C）。<strong>I2D 占大头</strong>说明耗时在内核排队：限流、队列深度、合并、cgroup，换更快的盘解决不了；<strong>D2C 占大头</strong>才轮到查设备或链路。这就是「到底该调软件还是换硬件」的分界线。</p>
 
   <div class="cheatsheet"><table>
     <thead><tr><th>字段</th><th>含义</th><th>怎么用 / 注意什么</th></tr></thead>
@@ -1442,7 +1442,7 @@ posix_fadvise(fd, <span class="num">0</span>, done - <span class="num">8</span>*
     </tbody>
   </table></div>
 
-  <p>eBPF 把「文件系统层慢」和「设备层慢」拆开：<code>ext4slower</code> 慢而 <code>biolatency</code> 快 → 日志/锁/fsync 风暴，不在盘上。原理见 <a href="observability_ebpf.html">eBPF 与可观测性</a>。偶发救命：<code>fatrace</code> 看谁在写目录；<code>lsof +D</code> 找 umount busy；<code>filefrag -v</code> 对比两台机器同一张表谁碎了（§7）。</p>
+  <p>eBPF（可在内核里安全挂探针的技术）能把「文件系统层慢」和「设备层慢」拆开来看：<code>ext4slower</code> 显示慢而 <code>biolatency</code> 显示快 → 问题在日志/锁/fsync 风暴，不在盘上。原理见 <a href="observability_ebpf.html">eBPF 与可观测性</a>。几个偶发场景的救命工具：<code>fatrace</code> 看谁在写某个目录；<code>lsof +D</code> 找出 umount 报 busy 的元凶；<code>filefrag -v</code> 对比两台机器同一张表谁更碎（§7）。</p>
 
   <div class="checklist">
     <h4>I/O 排障速查</h4>

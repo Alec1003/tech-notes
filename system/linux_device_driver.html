@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linux 设备驱动开发 · 字符设备 / 设备树 / 中断 / 内核并发 / DMA — Tech Notes</title>
-<meta name="description" content="Linux 设备驱动开发：从「加载一个内核模块」到「写一个能跑在真实 SoC 上的字符 + 平台驱动」： module / cdev / file_operations、 copy_to_user / ioctl / mmap、 设备树 probe、 中断上下半部、 spinlock / 睡眠规则">
+<meta name="description" content="用大白话讲 Linux 设备驱动开发：从加载一个内核模块到写出能跑在真实芯片上的字符设备与平台驱动，module、cdev、file_operations、copy_to_user、ioctl、mmap、设备树 probe、中断上下半部、spinlock 睡眠规则一次讲清，含高频面试题。">
 <!-- tn-social:v1 -->
 <link rel="canonical" href="https://kavinchan13.github.io/tech-notes/system/linux_device_driver.html">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -17,14 +17,14 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:url" content="https://kavinchan13.github.io/tech-notes/system/linux_device_driver.html">
 <meta property="og:title" content="Linux 设备驱动开发 · 字符设备 / 设备树 / 中断 / 内核并发 / DMA">
-<meta property="og:description" content="Linux 设备驱动开发：从「加载一个内核模块」到「写一个能跑在真实 SoC 上的字符 + 平台驱动」： module / cdev / file_operations、 copy_to_user / ioctl / mmap、 设备树 probe、 中断上下半部、 spinlock / 睡眠规则">
+<meta property="og:description" content="用大白话讲 Linux 设备驱动开发：从加载一个内核模块到写出能跑在真实芯片上的字符设备与平台驱动，module、cdev、file_operations、copy_to_user、ioctl、mmap、设备树 probe、中断上下半部、spinlock 睡眠规则一次讲清，含高频面试题。">
 <meta property="og:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:alt" content="技术笔记 · 系统 / 架构 / 工程">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Linux 设备驱动开发 · 字符设备 / 设备树 / 中断 / 内核并发 / DMA">
-<meta name="twitter:description" content="Linux 设备驱动开发：从「加载一个内核模块」到「写一个能跑在真实 SoC 上的字符 + 平台驱动」： module / cdev / file_operations、 copy_to_user / ioctl / mmap、 设备树 probe、 中断上下半部、 spinlock / 睡眠规则">
+<meta name="twitter:description" content="用大白话讲 Linux 设备驱动开发：从加载一个内核模块到写出能跑在真实芯片上的字符设备与平台驱动，module、cdev、file_operations、copy_to_user、ioctl、mmap、设备树 probe、中断上下半部、spinlock 睡眠规则一次讲清，含高频面试题。">
 <meta name="twitter:image" content="https://kavinchan13.github.io/tech-notes/assets/og-cover.jpg">
 <!-- /tn-social:v1 -->
 <link rel="stylesheet" href="../assets/guide-theme.css">
@@ -124,7 +124,7 @@
     <section class="chapter" id="ch1">
       <div class="ch-head"><div class="num">01</div><div class="t"><h2>驱动在哪：用户态 vs 内核态</h2><div class="sub">你写的 open/read 最终落到谁身上</div></div></div>
 
-      <p class="lead">在用户态你调用 <code>open("/dev/mydev")</code>、<code>read(fd, buf, n)</code>、<code>ioctl(fd, CMD, arg)</code>。<strong>驱动</strong>就是内核里接住这些调用的一段代码：把「一次系统调用」翻译成「对某个硬件寄存器的读写 / 对某块内存的搬运」，再把结果交回用户态。换句话说，<a href="./filedescriptor_deepdive.html">文件描述符</a>那篇讲的 <code>struct file::f_op</code> 函数表，<strong>表里的函数指针正是驱动要填的坑</strong>。</p>
+      <p class="lead">在用户态你调用 <code>open("/dev/mydev")</code>、<code>read(fd, buf, n)</code>、<code>ioctl(fd, CMD, arg)</code>。<strong>驱动</strong>就是内核里接住这些调用的一段代码：它把「一次系统调用」翻译成「对某个硬件寄存器的读写 / 对某块内存的搬运」，再把结果交回用户态。换句话说，<a href="./filedescriptor_deepdive.html">文件描述符</a>那篇讲的 <code>struct file::f_op</code> 函数表，<strong>表里的函数指针正是驱动要填的坑</strong>。</p>
 
       <div class="analogy">
         <div class="at">生活类比：餐厅的后厨与传菜口</div>
@@ -133,7 +133,7 @@
       </div>
 
       <h3>1.1 内核态代码的五条铁律</h3>
-      <p>进入内核态，用户态的很多"常识"立刻失效。这不是风格问题，而是<strong>硬约束</strong>。</p>
+      <p>进入内核态，用户态的很多"常识"立刻失效。这不是风格问题，而是<strong>硬约束</strong>：内核代码跑在所有进程共享的地盘上，没有进程边界替你兜底，出错就是整机遭殃。</p>
       <table>
         <thead><tr><th>约束</th><th>为什么</th><th>后果 / 替代</th></tr></thead>
         <tbody>
@@ -225,7 +225,7 @@
 
       <h3>1.3 全篇最该背下来的一张表：当前上下文能不能睡</h3>
 
-      <p>驱动里九成的"偶发死机"都是同一个问题：<strong>在不能睡眠的上下文里调了会睡眠的函数</strong>。它经常不当场崩——只有恰好抢不到锁、恰好缺页时才真睡下去，于是压测两天没事、客户现场三小时就 hang。所以写每一行前先问：<strong>"我现在在哪个上下文？"</strong></p>
+      <p>驱动里九成的"偶发死机"都是同一个问题：<strong>在不能睡眠的上下文（上下文——代码此刻的运行身份：是普通进程、还是中断处理等特殊状态，决定了你能调用哪些函数）里调了会睡眠的函数</strong>。它经常不当场崩——只有恰好抢不到锁、恰好缺页时才真睡下去，于是压测两天没事、客户现场三小时就 hang。所以写每一行前先问自己：<strong>"我现在在哪个上下文？"</strong></p>
 
       <div style="overflow-x:auto">
       <table>
@@ -287,13 +287,13 @@
 
       <h3>1.4 别靠猜——让内核告诉你会不会睡</h3>
 
-      <p>内核在每个可能睡眠的函数入口都埋了 <code>might_sleep()</code>，平时被编译掉，打开 <code>CONFIG_DEBUG_ATOMIC_SLEEP</code> 后就会在原子上下文里调用可睡函数的那一刻打出 <em>BUG: sleeping function called from invalid context</em> 和完整调用栈。判读三步：<code>in_atomic(): 1</code> 说明 <code>preempt_count</code> 非零（持自旋锁或关了抢占）；<code>irqs_disabled(): 1</code> 说明是关中断导致的；栈里第一个带 <code>[模块名]</code> 的帧才是<strong>你的锅</strong>。</p>
+      <p>内核在每个可能睡眠的函数入口都埋了 <code>might_sleep()</code>（一个自检点：平时被编译掉，开了调试选项才生效）。打开 <code>CONFIG_DEBUG_ATOMIC_SLEEP</code> 后，它就会在「原子上下文（不可睡眠的状态）里调了可睡函数」的那一刻打出 <em>BUG: sleeping function called from invalid context</em> 和完整调用栈。判读分三步：<code>in_atomic(): 1</code> 说明 <code>preempt_count</code> 非零（持自旋锁或关了抢占）；<code>irqs_disabled(): 1</code> 说明是关中断导致的；栈里第一个带 <code>[模块名]</code> 的帧才是<strong>你的锅</strong>。</p>
 
       <div class="box danger">不要用 <code>in_atomic()</code> / <code>in_interrupt()</code> 去做<strong>逻辑分支</strong>（"在中断里就用 GFP_ATOMIC，否则 GFP_KERNEL"）：<code>preempt_count</code> 在某些配置下并不总能反映真实情况，这样写等于把"我不知道自己在什么上下文"变成永久技术债。正确做法是<strong>在函数注释里规定调用上下文</strong>，并加一个 <code>gfp_t</code> 参数由调用者传下来。</div>
 
       <h3>1.5 错误处理：负 errno 与 ERR_PTR</h3>
 
-      <p>规矩只有一条：<strong>返回 <code>int</code> 的函数失败给负 errno、成功给 0 或有意义的正值</strong>；返回<strong>指针</strong>的函数不能返回 <code>-EINVAL</code>，要用 <code>ERR_PTR(-ENOMEM)</code> 把错误码编进指针，调用侧用 <code>IS_ERR()</code> 判断、<code>PTR_ERR()</code> 取回。这个负值最终一路传回 VFS，变成用户态的 <code>errno</code>。</p>
+      <p>规矩只有一条：<strong>返回 <code>int</code> 的函数失败给负 errno（错误码，如 <code>-EINVAL</code>）、成功给 0 或有意义的正值</strong>；返回<strong>指针</strong>的函数不能返回 <code>-EINVAL</code>，要用 <code>ERR_PTR(-ENOMEM)</code> 把错误码编进指针，调用侧用 <code>IS_ERR()</code> 判断、<code>PTR_ERR()</code> 取回。这个负值最终一路传回 VFS，变成用户态的 <code>errno</code>。</p>
 
       <div class="def">
         <div class="dt">名词：ERR_PTR / IS_ERR / PTR_ERR</div>
@@ -319,9 +319,9 @@
     <section class="chapter" id="ch2">
       <div class="ch-head"><div class="num">02</div><div class="t"><h2>第一个内核模块</h2><div class="sub">insmod / rmmod / dmesg 的最小闭环</div></div></div>
 
-      <p>驱动通常以<strong>可加载内核模块（LKM，<code>.ko</code>）</strong>的形式存在：编译成独立文件，运行时 <code>insmod</code> 装进内核、<code>rmmod</code> 卸载，不用重编内核也不用重启。骨架只有三件事：<code>module_init()</code> 注册加载入口（返回非 0 则模块<strong>不驻留</strong>）、<code>module_exit()</code> 注册卸载入口、<code>MODULE_LICENSE("GPL")</code> 声明许可（非 GPL 会 taint 内核，还用不了以 <code>EXPORT_SYMBOL_GPL</code> 导出的核心 API）。第 3 章的骨架就是把这三件事和 <code>cdev</code> 注册拼在一起。</p>
+      <p>驱动通常以<strong>可加载内核模块（LKM，<code>.ko</code>——一个可动态插进运行中内核的独立文件）</strong>的形式存在：编译成独立文件，运行时 <code>insmod</code> 装进内核、<code>rmmod</code> 卸载，不用重编内核也不用重启。骨架只有三件事：<code>module_init()</code> 注册加载入口（返回非 0 则模块<strong>不驻留</strong>）、<code>module_exit()</code> 注册卸载入口、<code>MODULE_LICENSE("GPL")</code> 声明许可（非 GPL 会 taint 内核，还用不了以 <code>EXPORT_SYMBOL_GPL</code> 导出的核心 API）。第 3 章的骨架就是把这三件事和 <code>cdev</code> 注册拼在一起。</p>
 
-      <p>模块不能用普通 <code>gcc</code> 编译——它必须针对<strong>特定内核版本</strong>的头文件和配置构建，靠内核源码树的 Kbuild：<code>Makefile</code> 里写 <code>obj-m += mydev.o</code>，再 <code>make -C /lib/modules/$(uname -r)/build M=$PWD modules</code>。</p>
+      <p>模块不能用普通 <code>gcc</code> 编译——它必须针对<strong>特定内核版本</strong>的头文件和配置来构建，这要靠内核源码树自带的 Kbuild 构建系统：<code>Makefile</code> 里写 <code>obj-m += mydev.o</code>，再 <code>make -C /lib/modules/$(uname -r)/build M=$PWD modules</code>。</p>
 
       <h3>2.1 加载—验证—卸载的命令闭环</h3>
 
@@ -422,7 +422,7 @@
         <div class="svg-caption">三类设备的分工：字符设备最"裸"，块设备与网络设备各自站在一整套内核子系统之上</div>
       </div>
 
-      <p>本文聚焦最常写的字符设备：让 <code>/dev/mydev</code> 能 open/read/write，需要三样东西对齐。</p>
+      <p>本文聚焦最常写的字符设备（字符设备——按字节流顺序访问的设备，串口、传感器、GPIO 都算）：要让 <code>/dev/mydev</code> 能 open/read/write，需要三样东西对齐：设备号、cdev、file_operations，下面逐个讲。</p>
 
       <h3>3.1 设备号、cdev 与 fops 的注册关系</h3>
 
@@ -591,7 +591,7 @@ err_region: <span class="fn">unregister_chrdev_region</span>(dev_num, <span clas
 
       <h3>3.3 三层注册各管什么，漏一层什么症状</h3>
 
-      <p>这三个调用常被当成"抄下来的样板"，但漏掉任何一层的症状都不一样，而且都很有迷惑性：</p>
+      <p>这三个调用（占设备号 / cdev 注册 / 建设备节点）常被当成"抄下来的样板"，但漏掉任何一层的症状都不一样，而且都很有迷惑性：</p>
 
       <div style="overflow-x:auto">
       <table>
@@ -651,7 +651,7 @@ err_region: <span class="fn">unregister_chrdev_region</span>(dev_num, <span clas
     <section class="chapter" id="ch4">
       <div class="ch-head"><div class="num">04</div><div class="t"><h2>与用户态的数据通道</h2><div class="sub">copy_*_user / ioctl / mmap 三种流派</div></div></div>
 
-      <p>驱动和用户态之间搬数据有三条路，选错会要么慢、要么不安全。</p>
+      <p>驱动和用户态之间搬数据有三条路（read/write 拷贝、ioctl 传小命令、mmap 共享内存），各有各的代价，选错了要么慢、要么不安全。</p>
       <table>
         <thead><tr><th>通道</th><th>方向 / 语义</th><th>开销</th><th>适用</th></tr></thead>
         <tbody>
@@ -663,7 +663,7 @@ err_region: <span class="fn">unregister_chrdev_region</span>(dev_num, <span clas
 
       <h3>4.1 copy_*_user 多做了什么，不做会怎样</h3>
 
-      <p>用户指针<strong>永远不可信</strong>：它可能非法、可能指向已被换出的页、可能是攻击构造的内核地址。把 <code>memcpy</code> 和 <code>copy_to_user</code> 拆开看，后者多做的每一件事都对应一类真实事故：</p>
+      <p>用户指针<strong>永远不可信</strong>：它可能是非法地址、可能指向已被换出（暂时不物理内存）的页、也可能是攻击者精心构造的内核地址。把 <code>memcpy</code> 和 <code>copy_to_user</code> 拆开对比，后者多做的每一件事都对应一类真实事故：</p>
 
       <div style="overflow-x:auto">
       <table>
@@ -747,7 +747,7 @@ ret = <span class="fn">copy_to_user</span>(ubuf, kbuf, n);
 
       <h3>4.3 ioctl：设备的"控制面"</h3>
 
-      <p><code>read/write</code> 是数据面，<code>ioctl</code> 是控制面。<code>.unlocked_ioctl</code>（不是老的 <code>.ioctl</code>）是现代接口，实现上就是一个 <code>switch (cmd)</code>：每个 <code>case</code> 里取参、<strong>严格校验</strong>、再动硬件；<code>default</code> 必须 <code>return -ENOTTY</code>。命令号不能随手取整数，要用内核宏把四个字段打包进一个 32 位数，这样不同驱动的命令不会撞车：</p>
+      <p><code>read/write</code> 走的是数据面（搬运正餐数据），<code>ioctl</code> 走的是控制面（下达配置命令）。<code>.unlocked_ioctl</code>（不是老的 <code>.ioctl</code>）是现代接口，实现上就是一个 <code>switch (cmd)</code>：每个 <code>case</code> 里取参、<strong>严格校验</strong>、再动硬件；<code>default</code> 必须 <code>return -ENOTTY</code>。命令号不能随手取整数，要用内核宏把方向、大小、幻数、序号四个字段打包进一个 32 位数，这样不同驱动的命令不会撞车：</p>
 
       <div class="svg-wrap">
         <svg viewBox="0 0 840 170" role="img" aria-label="ioctl 命令号的 32 位字段布局：方向 2 位、大小 14 位、幻数 8 位、序号 8 位">
@@ -781,7 +781,7 @@ ret = <span class="fn">copy_to_user</span>(ubuf, kbuf, n);
 
       <h3>4.4 32/64 位混用：最难查的一类 ioctl 故障</h3>
 
-      <p>典型场景：64 位内核跑一个 32 位编译的老用户态程序（嵌入式里非常常见——内核先升到 arm64，应用还是 armhf）。<strong>同一份头文件，两边算出来的命令号不一样</strong>：</p>
+      <p>典型场景：64 位内核上跑一个 32 位编译的老用户态程序（嵌入式里非常常见——内核先升到 arm64，应用还是 armhf）。<strong>同一份头文件，两边算出来的命令号却不一样</strong>，因为命令号里编码了参数大小，而两边算出的 <code>sizeof</code> 不同：</p>
 
       <div style="overflow-x:auto">
       <table>
@@ -822,7 +822,7 @@ ret = <span class="fn">copy_to_user</span>(ubuf, kbuf, n);
 
       <h3>4.5 mmap：零拷贝的代价与用途</h3>
 
-      <p>当吞吐是瓶颈（摄像头帧、GPU、采集卡），逐字节 <code>copy_to_user</code> 太贵。<code>.mmap</code> 回调把设备内存或内核缓冲映射进用户地址空间，之后用户读写<strong>就是访存，不再有系统调用、也不再经过驱动</strong>。实现上只有两句要紧的：用 <code>pgprot_noncached(vma-&gt;vm_page_prot)</code> 改页属性，再用 <code>remap_pfn_range()</code> 把物理页帧号铺进 <code>vma</code>。</p>
+      <p>当吞吐是瓶颈（摄像头帧、GPU、采集卡），逐字节 <code>copy_to_user</code> 就太贵了。<code>.mmap</code> 回调把设备内存或内核缓冲映射进用户地址空间，之后用户读写这块区域<strong>就是普通访存，不再有系统调用、也不再经过驱动</strong>。实现上只有两句要紧的：先用 <code>pgprot_noncached(vma-&gt;vm_page_prot)</code> 把页属性改成「不缓存」，再用 <code>remap_pfn_range()</code> 把物理页帧号铺进 <code>vma</code>（内核给你划的那段虚拟地址区间）。</p>
 
       <div class="box danger">映射设备寄存器一定要用 <code>pgprot_noncached</code>（或 write-combining）：走普通可缓存映射，CPU 会把对寄存器的写攒在 cache 里、把读命中旧值，硬件行为完全错乱。代价也要认清：<strong>零拷贝的另一面是"内核失去了每次访问的插手点"</strong>，同步、越界、生命周期都得靠约定（通常再加一个 ioctl 做"提交 / 归还 buffer"的握手）。</div>
     </section>
@@ -831,7 +831,7 @@ ret = <span class="fn">copy_to_user</span>(ubuf, kbuf, n);
     <section class="chapter" id="ch5">
       <div class="ch-head"><div class="num">05</div><div class="t"><h2>设备树与 platform_driver</h2><div class="sub">别再把板级信息写死进 C 代码</div></div></div>
 
-      <p>x86 有 PCI/ACPI 能自动枚举硬件，但 ARM/RISC-V SoC 上大量外设（I²C 控制器、SPI、GPIO、UART、传感器）挂在片上总线，<strong>硬件无法自我描述</strong>——寄存器基址、中断号、时钟在哪，CPU 不知道。历史上这些信息硬编码在内核的 board file 里，几千个 board file 让 ARM 内核树臃肿不堪。<strong>设备树</strong>就是把它们从代码里抽出来，变成一份独立的数据文件。</p>
+      <p>x86 有 PCI/ACPI 能自动枚举硬件（设备自己会举手报上名来），但 ARM/RISC-V SoC 上大量外设（I²C 控制器、SPI、GPIO、UART、传感器）挂在片上总线，<strong>硬件无法自我描述</strong>——寄存器基址在哪、中断号是多少、时钟接的哪个，CPU 一概不知道。历史上这些信息硬编码在内核的 board file 里，几千个 board file 让 ARM 内核树臃肿不堪。<strong>设备树</strong>（Device Tree——一份描述「这块板子上有什么硬件」的数据文件）就是把它们从代码里抽出来，变成一份独立的数据文件。</p>
 
       <div class="analogy">
         <div class="at">生活类比：装修图纸 vs 把家具焊死在墙上</div>
@@ -841,7 +841,7 @@ ret = <span class="fn">copy_to_user</span>(ubuf, kbuf, n);
 
       <h3>5.1 一个节点 + 一次匹配</h3>
 
-      <p>节点描述硬件，驱动声明自己认哪个 <code>compatible</code>，内核负责撮合。这两半必须一起看才有意义，所以放在同一块里：</p>
+      <p>分工是：设备树节点描述硬件长什么样，驱动声明自己认哪个 <code>compatible</code> 字符串，内核负责把两边撮合到一起。这两半必须一起看才有意义，所以放在同一块里：</p>
 
       <pre data-lang="C"><code><span class="cm">/* ── board.dts：描述「板子上有什么」，不描述「怎么驱动它」 ────────── */</span>
 myperiph@40001000 {
@@ -1006,7 +1006,7 @@ myperiph@40001000 {
     <section class="chapter" id="ch6">
       <div class="ch-head"><div class="num">06</div><div class="t"><h2>中断：上半部与下半部</h2><div class="sub">为什么中断处理要"拆两半"</div></div></div>
 
-      <p>硬件事件（数据到了、传输完成、按键按下）通过<strong>中断</strong>异步通知 CPU，CPU 立刻暂停当前工作跳去执行中断服务程序（ISR）。问题在于：<strong>中断处理期间通常关着同优先级中断，处理越久，系统对其它事件越迟钝、延迟抖动越大</strong>。所以内核把中断处理拆成两半。</p>
+      <p>硬件事件（数据到了、传输完成、按键按下）通过<strong>中断</strong>（硬件主动打断 CPU、报告「有事发生」的机制）异步通知 CPU，CPU 立刻暂停当前工作跳去执行中断服务程序（ISR）。问题在于：<strong>中断处理期间通常关着同优先级中断，处理越久，系统对其它事件越迟钝、延迟抖动越大</strong>。所以内核把中断处理拆成两半：上半部只做「应答硬件 + 登记任务」，重活留给下半部稍后慢慢干。</p>
 
       <div class="def">
         <div class="dt">名词：中断上下文（interrupt context）</div>
@@ -1077,7 +1077,7 @@ myperiph@40001000 {
 
       <h3>6.2 现代写法：threaded IRQ</h3>
 
-      <p>与其手动管理 tasklet/workqueue，现代驱动直接用<strong>线程化中断</strong>：一个函数做上半部（quick check），一个函数做下半部（跑在专属内核线程，可以睡眠）。这也是 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a> 让中断可抢占、压低延迟的基础。上半部的返回值直接决定内核接下来做什么：</p>
+      <p>与其手动管理 tasklet/workqueue，现代驱动直接用<strong>线程化中断</strong>（threaded IRQ——把下半部放进一个专属内核线程跑，因此可以睡眠）：一个函数做上半部（quick check，中断上下文里快速应答），一个函数做下半部（跑在专属内核线程，可以睡眠）。这也是 <a href="../embedded-realtime/preempt_rt_deep_dive.html">PREEMPT_RT</a> 让中断可抢占、压低延迟的基础。上半部的返回值直接决定内核接下来做什么：</p>
 
       <table>
         <thead><tr><th>返回 <code>irqreturn_t</code></th><th>含义</th><th>不这样返回的后果</th></tr></thead>
@@ -1169,13 +1169,13 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
     <section class="chapter" id="ch7">
       <div class="ch-head"><div class="num">07</div><div class="t"><h2>内核并发与竞态</h2><div class="sub">选错锁 = 死锁或数据损坏</div></div></div>
 
-      <p>内核天生高度并发：多核同时进你的驱动、中断随时打断进程上下文、抢占让内核代码中途被换出。共享数据（缓冲、计数、寄存器影子值）必须保护。</p>
+      <p>内核天生高度并发：多个核可能同时进你的驱动、中断随时打断正在执行的进程上下文、抢占又让内核代码中途被换出去。所以共享数据（缓冲、计数、寄存器影子值——为方便软件读取而缓存在内存里的寄存器副本）必须保护。</p>
 
       <div class="box tip">这一节只讲最常用的那几把锁。完整的内核同步体系——<code>READ_ONCE</code> 为什么不能用 <code>volatile</code> 替代、内存屏障为什么必须成对、seqlock 与 per-CPU 变量、RCU 的宽限期原理与陷阱——见 <a href="kernel_synchronization.html">内核同步原语与 RCU</a>。写驱动而不理解屏障与 RCU，写出来的竞态往往要到量产才暴露。</div>
 
       <h3>7.1 三个并发来源，各配一把锁</h3>
 
-      <p>抽象地讲"要加锁"没有用。驱动里的并发只有三个来源，认出来就知道该用什么：</p>
+      <p>抽象地讲"要加锁"没有用。驱动里的并发其实只有三个来源（多进程并发进驱动、中断打断执行、别的核同时在跑），认出眼前是哪一种，就知道该用什么锁：</p>
 
       <div class="svg-wrap">
         <svg viewBox="0 0 860 342" role="img" aria-label="驱动里共享数据的三个并发来源：多个用户进程走进程上下文、中断上下半部、以及另一个 CPU 核并行执行，分别对应 mutex、spin_lock_irqsave 和自旋锁本身" style="min-width:740px;height:auto">
@@ -1243,7 +1243,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
         </tbody>
       </table>
 
-      <p>四个 <code>spin_lock</code> 变体的差别只在"额外关掉了什么"，选错的后果各不相同：</p>
+      <p>四个 <code>spin_lock</code> 变体的差别只在「上锁时额外关掉了什么」（抢占、软中断、硬中断），选错的后果各不相同：</p>
 
       <table>
         <thead><tr><th>变体</th><th>额外做的事</th><th>什么时候用 / 不用</th></tr></thead>
@@ -1259,7 +1259,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
 
       <h3>7.2 唤醒丢失：阻塞读为什么必须用 wait_event</h3>
 
-      <p>还有一类竞态<strong>不涉及数据损坏，而是让进程永久睡死</strong>。它是阻塞读的骨架必须照抄的原因：</p>
+      <p>还有一类竞态<strong>不涉及数据损坏，而是让进程永久睡死</strong>（唤醒丢失——数据其实到了，但「叫醒」那个信号在错误的时机发出，睡着的进程再也等不到下一次）。它正是阻塞读的骨架必须照抄 <code>wait_event</code> 的原因：</p>
 
       <div class="svg-wrap">
         <svg viewBox="0 0 860 300" role="img" aria-label="唤醒丢失的时序对比：手写检查条件再睡眠会留下一个窗口，中断在窗口内唤醒则进程永久阻塞；wait_event_interruptible 先挂等待队列再检查条件，把窗口消除" style="min-width:740px;height:auto">
@@ -1345,7 +1345,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
     <section class="chapter" id="ch8">
       <div class="ch-head"><div class="num">08</div><div class="t"><h2>DMA 与一致性内存</h2><div class="sub">让外设自己搬数据，但小心 cache</div></div></div>
 
-      <p><strong>DMA（直接内存访问）</strong>让外设绕过 CPU 直接读写内存：网卡收包、摄像头写帧、磁盘控制器搬扇区都靠它。CPU 只需"告诉外设缓冲在哪、多大"，然后去干别的，传输完外设发中断。它是高吞吐外设的命脉，但引出两个硬核问题：<strong>地址</strong>与<strong>cache 一致性</strong>，而两者的根源都是同一件事——<strong>CPU 和设备走的不是同一条路</strong>。</p>
+      <p><strong>DMA（直接内存访问——外设绕过 CPU、自己往内存搬数据的机制）</strong>让网卡收包、摄像头写帧、磁盘控制器搬扇区这些重活不再占用 CPU：CPU 只需「告诉外设缓冲在哪、多大」，然后去干别的，传输完外设发中断通知。它是高吞吐外设的命脉，但引出两个硬核问题：<strong>地址</strong>与<strong>cache 一致性</strong>，而两者的根源都是同一件事——<strong>CPU 和设备走的不是同一条路</strong>。</p>
 
       <h3>8.1 两条数据路径：MMIO 与 DMA</h3>
 
@@ -1436,7 +1436,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
         </div>
       </div>
 
-      <p>方向不是文档注释，而是<strong>告诉内核在什么时机做 clean 还是 invalidate</strong>。写反了在无一致性硬件的平台上就是偶发数据损坏，而且往往只在特定 cache 状态下出现：</p>
+      <p>方向字段不是文档注释，而是<strong>告诉内核在什么时机做 clean（把 CPU cache 里的脏行写回内存）还是 invalidate（把可能过期的 cache 行直接作废）</strong>。写反了在无一致性硬件的平台上就是偶发数据损坏，而且往往只在特定 cache 状态下出现：</p>
 
       <table>
         <thead><tr><th>方向</th><th>语义</th><th>内核在什么时机做什么</th></tr></thead>
@@ -1449,7 +1449,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
 
       <h3>8.3 流式映射的所有权规则</h3>
 
-      <p>流式映射最容易违反的不是"方向"而是<strong>所有权</strong>：映射期间这块 buffer 属于设备，CPU 不许碰。画成时间轴就很清楚：</p>
+      <p>流式映射最容易违反的不是「方向」而是<strong>所有权</strong>：映射期间这块 buffer 归设备，CPU 不许碰。画成时间轴就很清楚：</p>
 
       <div class="svg-wrap">
         <svg viewBox="0 0 840 230" role="img" aria-label="流式 DMA 映射期间缓冲区所有权在 CPU 与设备之间转移的时间轴">
@@ -1524,7 +1524,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
     <section class="chapter" id="ch9">
       <div class="ch-head"><div class="num">09</div><div class="t"><h2>调试与观测</h2><div class="sub">没有 gdb 断点时你还有什么</div></div></div>
 
-      <p>内核态调试没有 <code>printf</code> 那么随意，一个空指针可能直接 panic。好在工具链很成熟：</p>
+      <p>内核态调试没有 <code>printf</code> 那么随意——一个空指针就可能直接 panic 整机。好在工具链很成熟，没有 gdb 断点也有整一套替代手段：</p>
 
       <table>
         <thead><tr><th>手段</th><th>用途</th><th>要点</th></tr></thead>
@@ -1540,7 +1540,7 @@ ret = <span class="fn">devm_request_threaded_irq</span>(dev, p-&gt;irq,
 
       <h3>9.1 printk 的级别，以及为什么必须限速</h3>
 
-      <p><code>printk</code> 有 8 个级别。日志<strong>全部</strong>进内核环形缓冲（<code>dmesg</code> 都能看到），但只有级别数值<strong>小于</strong> <code>console_loglevel</code> 的才会往控制台（串口 / VGA）输出——这是嵌入式"看不到 log"的头号排查点。门槛看 <code>/proc/sys/kernel/printk</code> 的第一个数，临时提高就往它 <code>echo 8</code>，或用启动参数 <code>ignore_loglevel</code>。</p>
+      <p><code>printk</code> 有 8 个级别。日志<strong>全部</strong>会进内核环形缓冲（所以 <code>dmesg</code> 都能看到），但只有级别数值<strong>小于</strong> <code>console_loglevel</code> 的才会再往控制台（串口 / VGA）输出——这是嵌入式「看不到 log」的头号排查点。门槛值看 <code>/proc/sys/kernel/printk</code> 的第一个数，临时提高就往它 <code>echo 8</code>，或用启动参数 <code>ignore_loglevel</code>。</p>
 
       <div style="overflow-x:auto">
       <table>
